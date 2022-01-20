@@ -19,6 +19,7 @@ config("hicollie_include") {
     ".",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
     "//utils/native/base/include",
+    "//foundation/appexecfwk/standard/interfaces/innerkits/libeventhandler/include",
   ]
   if (is_ohos) {
     cflags_cc = [ "-D__XCOLLIE_OHOS__" ]
@@ -27,13 +28,17 @@ config("hicollie_include") {
 
 ohos_source_set("libhicollie_source") {
   sources = [
+    "handler_checker.cpp",
     "timer_ring.cpp",
+    "watchdog.cpp",
+    "watchdog_inner.cpp",
     "xcollie.cpp",
     "xcollie_inner.cpp",
   ]
   configs = [ ":hicollie_include" ]
 
   external_deps = [
+    "appexecfwk_standard:libeventhandler",
     "hilog_native:libhilog",
     "hisysevent_native:libhisysevent",
   ]
