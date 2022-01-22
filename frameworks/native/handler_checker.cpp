@@ -14,10 +14,6 @@
  */
 
 #include "handler_checker.h"
-#include <unistd.h>
-
-#include "hisysevent.h"
-#include "xcollie_utils.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -33,19 +29,17 @@ void HandlerChecker::ScheduleCheck()
     handler_->PostTask(f, "task", 0);
 }
 
-void HandlerChecker::CheckState(const unsigned int& interval)
+int HandlerChecker::GetCheckState()
 {
     if (isCompleted_) {
-        XCOLLIE_LOGI("task completed");
         taskSlow = false;
-        return;
+        return CheckStatus::COMPLETED;
     } else {
         if (!taskSlow) {
             taskSlow = true;
-            SendEvent(getpid(), name_, "watchdog: thread " + name_ + " blocked " + std::to_string(interval) + "s");
+            return CheckStatus::WAITING;
         } else {
-            XCOLLIE_LOGI("Watchdog happened, killing process");
-            _exit(1);
+            return CheckStatus::WAITED_HALF;
         }
     }
 }
@@ -53,19 +47,6 @@ void HandlerChecker::CheckState(const unsigned int& interval)
 std::shared_ptr<AppExecFwk::EventHandler> HandlerChecker::GetHandler() const
 {
     return handler_;
-}
-
-void HandlerChecker::SendEvent(int tid, const std::string &threadName, const std::string &keyMsg) const
-{
-    pid_t pid = getpid();
-    gid_t gid = getgid();
-    time_t curTime = time(nullptr);
-    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
-        keyMsg + "\ntimeout tid: " + std::to_string(tid) +
-        "\ntimeout function: " + threadName;
-    HiSysEvent::Write("FRAMEWORK", "WATCHDOG", HiSysEvent::EventType::FAULT,
-        "PID", pid, "TGID", gid, "MSG", sendMsg);
-    XCOLLIE_LOGI("send event FRAMEWORK_WATCHDOG, msg=%s", keyMsg.c_str());
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

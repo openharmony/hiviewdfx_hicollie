@@ -159,9 +159,9 @@ void XCollieInner::SendEvent(int tid, const std::string &timerName, const std::s
 #else
     sendMsg += "\n>>> " + timerName + " <<<\n";
 #endif
-    HiSysEvent::Write("FRAMEWORK", "WATCHDOG", HiSysEvent::EventType::FAULT,
+    HiSysEvent::Write("FRAMEWORK", "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
         "PID", pid, "TGID", gid, "CMD", cmd, "MSG", sendMsg);
-    XCOLLIE_LOGI("send event FRAMEWORK_WATCHDOG, msg=%s", keyMsg.c_str());
+    XCOLLIE_LOGI("send event FRAMEWORK_SERVICE_TIMEOUT, msg=%s", keyMsg.c_str());
 }
 
 void XCollieInner::DoTimerCallback(struct InputTimerPara *task)

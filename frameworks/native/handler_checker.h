@@ -23,6 +23,12 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+enum CheckStatus {
+    COMPLETED = 0,
+    WAITING = 1,
+    WAITED_HALF = 2,
+};
+
 class HandlerChecker {
 public:
     HandlerChecker(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler)
@@ -31,12 +37,10 @@ public:
 
 public:
     void ScheduleCheck();
-    void CheckState(const unsigned int& interval);
+    int GetCheckState();
     std::shared_ptr<AppExecFwk::EventHandler> GetHandler() const;
 
 private:
-    void SendEvent(int tid, const std::string &threadName, const std::string &keyMsg) const;
-
     std::string name_;
     std::shared_ptr<AppExecFwk::EventHandler> handler_;
     std::atomic<bool> isCompleted_ = true;

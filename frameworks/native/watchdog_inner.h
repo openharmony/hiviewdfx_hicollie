@@ -36,6 +36,9 @@ public:
 private:
     void SetTimeval(unsigned int timeval);
     unsigned int GetCheckInterval() const;
+    int EvaluateCheckerState();
+    std::string GetBlockDescription(unsigned int interval);
+    void SendEvent(const std::string &keyMsg) const;
     bool Start();
     bool Stop();
 

@@ -14,6 +14,9 @@
  */
 
 #include "watchdog_inner.h"
+#include <unistd.h>
+
+#include "hisysevent.h"
 #include "xcollie_utils.h"
 
 namespace OHOS {
@@ -71,12 +74,40 @@ bool WatchdogInner::Start()
         std::this_thread::sleep_for(std::chrono::milliseconds(interval));
         {
             std::unique_lock lock(lock_);
-            for (auto info : handlerMap_) {
-                info.second->CheckState(interval / 1000); // 1s = 1000ms
+            int waitState = EvaluateCheckerState();
+            if (waitState == CheckStatus::COMPLETED) {
+                continue;
+            } else if (waitState == CheckStatus::WAITING) {
+                std::string description = GetBlockDescription(interval / 1000); // 1s = 1000ms
+                SendEvent(description);
+            } else {
+                XCOLLIE_LOGI("Watchdog happened, killing process");
+                _exit(1);
             }
         }
     }
     return true;
+}
+
+int WatchdogInner::EvaluateCheckerState()
+{
+    int state = CheckStatus::COMPLETED;
+    for (auto info : handlerMap_) {
+        state = std::max(state, info.second->GetCheckState());
+    }
+    return state;
+}
+
+std::string WatchdogInner::GetBlockDescription(unsigned int interval)
+{
+    std::string desc = "Watchdog: thread(";
+    for (auto info : handlerMap_) {
+        if (info.second->GetCheckState() > CheckStatus::COMPLETED) {
+            desc += info.first + " ";
+        }
+    }
+    desc += ") blocked " + std::to_string(interval) + "s";
+    return desc;
 }
 
 bool WatchdogInner::Stop()
@@ -97,6 +128,19 @@ void WatchdogInner::SetTimeval(unsigned int timeval)
 unsigned int WatchdogInner::GetCheckInterval() const
 {
     return timeval_ * 500; // 0.5s = 500ms
+}
+
+
+void WatchdogInner::SendEvent(const std::string &keyMsg) const
+{
+    pid_t pid = getpid();
+    gid_t gid = getgid();
+    time_t curTime = time(nullptr);
+    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
+        "\n" + keyMsg;
+    HiSysEvent::Write("FRAMEWORK", "SERVICE_BLOCK", HiSysEvent::EventType::FAULT,
+        "PID", pid, "TGID", gid, "MSG", sendMsg);
+    XCOLLIE_LOGI("send event FRAMEWORK_SERVICE_BLOCK, msg=%s", keyMsg.c_str());
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
