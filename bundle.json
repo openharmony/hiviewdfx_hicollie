@@ -15,6 +15,9 @@
         "adapted_system_type": [
             "standard"
         ],
+        "hisysevent_config": [
+          "//base/hiviewdfx/hicollie/hisysevent.yaml"
+        ],
         "rom": "",
         "ram": "",
         "deps": {
