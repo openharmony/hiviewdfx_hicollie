@@ -145,23 +145,12 @@ void XCollieInner::SendEvent(int tid, const std::string &timerName, const std::s
 {
     pid_t pid = getpid();
     gid_t gid = getgid();
-    std::string cmd = "p=" + std::to_string(pid) + ",S";
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
-        keyMsg + "\ntimeout tid: " + std::to_string(tid) +
-        "\ntimeout function: " + timerName;
-#ifndef __XCOLLIE_OHOS__
-    if (getprogname()) {
-        sendMsg += "\n>>> " + std::string(getprogname()) + " <<<\n";
-    } else {
-        sendMsg += "\n>>> " + timerName + " <<<\n";
-    }
-#else
-    sendMsg += "\n>>> " + timerName + " <<<\n";
-#endif
+        "timeout timer: " + timerName + "\n" + keyMsg;
     HiSysEvent::Write("FRAMEWORK", "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
-        "PID", pid, "TGID", gid, "CMD", cmd, "MSG", sendMsg);
-    XCOLLIE_LOGI("send event FRAMEWORK_SERVICE_TIMEOUT, msg=%s", keyMsg.c_str());
+        "PID", pid, "TGID", gid, "MSG", sendMsg);
+    XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_TIMEOUT], msg=%s", keyMsg.c_str());
 }
 
 void XCollieInner::DoTimerCallback(struct InputTimerPara *task)

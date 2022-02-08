@@ -140,7 +140,7 @@ void WatchdogInner::SendEvent(const std::string &keyMsg) const
         "\n" + keyMsg;
     HiSysEvent::Write("FRAMEWORK", "SERVICE_BLOCK", HiSysEvent::EventType::FAULT,
         "PID", pid, "TGID", gid, "MSG", sendMsg);
-    XCOLLIE_LOGI("send event FRAMEWORK_SERVICE_BLOCK, msg=%s", keyMsg.c_str());
+    XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_BLOCK], msg=%s", keyMsg.c_str());
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
