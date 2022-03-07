@@ -44,6 +44,9 @@ ohos_source_set("libhicollie_source") {
   ]
 
   deps = [ "//utils/native/base:utils" ]
+
+  part_name = "hicollie_native"
+  subsystem_name = "hiviewdfx"
 }
 
 group("libhicollie") {
