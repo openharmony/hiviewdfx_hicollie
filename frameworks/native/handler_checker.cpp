@@ -26,7 +26,7 @@ void HandlerChecker::ScheduleCheck()
     auto f = [this] () {
         this->isCompleted_.store(true);
     };
-    handler_->PostTask(f, "task", 0);
+    handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE);
 }
 
 int HandlerChecker::GetCheckState()
