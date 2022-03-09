@@ -19,6 +19,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <condition_variable>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -47,6 +48,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<HandlerChecker>> handlerMap_;
     std::unique_ptr<std::thread> threadLoop_;
     std::mutex lock_;
+    std::condition_variable condition_;
     std::atomic_bool isNeedStop_ = false;
 };
 } // end of namespace HiviewDFX

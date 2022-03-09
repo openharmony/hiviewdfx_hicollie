@@ -64,26 +64,30 @@ bool WatchdogInner::Start()
 {
     XCOLLIE_LOGI("Run watchdog!");
     while (!isNeedStop_) {
-        {
-            std::unique_lock lock(lock_);
-            for (auto info : handlerMap_) {
-                info.second->ScheduleCheck();
-            }
+        std::unique_lock lock(lock_);
+
+        // send
+        for (auto info : handlerMap_) {
+            info.second->ScheduleCheck();
         }
+
+        // sleep
         unsigned int interval = GetCheckInterval();
-        std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-        {
-            std::unique_lock lock(lock_);
-            int waitState = EvaluateCheckerState();
-            if (waitState == CheckStatus::COMPLETED) {
-                continue;
-            } else if (waitState == CheckStatus::WAITING) {
-                std::string description = GetBlockDescription(interval / 1000); // 1s = 1000ms
-                SendEvent(description);
-            } else {
-                XCOLLIE_LOGI("Watchdog happened, killing process");
-                _exit(1);
-            }
+        if (condition_.wait_for(lock, std::chrono::milliseconds(interval)) !=  std::cv_status::timeout) {
+            XCOLLIE_LOGE("Watchdog is exiting");
+            break;
+        }
+
+        // check
+        int waitState = EvaluateCheckerState();
+        if (waitState == CheckStatus::COMPLETED) {
+            continue;
+        } else if (waitState == CheckStatus::WAITING) {
+            std::string description = GetBlockDescription(interval / 1000); // 1s = 1000ms
+            SendEvent(description);
+        } else {
+            XCOLLIE_LOGI("Watchdog happened, killing process");
+            _exit(1);
         }
     }
     return true;
@@ -113,6 +117,8 @@ std::string WatchdogInner::GetBlockDescription(unsigned int interval)
 bool WatchdogInner::Stop()
 {
     isNeedStop_.store(true);
+    condition_.notify_all();
+
     if (threadLoop_ != nullptr && threadLoop_->joinable()) {
         threadLoop_->join();
         threadLoop_ = nullptr;
