@@ -83,11 +83,13 @@ bool WatchdogInner::Start()
         if (waitState == CheckStatus::COMPLETED) {
             continue;
         } else if (waitState == CheckStatus::WAITING) {
+            XCOLLIE_LOGI("Watchdog half-block happened, send event");
             std::string description = GetBlockDescription(interval / 1000); // 1s = 1000ms
             SendEvent(description);
         } else {
-            XCOLLIE_LOGI("Watchdog happened, killing process");
-            _exit(1);
+            XCOLLIE_LOGI("Watchdog happened, send event twice, and skip exiting process");
+            std::string description = GetBlockDescription(interval / 1000) + ", report twice instead of exiting process."; // 1s = 1000ms
+            SendEvent(description);
         }
     }
     return true;
