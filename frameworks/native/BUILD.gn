@@ -19,7 +19,6 @@ config("hicollie_include") {
     ".",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
     "//utils/native/base/include",
-    "//foundation/appexecfwk/standard/interfaces/innerkits/libeventhandler/include",
   ]
   if (is_ohos) {
     cflags_cc = [ "-D__XCOLLIE_OHOS__" ]
