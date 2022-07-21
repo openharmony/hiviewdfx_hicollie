@@ -18,7 +18,7 @@ config("hicollie_include") {
   include_dirs = [
     ".",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
-    "//utils/native/base/include",
+    "//commonlibrary/c_utils/base/include",
   ]
   if (is_ohos) {
     cflags_cc = [ "-D__XCOLLIE_OHOS__" ]
@@ -37,12 +37,11 @@ ohos_source_set("libhicollie_source") {
   configs = [ ":hicollie_include" ]
 
   external_deps = [
+    "c_utils:utils",
     "eventhandler:libeventhandler",
     "hilog_native:libhilog",
     "hisysevent_native:libhisysevent",
   ]
-
-  deps = [ "//utils/native/base:utils" ]
 
   part_name = "hicollie_native"
   subsystem_name = "hiviewdfx"

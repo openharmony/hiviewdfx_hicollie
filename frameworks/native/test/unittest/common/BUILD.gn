@@ -23,7 +23,7 @@ config("module_private_config") {
     ".",
     "${hicollie_part_path}/frameworks/native/test",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
-    "//utils/native/base/include",
+    "//commonlibrary/c_utils/base/include",
   ]
 }
 
@@ -37,11 +37,9 @@ ohos_unittest("XCollieUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//third_party/googletest:gtest_main",
-    "//utils/native/base:utils",
-  ]
+  deps = [ "//third_party/googletest:gtest_main" ]
   external_deps = [
+    "c_utils:utils",
     "hicollie_native:libhicollie",
     "hilog_native:libhilog",
     "hisysevent_native:libhisysevent",
