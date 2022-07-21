@@ -130,7 +130,8 @@ bool WatchdogInner::Stop()
 
 void WatchdogInner::SetTimeval(unsigned int timeval)
 {
-    timeval_ = timeval;
+    XCOLLIE_LOGI("expected time interval: %d", timeval);
+    timeval_ = WATCHDOGINNER_TIMEVAL;
 }
 
 unsigned int WatchdogInner::GetCheckInterval() const

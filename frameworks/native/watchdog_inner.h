@@ -32,6 +32,7 @@ namespace HiviewDFX {
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
+    static const int WATCHDOGINNER_TIMEVAL = 40;
     int AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         unsigned int timeval);
 private:
