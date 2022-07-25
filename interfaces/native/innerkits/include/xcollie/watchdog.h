@@ -31,11 +31,9 @@ public:
      *
      * @param name of current thread
      * @param current EventHandler
-     * @param time threshold to kill the process
      * @return 0 if added
      */
-    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-        unsigned int timeval);
+    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

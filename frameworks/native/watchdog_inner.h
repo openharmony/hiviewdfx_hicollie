@@ -32,12 +32,9 @@ namespace HiviewDFX {
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
-    static const int WATCHDOGINNER_TIMEVAL = 40;
-    int AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-        unsigned int timeval);
+    static const int WATCHDOGINNER_TIMEVAL = 60;
+    int AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler);
 private:
-    void SetTimeval(unsigned int timeval);
-    unsigned int GetCheckInterval() const;
     int EvaluateCheckerState();
     std::string GetBlockDescription(unsigned int interval);
     void SendEvent(const std::string &keyMsg) const;
@@ -45,7 +42,6 @@ private:
     bool Stop();
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
-    unsigned int timeval_ = 0;
     std::unordered_map<std::string, std::shared_ptr<HandlerChecker>> handlerMap_;
     std::unique_ptr<std::thread> threadLoop_;
     std::mutex lock_;

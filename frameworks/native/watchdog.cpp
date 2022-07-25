@@ -27,10 +27,9 @@ Watchdog::~Watchdog()
 {
 }
 
-int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-    unsigned int timeval)
+int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler)
 {
-    return WatchdogInner::GetInstance().AddThread(name, handler, timeval);
+    return WatchdogInner::GetInstance().AddThread(name, handler);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

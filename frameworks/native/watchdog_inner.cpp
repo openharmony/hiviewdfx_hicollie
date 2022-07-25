@@ -30,15 +30,13 @@ WatchdogInner::~WatchdogInner()
     Stop();
 }
 
-int WatchdogInner::AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-    unsigned int timeval)
+int WatchdogInner::AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler)
 {
     if (name.empty() || handler == nullptr) {
         XCOLLIE_LOGE("Add thread fail, invalid args!");
         return -1;
     }
     std::unique_lock<std::mutex> lock(lock_);
-    SetTimeval(timeval);
     for (auto [k, v] : handlerMap_) {
         if (k == name || v->GetHandler() == handler) {
             return 0;
@@ -56,7 +54,7 @@ int WatchdogInner::AddThread(const std::string& name, std::shared_ptr<AppExecFwk
         threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
         XCOLLIE_LOGI("Watchdog is running!");
     }
-    XCOLLIE_LOGI("Add thread success : %{public}s, timethreshold : %{public}d", name.c_str(), timeval);
+    XCOLLIE_LOGI("Add thread success : %{public}s", name.c_str());
     return 0;
 }
 
@@ -72,7 +70,7 @@ bool WatchdogInner::Start()
         }
 
         // sleep
-        unsigned int interval = GetCheckInterval();
+        unsigned int interval = WATCHDOGINNER_TIMEVAL * 500; // 0.5s = 500ms
         if (condition_.wait_for(lock, std::chrono::milliseconds(interval)) !=  std::cv_status::timeout) {
             XCOLLIE_LOGE("Watchdog is exiting");
             break;
@@ -127,18 +125,6 @@ bool WatchdogInner::Stop()
     }
     return true;
 }
-
-void WatchdogInner::SetTimeval(unsigned int timeval)
-{
-    XCOLLIE_LOGI("expected time interval: %d", timeval);
-    timeval_ = WATCHDOGINNER_TIMEVAL;
-}
-
-unsigned int WatchdogInner::GetCheckInterval() const
-{
-    return timeval_ * 500; // 0.5s = 500ms
-}
-
 
 void WatchdogInner::SendEvent(const std::string &keyMsg) const
 {
