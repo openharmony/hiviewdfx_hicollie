@@ -24,7 +24,7 @@ config("module_private_config") {
     "${hicollie_part_path}/frameworks/native",
     "${hicollie_part_path}/frameworks/native/test",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
-    "//utils/native/base/include",
+    "//commonlibrary/c_utils/base/include",
   ]
   if (is_ohos) {
     cflags_cc = [ "-D__XCOLLIE_OHOS__" ]
@@ -44,12 +44,10 @@ ohos_moduletest("XCollieModuleTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//third_party/googletest:gtest_main",
-    "//utils/native/base:utils",
-  ]
+  deps = [ "//third_party/googletest:gtest_main" ]
 
   external_deps = [
+    "c_utils:utils",
     "hilog_native:libhilog",
     "hisysevent_native:libhisysevent",
   ]
@@ -66,12 +64,10 @@ ohos_moduletest("XCollieTimeoutModuleTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//third_party/googletest:gtest_main",
-    "//utils/native/base:utils",
-  ]
+  deps = [ "//third_party/googletest:gtest_main" ]
 
   external_deps = [
+    "c_utils:utils",
     "hilog_native:libhilog",
     "hisysevent_native:libhisysevent",
   ]

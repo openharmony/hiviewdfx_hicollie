@@ -24,7 +24,7 @@
             "components": [
                 "hilog_native",
                 "hisysevent_native",
-                "utils_base"
+                "c_utils"
             ],
             "third_party": []
         },
