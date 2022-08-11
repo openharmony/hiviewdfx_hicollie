@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,6 +14,11 @@
  */
 
 #include "watchdog_inner.h"
+
+#include <climits>
+#include <mutex>
+
+#include <pthread.h>
 #include <unistd.h>
 
 #include "hisysevent.h"
@@ -21,6 +26,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 WatchdogInner::WatchdogInner()
 {
 }
@@ -30,112 +36,167 @@ WatchdogInner::~WatchdogInner()
     Stop();
 }
 
-int WatchdogInner::AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler)
+bool operator<(const WatchdogTask& lhs, const WatchdogTask& rhs)
+{
+    return lhs.nextTickTime > rhs.nextTickTime;
+};
+
+int WatchdogInner::AddThread(const std::string &name,
+    std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval)
 {
     if (name.empty() || handler == nullptr) {
         XCOLLIE_LOGE("Add thread fail, invalid args!");
         return -1;
     }
+
+    XCOLLIE_LOGI("Add thread %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    for (auto [k, v] : handlerMap_) {
-        if (k == name || v->GetHandler() == handler) {
-            return 0;
-        }
-    }
-    if (handlerMap_.size() >= MAX_WATCH_NUM) {
+    if (!InsertWatchdogTaskLocked(name, WatchdogTask(name, handler, interval))) {
         return -1;
     }
-    auto checker = std::make_shared<HandlerChecker>(name, handler);
-    if (checker == nullptr) {
-        return -1;
-    }
-    handlerMap_.insert(std::make_pair(name, checker));
-    if (threadLoop_ == nullptr) {
-        threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
-        XCOLLIE_LOGI("Watchdog is running!");
-    }
-    XCOLLIE_LOGI("Add thread success : %{public}s", name.c_str());
     return 0;
+}
+
+void WatchdogInner::RunOnshotTask(const std::string& name, Task&& task, uint64_t delay)
+{
+    if (name.empty() || task == nullptr) {
+        XCOLLIE_LOGE("Add task fail, invalid args!");
+        return;
+    }
+
+    XCOLLIE_LOGI("Add oneshot task %{public}s to watchdog.", name.c_str());
+    std::unique_lock<std::mutex> lock(lock_);
+    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0));
+}
+
+void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay)
+{
+    if (name.empty() || task == nullptr) {
+        XCOLLIE_LOGE("Add task fail, invalid args!");
+        return;
+    }
+
+    XCOLLIE_LOGI("Add periodical task %{public}s to watchdog.", name.c_str());
+    std::unique_lock<std::mutex> lock(lock_);
+    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, interval));
+}
+
+bool WatchdogInner::IsTaskExistLocked(const std::string& name)
+{
+    if (taskNameSet_.find(name) != taskNameSet_.end()) {
+        return true;
+    }
+
+    return false;
+}
+
+bool WatchdogInner::IsExceedMaxTaskLocked()
+{
+    if (checkerQueue_.size() >= MAX_WATCH_NUM) {
+        XCOLLIE_LOGE("Exceed max watchdog task!");
+        return true;
+    }
+
+    return false;
+}
+
+bool WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task)
+{
+    if (IsTaskExistLocked(name)) {
+        XCOLLIE_LOGI("Task with %{public}s already exist, failed to insert.", name.c_str());
+        return false;
+    }
+
+    if (IsExceedMaxTaskLocked()) {
+        XCOLLIE_LOGE("Exceed max watchdog task, failed to insert.");
+        return false;
+    }
+
+    checkerQueue_.push(std::move(task));
+    taskNameSet_.insert(name);
+    CreateWatchdogThreadIfNeed();
+    condition_.notify_all();
+    return true;
+}
+
+void WatchdogInner::StopWatchdog()
+{
+    Stop();
+}
+
+void WatchdogInner::CreateWatchdogThreadIfNeed()
+{
+    std::call_once(flag_, [this] {
+        if (threadLoop_ == nullptr) {
+            threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
+            XCOLLIE_LOGI("Watchdog is running!");
+        }
+    });
+}
+
+uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
+{
+    std::unique_lock<std::mutex> lock(lock_);
+    if (isNeedStop_) {
+        while (!checkerQueue_.empty()) {
+            checkerQueue_.pop();
+        }
+        return DEFAULT_TIMEOUT;
+    }
+
+    if (checkerQueue_.empty()) {
+        return DEFAULT_TIMEOUT;
+    }
+
+    const WatchdogTask& queuedTask = checkerQueue_.top();
+    if (queuedTask.nextTickTime > now) {
+        return queuedTask.nextTickTime - now;
+    }
+
+    task = queuedTask;
+    checkerQueue_.pop();
+    return 0;
+}
+
+void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
+{
+    if (task.checkInterval == 0) {
+        return;
+    }
+
+    std::unique_lock<std::mutex> lock(lock_);
+    task.nextTickTime = task.nextTickTime + task.checkInterval;
+    checkerQueue_.push(task);
 }
 
 bool WatchdogInner::Start()
 {
-    XCOLLIE_LOGI("Run watchdog!");
+    (void)pthread_setname_np(pthread_self(), "dfx_watchdog");
     while (!isNeedStop_) {
-        std::unique_lock lock(lock_);
-
-        // send
-        for (auto info : handlerMap_) {
-            info.second->ScheduleCheck();
-        }
-
-        // sleep
-        unsigned int interval = WATCHDOGINNER_TIMEVAL * 500; // 0.5s = 500ms
-        if (condition_.wait_for(lock, std::chrono::milliseconds(interval)) !=  std::cv_status::timeout) {
-            XCOLLIE_LOGE("Watchdog is exiting");
-            break;
-        }
-
-        // check
-        int waitState = EvaluateCheckerState();
-        if (waitState == CheckStatus::COMPLETED) {
+        uint64_t now = GetCurrentTickMillseconds();
+        WatchdogTask task;
+        uint64_t leftTimeMill = FetchNextTask(now, task);
+        if (leftTimeMill == 0) {
+            task.Run();
+            ReInsertTaskIfNeed(task);
             continue;
-        } else if (waitState == CheckStatus::WAITING) {
-            XCOLLIE_LOGI("Watchdog half-block happened, send event");
-            std::string description = GetBlockDescription(interval / 1000); // 1s = 1000ms
-            SendEvent(description);
         } else {
-            XCOLLIE_LOGI("Watchdog happened, send event twice, and skip exiting process");
-            std::string description = GetBlockDescription(interval / 1000) + ", report twice instead of exiting process."; // 1s = 1000ms
-            SendEvent(description);
+            std::unique_lock<std::mutex> lock(lock_);
+            condition_.wait_for(lock, std::chrono::milliseconds(leftTimeMill));
         }
     }
     return true;
-}
-
-int WatchdogInner::EvaluateCheckerState()
-{
-    int state = CheckStatus::COMPLETED;
-    for (auto info : handlerMap_) {
-        state = std::max(state, info.second->GetCheckState());
-    }
-    return state;
-}
-
-std::string WatchdogInner::GetBlockDescription(unsigned int interval)
-{
-    std::string desc = "Watchdog: thread(";
-    for (auto info : handlerMap_) {
-        if (info.second->GetCheckState() > CheckStatus::COMPLETED) {
-            desc += info.first + " ";
-        }
-    }
-    desc += ") blocked " + std::to_string(interval) + "s";
-    return desc;
 }
 
 bool WatchdogInner::Stop()
 {
     isNeedStop_.store(true);
     condition_.notify_all();
-
     if (threadLoop_ != nullptr && threadLoop_->joinable()) {
         threadLoop_->join();
         threadLoop_ = nullptr;
     }
     return true;
-}
-
-void WatchdogInner::SendEvent(const std::string &keyMsg) const
-{
-    pid_t pid = getpid();
-    gid_t gid = getgid();
-    time_t curTime = time(nullptr);
-    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
-        "\n" + keyMsg;
-    HiSysEvent::Write("FRAMEWORK", "SERVICE_BLOCK", HiSysEvent::EventType::FAULT,
-        "PID", pid, "TGID", gid, "MSG", sendMsg);
-    XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_BLOCK], msg=%s", keyMsg.c_str());
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

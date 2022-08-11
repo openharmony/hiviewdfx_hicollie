@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,14 +17,15 @@
 #define RELIABILITY_WATCHDOG_INNER_H
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
-#include <condition_variable>
+#include <queue>
+#include <set>
 #include <string>
 #include <thread>
-#include <unordered_map>
 
-#include "handler_checker.h"
+#include "watchdog_task.h"
 #include "singleton.h"
 
 namespace OHOS {
@@ -32,21 +33,29 @@ namespace HiviewDFX {
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
-    static const int WATCHDOGINNER_TIMEVAL = 60;
-    int AddThread(const std::string& name, std::shared_ptr<AppExecFwk::EventHandler> handler);
+    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval);
+    void RunOnshotTask(const std::string& name, Task&& task, uint64_t delay);
+    void RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay);
+    void StopWatchdog();
+
 private:
-    int EvaluateCheckerState();
-    std::string GetBlockDescription(unsigned int interval);
-    void SendEvent(const std::string &keyMsg) const;
     bool Start();
     bool Stop();
+    bool IsTaskExistLocked(const std::string& name);
+    bool IsExceedMaxTaskLocked();
+    bool InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
+    uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
+    void ReInsertTaskIfNeed(WatchdogTask& task);
+    void CreateWatchdogThreadIfNeed();
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
-    std::unordered_map<std::string, std::shared_ptr<HandlerChecker>> handlerMap_;
+    std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
     std::unique_ptr<std::thread> threadLoop_;
     std::mutex lock_;
     std::condition_variable condition_;
     std::atomic_bool isNeedStop_ = false;
+    std::once_flag flag_;
+    std::set<std::string> taskNameSet_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

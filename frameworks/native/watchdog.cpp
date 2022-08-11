@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Huawei Device Co., Ltd.
+ * Copyright (c) 2021-2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,28 @@ Watchdog::~Watchdog()
 
 int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler)
 {
-    return WatchdogInner::GetInstance().AddThread(name, handler);
+    constexpr uint64_t WATCHDOG_TIMEVAL = 30000;
+    return WatchdogInner::GetInstance().AddThread(name, handler, WATCHDOG_TIMEVAL);
+}
+
+int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,  uint64_t interval)
+{
+    return WatchdogInner::GetInstance().AddThread(name, handler, interval);
+}
+
+void Watchdog::RunOnshotTask(const std::string& name, Task&& task, uint64_t delay)
+{
+    return WatchdogInner::GetInstance().RunOnshotTask(name, std::move(task), delay);
+}
+
+void Watchdog::RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay)
+{
+    return WatchdogInner::GetInstance().RunPeriodicalTask(name, std::move(task), interval, delay);
+}
+
+void Watchdog::StopWatchdog()
+{
+    return WatchdogInner::GetInstance().StopWatchdog();
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
