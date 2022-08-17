@@ -31,7 +31,7 @@ public:
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval);
     WatchdogTask() {};
     ~WatchdogTask() {};
-    void Run();
+    void Run(uint64_t now);
     void RunHandlerCheckerTask();
     void SendEvent(const std::string &msg) const;
 

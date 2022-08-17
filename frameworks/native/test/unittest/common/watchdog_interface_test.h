@@ -26,6 +26,7 @@ public:
     static void TearDownTestCase(void);
     void SetUp();
     void TearDown();
+    void DoAddWatchThread();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

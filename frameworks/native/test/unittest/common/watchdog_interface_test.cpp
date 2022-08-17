@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <string>
+#include <thread>
 
 #include "event_handler.h"
 #include "watchdog.h"
@@ -25,6 +26,18 @@ using namespace testing::ext;
 using namespace OHOS::AppExecFwk;
 namespace OHOS {
 namespace HiviewDFX {
+class TestEventHandler : public EventHandler {
+public:
+    explicit TestEventHandler(const std::shared_ptr<EventRunner> &runner)
+        : EventHandler(runner) {};
+    ~TestEventHandler() {};
+    void ProcessEvent(const InnerEvent::Pointer &event)
+    {
+        count++;
+    }
+    int count;
+};
+
 constexpr int PERIODICAL_TASK_TIME = 2000;
 constexpr int TOTAL_WAIT_TIME = 11;
 constexpr int EXPECT_RUN_TIMES = 5;
@@ -44,17 +57,14 @@ void WatchdogInterfaceTest::TearDown(void)
 {
 }
 
-class TestEventHandler : public EventHandler {
-public:
-    explicit TestEventHandler(const std::shared_ptr<EventRunner> &runner)
-        : EventHandler(runner) {};
-    ~TestEventHandler() {};
-    void ProcessEvent(const InnerEvent::Pointer &event)
-    {
-        count++;
-    }
-    int count;
-};
+int g_ret = 0;
+void WatchdogInterfaceTest::DoAddWatchThread()
+{
+    auto runner = EventRunner::Create("test_thread");
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    g_ret += Watchdog::GetInstance().AddThread("DoAddWatchThread", handler);
+    handler.reset();
+}
 
 static inline void Sleep(int second)
 {
@@ -62,6 +72,36 @@ static inline void Sleep(int second)
     while (left > 0) {
         left = sleep(left);
     }
+}
+
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_003, TestSize.Level1)
+{
+    constexpr int BLOCK_TIME = 10;
+    constexpr int MAX_THREAD = 5;
+    std::vector<std::thread> threads(MAX_THREAD);
+    for (int i = 0; i < MAX_THREAD; i++) {
+        threads[i] = std::thread(&WatchdogInterfaceTest::DoAddWatchThread, this);
+    }
+
+    for (auto& th : threads) {
+        th.join();
+    }
+    ASSERT_EQ(g_ret, -4); // -4 : -1 * 4
+    Sleep(BLOCK_TIME);
+}
+
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_004, TestSize.Level1)
+{
+    constexpr int BLOCK_TIME = 10;
+    constexpr int CHECK_PERIOD = 2000;
+    auto runner = EventRunner::Create("test_thread");
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    int ret = Watchdog::GetInstance().AddThread("BLOCK2S", handler, CHECK_PERIOD);
+    ASSERT_EQ(ret, 0);
+
+    auto taskFunc = []() { Sleep(BLOCK_TIME); };
+    Watchdog::GetInstance().RunOnshotTask("block", taskFunc);
+    Sleep(BLOCK_TIME);
 }
 
 /**

@@ -15,7 +15,9 @@
 
 #include "watchdog_task.h"
 
+#include <cinttypes>
 #include <ctime>
+
 #include <unistd.h>
 
 #include "hisysevent.h"
@@ -40,8 +42,18 @@ WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64
     isTaskScheduled = false;
 }
 
-void WatchdogTask::Run()
+void WatchdogTask::Run(uint64_t now)
 {
+    constexpr int RESET_RATIO = 2;
+    if ((checkInterval != 0) && (now - nextTickTime > (RESET_RATIO * checkInterval))) {
+        XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."
+            "now:%{public}" PRIu64 " expect:%{public}" PRIu64 " interval:%{public}" PRIu64 "",
+            now, nextTickTime, checkInterval);
+        nextTickTime = now;
+        isTaskScheduled = false;
+        return;
+    }
+
     if (task != nullptr) {
         task();
     } else {

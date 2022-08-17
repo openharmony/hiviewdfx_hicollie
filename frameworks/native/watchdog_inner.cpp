@@ -177,7 +177,7 @@ bool WatchdogInner::Start()
         WatchdogTask task;
         uint64_t leftTimeMill = FetchNextTask(now, task);
         if (leftTimeMill == 0) {
-            task.Run();
+            task.Run(now);
             ReInsertTaskIfNeed(task);
             continue;
         } else {
