@@ -17,6 +17,7 @@
 
 #include <cinttypes>
 #include <ctime>
+#include <thread>
 
 #include <unistd.h>
 
@@ -25,8 +26,9 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval)
-    : name(name), task(nullptr)
+WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
+    TimeOutCallback timeOutCallback, uint64_t interval)
+    : name(name), task(nullptr), timeOutCallback(timeOutCallback)
 {
     checker = std::make_shared<HandlerChecker>(name, handler);
     checkInterval = interval;
@@ -35,7 +37,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval)
-    : name(name), task(std::move(task)), checker(nullptr)
+    : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr)
 {
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
@@ -78,16 +80,22 @@ void WatchdogTask::RunHandlerCheckerTask()
     }
 }
 
-void WatchdogTask::SendEvent(const std::string &msg) const
+void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
 {
-    pid_t pid = getpid();
-    gid_t gid = getgid();
+    int32_t pid = getpid();
+    int32_t gid = getgid();
+    int32_t uid = getuid();
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg;
-    HiSysEvent::Write("FRAMEWORK", "SERVICE_BLOCK", HiSysEvent::EventType::FAULT,
-        "PID", pid, "TGID", gid, "MSG", sendMsg);
-    XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_BLOCK], msg=%{public}s", msg.c_str());
+    HiSysEvent::Write("FRAMEWORK", eventName, HiSysEvent::EventType::FAULT,
+        "PID", pid,
+        "TGID", gid,
+        "UID", uid,
+        "MODULE_NAME", name,
+        "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg);
+    XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
 }
 
 int WatchdogTask::EvaluateCheckerState()
@@ -98,12 +106,22 @@ int WatchdogTask::EvaluateCheckerState()
     } else if (waitState == CheckStatus::WAITED_HALF) {
         XCOLLIE_LOGI("Watchdog half-block happened, send event");
         std::string description = GetBlockDescription(checkInterval / 1000); // 1s = 1000ms
-        SendEvent(description);
+        if (timeOutCallback != nullptr) {
+            timeOutCallback(name, waitState);
+        } else {
+            SendEvent(description, "SERVICE_WARNING");
+        }
     } else {
         XCOLLIE_LOGI("Watchdog happened, send event twice, and skip exiting process");
         std::string description = GetBlockDescription(checkInterval / 1000) +
             ", report twice instead of exiting process."; // 1s = 1000ms
-        SendEvent(description);
+        if (timeOutCallback != nullptr) {
+            timeOutCallback(name, waitState);
+        } else {
+            SendEvent(description, "SERVICE_BLOCK");
+            std::this_thread::sleep_for(std::chrono::seconds(3)); // after 3s exit
+            exit(0);
+        }
     }
     return waitState;
 }

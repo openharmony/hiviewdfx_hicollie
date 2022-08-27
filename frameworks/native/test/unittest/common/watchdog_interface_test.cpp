@@ -130,7 +130,10 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_001, TestSize.Level1)
      * @tc.steps: step2. add handler to watchdog and check the hisysevent result
      * @tc.expected: step2. add handler to watchdog successfully
      */
-    int result = Watchdog::GetInstance().AddThread("TestBlock70s", handler);
+    auto timeOutCallback = [](const std::string &name, int waitState) {
+        printf("TestBlock70s time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
+    };
+    int result = Watchdog::GetInstance().AddThread("TestBlock70s", handler, timeOutCallback);
     ASSERT_EQ(result, 0);
 
     /**
@@ -167,8 +170,17 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
      * @tc.steps: step2. add handler to watchdog and check the hisysevent result
      * @tc.expected: step2. add handler to watchdog successfully
      */
-    int result = Watchdog::GetInstance().AddThread("TestBlock20", handler, CHECK_PERIOD);
+    auto timeOutCallback = [](const std::string &name, int waitState) {
+        printf("TestBlock20 time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
+    };
+    int result = Watchdog::GetInstance().AddThread("TestBlock20", handler, timeOutCallback, CHECK_PERIOD);
+
+    auto timeOutCallback1 = [](const std::string &name, int waitState) {
+        printf("TestBlock20_1 time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
+    };
+    int result2 = Watchdog::GetInstance().AddThread("TestBlock20_1", handler, timeOutCallback1, CHECK_PERIOD);
     ASSERT_EQ(result, 0);
+    ASSERT_EQ(result2, 0);
 
     /**
      * @tc.steps: step3. sleep a while until timeout

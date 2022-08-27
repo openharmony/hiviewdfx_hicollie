@@ -27,15 +27,15 @@ Watchdog::~Watchdog()
 {
 }
 
-int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler)
+int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
+    TimeOutCallback timeOutCallback, uint64_t interval)
 {
-    constexpr uint64_t WATCHDOG_TIMEVAL = 30000;
-    return WatchdogInner::GetInstance().AddThread(name, handler, WATCHDOG_TIMEVAL);
+    return WatchdogInner::GetInstance().AddThread(name, handler, timeOutCallback, interval);
 }
 
 int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,  uint64_t interval)
 {
-    return WatchdogInner::GetInstance().AddThread(name, handler, interval);
+    return WatchdogInner::GetInstance().AddThread(name, handler, nullptr, interval);
 }
 
 void Watchdog::RunOnshotTask(const std::string& name, Task&& task, uint64_t delay)

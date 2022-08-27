@@ -143,13 +143,19 @@ bool XCollieInner::IsCallbackLimit(unsigned int flag)
 
 void XCollieInner::SendEvent(int tid, const std::string &timerName, const std::string &keyMsg) const
 {
-    pid_t pid = getpid();
-    gid_t gid = getgid();
+    int32_t pid = getpid();
+    int32_t gid = getgid();
+    int32_t uid = getuid();
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
         "timeout timer: " + timerName + "\n" + keyMsg;
     HiSysEvent::Write("FRAMEWORK", "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
-        "PID", pid, "TGID", gid, "MSG", sendMsg);
+        "PID", pid,
+        "TGID", gid,
+        "UID", uid,
+        "MODULE_NAME", timerName,
+        "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg);
     XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_TIMEOUT], msg=%s", keyMsg.c_str());
 }
 
