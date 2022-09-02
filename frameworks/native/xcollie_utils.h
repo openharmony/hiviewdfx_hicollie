@@ -18,6 +18,7 @@
 
 #include <chrono>
 #include <string>
+#include <fstream>
 
 #include "hilog/log.h"
 
@@ -30,11 +31,9 @@ static constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0x
 #define XCOLLIE_LOGI(...) (void)OHOS::HiviewDFX::HiLog::Info(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGD(...) (void)OHOS::HiviewDFX::HiLog::Debug(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 
-inline uint64_t GetCurrentTickMillseconds()
-{
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-}
+uint64_t GetCurrentTickMillseconds();
+
+std::string GetSelfProcName();
 } // end of HiviewDFX
 } // end of OHOS
 #endif

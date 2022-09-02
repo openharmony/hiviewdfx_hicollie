@@ -21,21 +21,26 @@
 #include "singleton.h"
 
 using Task = std::function<void()>;
+using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;
 namespace OHOS {
 namespace HiviewDFX {
 class Watchdog : public Singleton<Watchdog> {
     DECLARE_SINGLETON(Watchdog);
+    static const uint64_t WATCHDOG_TIMEVAL = 30000;
 public:
 
     /**
-     * Add current handler to watchdog thread with default check interval 30 seconds
+     * Add handler to watchdog thread with customized check interval
      *
-     * @param name of current thread
-     * @param current EventHandler
+     * @param name, the name of handler check task
+     * @param handler, the handler to be checked periodically
+     * @param timeOutCallback, callback when timeout
+     * @param interval, the period in millisecond
      * @return 0 if added
      *
      */
-    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler);
+    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
+        TimeOutCallback timeOutCallback = nullptr, uint64_t interval = WATCHDOG_TIMEVAL);
 
     /**
      * Add handler to watchdog thread with customized check interval

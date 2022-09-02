@@ -36,13 +36,8 @@ WatchdogInner::~WatchdogInner()
     Stop();
 }
 
-bool operator<(const WatchdogTask& lhs, const WatchdogTask& rhs)
-{
-    return lhs.nextTickTime > rhs.nextTickTime;
-};
-
 int WatchdogInner::AddThread(const std::string &name,
-    std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval)
+    std::shared_ptr<AppExecFwk::EventHandler> handler, TimeOutCallback timeOutCallback, uint64_t interval)
 {
     if (name.empty() || handler == nullptr) {
         XCOLLIE_LOGE("Add thread fail, invalid args!");
@@ -51,7 +46,7 @@ int WatchdogInner::AddThread(const std::string &name,
 
     XCOLLIE_LOGI("Add thread %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    if (!InsertWatchdogTaskLocked(name, WatchdogTask(name, handler, interval))) {
+    if (!InsertWatchdogTaskLocked(name, WatchdogTask(name, handler, timeOutCallback, interval))) {
         return -1;
     }
     return 0;
@@ -141,7 +136,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         while (!checkerQueue_.empty()) {
             checkerQueue_.pop();
         }
-        return DEFAULT_TIMEOUT;
+        return 0;
     }
 
     if (checkerQueue_.empty()) {

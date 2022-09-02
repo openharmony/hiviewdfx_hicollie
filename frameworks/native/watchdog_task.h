@@ -23,22 +23,39 @@
 #include "handler_checker.h"
 
 using Task = std::function<void()>;
+using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;
 namespace OHOS {
 namespace HiviewDFX {
 class WatchdogTask {
 public:
-    WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval);
+    WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
+        TimeOutCallback timeOutCallback, uint64_t interval);
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval);
-    WatchdogTask() {};
+    WatchdogTask()
+        : name(""),
+          task(nullptr),
+          timeOutCallback(nullptr),
+          checker(nullptr),
+          checkInterval(0),
+          nextTickTime(0),
+          isTaskScheduled(false) {};
     ~WatchdogTask() {};
+
+    bool operator<(const WatchdogTask &obj) const
+    {
+        // as we use std::priority_queue, the event with smaller target time will be in the top of the queue
+        return (this->nextTickTime > obj.nextTickTime);
+    }
+
     void Run(uint64_t now);
     void RunHandlerCheckerTask();
-    void SendEvent(const std::string &msg) const;
+    void SendEvent(const std::string &msg, const std::string &eventName) const;
 
     int EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
     std::string name;
     Task task;
+    TimeOutCallback timeOutCallback;
     std::shared_ptr<HandlerChecker> checker;
     uint64_t checkInterval;
     uint64_t nextTickTime;
