@@ -52,7 +52,7 @@ int WatchdogInner::AddThread(const std::string &name,
     return 0;
 }
 
-void WatchdogInner::RunOnshotTask(const std::string& name, Task&& task, uint64_t delay)
+void WatchdogInner::RunOneShotTask(const std::string& name, Task&& task, uint64_t delay)
 {
     if (name.empty() || task == nullptr) {
         XCOLLIE_LOGE("Add task fail, invalid args!");
@@ -61,7 +61,7 @@ void WatchdogInner::RunOnshotTask(const std::string& name, Task&& task, uint64_t
 
     XCOLLIE_LOGI("Add oneshot task %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0));
+    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0, true));
 }
 
 void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay)
@@ -73,7 +73,7 @@ void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint
 
     XCOLLIE_LOGI("Add periodical task %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, interval));
+    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, interval, false));
 }
 
 bool WatchdogInner::IsTaskExistLocked(const std::string& name)
@@ -97,7 +97,7 @@ bool WatchdogInner::IsExceedMaxTaskLocked()
 
 bool WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task)
 {
-    if (IsTaskExistLocked(name)) {
+    if (!task.isOneshotTask && IsTaskExistLocked(name)) {
         XCOLLIE_LOGI("Task with %{public}s already exist, failed to insert.", name.c_str());
         return false;
     }
@@ -108,7 +108,9 @@ bool WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, WatchdogTa
     }
 
     checkerQueue_.push(std::move(task));
-    taskNameSet_.insert(name);
+    if (!task.isOneshotTask) {
+        taskNameSet_.insert(name);
+    }
     CreateWatchdogThreadIfNeed();
     condition_.notify_all();
     return true;

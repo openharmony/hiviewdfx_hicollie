@@ -30,7 +30,7 @@ class WatchdogTask {
 public:
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
-    WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval);
+    WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot);
     WatchdogTask()
         : name(""),
           task(nullptr),
@@ -38,7 +38,8 @@ public:
           checker(nullptr),
           checkInterval(0),
           nextTickTime(0),
-          isTaskScheduled(false) {};
+          isTaskScheduled(false),
+          isOneshotTask(false) {};
     ~WatchdogTask() {};
 
     bool operator<(const WatchdogTask &obj) const
@@ -60,6 +61,7 @@ public:
     uint64_t checkInterval;
     uint64_t nextTickTime;
     bool isTaskScheduled;
+    bool isOneshotTask;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
