@@ -38,9 +38,9 @@ int Watchdog::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::Eve
     return WatchdogInner::GetInstance().AddThread(name, handler, nullptr, interval);
 }
 
-void Watchdog::RunOnshotTask(const std::string& name, Task&& task, uint64_t delay)
+void Watchdog::RunOneShotTask(const std::string& name, Task&& task, uint64_t delay)
 {
-    return WatchdogInner::GetInstance().RunOnshotTask(name, std::move(task), delay);
+    return WatchdogInner::GetInstance().RunOneShotTask(name, std::move(task), delay);
 }
 
 void Watchdog::RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay)

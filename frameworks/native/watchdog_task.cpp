@@ -34,14 +34,16 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isTaskScheduled = false;
+    isOneshotTask = false;
 }
 
-WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval)
+WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr)
 {
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
     isTaskScheduled = false;
+    isOneshotTask = isOneshot;
 }
 
 void WatchdogTask::Run(uint64_t now)

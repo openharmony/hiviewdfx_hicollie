@@ -36,7 +36,7 @@ public:
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval);
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
-    void RunOnshotTask(const std::string& name, Task&& task, uint64_t delay);
+    void RunOneShotTask(const std::string& name, Task&& task, uint64_t delay);
     void RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay);
     void StopWatchdog();
 

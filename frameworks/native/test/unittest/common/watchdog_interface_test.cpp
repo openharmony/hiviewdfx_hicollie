@@ -100,7 +100,7 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_004, TestSize.Level1)
     ASSERT_EQ(ret, 0);
 
     auto taskFunc = []() { Sleep(BLOCK_TIME); };
-    Watchdog::GetInstance().RunOnshotTask("block", taskFunc);
+    Watchdog::GetInstance().RunOneShotTask("block", taskFunc);
     Sleep(BLOCK_TIME);
 }
 
@@ -207,8 +207,8 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogRunTaskTest_001, TestSize.Level1)
     auto task1Func = [&task1Result]() { task1Result = 1; };
     int task2Result = 0;
     auto task2Func = [&task2Result]() { task2Result = 1; };
-    Watchdog::GetInstance().RunOnshotTask("task1", task1Func);
-    Watchdog::GetInstance().RunOnshotTask("task2", task2Func);
+    Watchdog::GetInstance().RunOneShotTask("task1", task1Func);
+    Watchdog::GetInstance().RunOneShotTask("task2", task2Func);
     Sleep(ONESHOT_TASK_TIME);
     ASSERT_EQ(task1Result, 1);
     ASSERT_EQ(task2Result, 1);
@@ -219,7 +219,7 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogRunTaskTest_001, TestSize.Level1)
      */
     int delayedTaskResult = 0;
     auto delayedTaskFunc = [&delayedTaskResult]() { delayedTaskResult = 1; };
-    Watchdog::GetInstance().RunOnshotTask("task3", delayedTaskFunc, DELAYED_TASK_TIME_MILLISECOND);
+    Watchdog::GetInstance().RunOneShotTask("task3", delayedTaskFunc, DELAYED_TASK_TIME_MILLISECOND);
     ASSERT_EQ(delayedTaskResult, 0);
     Sleep(ONESHOT_TASK_TIME + DELAYED_TASK_TIME);
     ASSERT_EQ(delayedTaskResult, 1);
