@@ -61,7 +61,7 @@ public:
      * @param delay, delay a few millisecond to run the task
      *
      */
-    void RunOnshotTask(const std::string& name, Task&& task, uint64_t delay = 0);
+    void RunOneShotTask(const std::string& name, Task&& task, uint64_t delay = 0);
 
     /**
      * Run a periodical task in shared watchdog thread
