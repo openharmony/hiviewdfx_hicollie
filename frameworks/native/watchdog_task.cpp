@@ -122,7 +122,7 @@ int WatchdogTask::EvaluateCheckerState()
         } else {
             SendEvent(description, "SERVICE_BLOCK");
             std::this_thread::sleep_for(std::chrono::seconds(3)); // after 3s exit
-            exit(0);
+            _exit(0);
         }
     }
     return waitState;

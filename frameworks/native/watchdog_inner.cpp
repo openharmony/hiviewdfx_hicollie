@@ -58,8 +58,6 @@ void WatchdogInner::RunOneShotTask(const std::string& name, Task&& task, uint64_
         XCOLLIE_LOGE("Add task fail, invalid args!");
         return;
     }
-
-    XCOLLIE_LOGI("Add oneshot task %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0, true));
 }
