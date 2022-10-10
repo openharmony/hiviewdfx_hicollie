@@ -36,11 +36,23 @@ WatchdogInner::~WatchdogInner()
     Stop();
 }
 
+static bool IsInAppspwan()
+{
+    if (getuid() == 0 && GetSelfProcName().find("appspawn") != std::string::npos) {
+        return true;
+    }
+    return false;
+}
+
 int WatchdogInner::AddThread(const std::string &name,
     std::shared_ptr<AppExecFwk::EventHandler> handler, TimeOutCallback timeOutCallback, uint64_t interval)
 {
     if (name.empty() || handler == nullptr) {
         XCOLLIE_LOGE("Add thread fail, invalid args!");
+        return -1;
+    }
+
+    if (IsInAppspwan()) {
         return -1;
     }
 
@@ -58,6 +70,11 @@ void WatchdogInner::RunOneShotTask(const std::string& name, Task&& task, uint64_
         XCOLLIE_LOGE("Add task fail, invalid args!");
         return;
     }
+
+    if (IsInAppspwan()) {
+        return;
+    }
+
     std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0, true));
 }
@@ -66,6 +83,10 @@ void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint
 {
     if (name.empty() || task == nullptr) {
         XCOLLIE_LOGE("Add task fail, invalid args!");
+        return;
+    }
+
+    if (IsInAppspwan()) {
         return;
     }
 
@@ -136,7 +157,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         while (!checkerQueue_.empty()) {
             checkerQueue_.pop();
         }
-        return 0;
+        return DEFAULT_TIMEOUT;
     }
 
     if (checkerQueue_.empty()) {
@@ -167,6 +188,7 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
 bool WatchdogInner::Start()
 {
     (void)pthread_setname_np(pthread_self(), "dfx_watchdog");
+    XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", gettid());
     while (!isNeedStop_) {
         uint64_t now = GetCurrentTickMillseconds();
         WatchdogTask task;
@@ -175,6 +197,8 @@ bool WatchdogInner::Start()
             task.Run(now);
             ReInsertTaskIfNeed(task);
             continue;
+        } else if (isNeedStop_) {
+            break;
         } else {
             std::unique_lock<std::mutex> lock(lock_);
             condition_.wait_for(lock, std::chrono::milliseconds(leftTimeMill));
