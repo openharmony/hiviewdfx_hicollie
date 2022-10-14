@@ -187,7 +187,7 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
 
 bool WatchdogInner::Start()
 {
-    (void)pthread_setname_np(pthread_self(), "dfx_watchdog");
+    (void)pthread_setname_np(pthread_self(), "DfxWatchdog");
     XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", gettid());
     while (!isNeedStop_) {
         uint64_t now = GetCurrentTickMillseconds();

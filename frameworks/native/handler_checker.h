@@ -19,6 +19,7 @@
 #include <atomic>
 #include <string>
 
+#include "dumper.h"
 #include "event_handler.h"
 
 namespace OHOS {
@@ -39,12 +40,22 @@ public:
     void ScheduleCheck();
     int GetCheckState();
     std::shared_ptr<AppExecFwk::EventHandler> GetHandler() const;
+    std::string GetDumpInfo();
 
 private:
     std::string name_;
     std::shared_ptr<AppExecFwk::EventHandler> handler_;
     std::atomic<bool> isCompleted_ = true;
     bool taskSlow = false;
+};
+
+class HandlerDumper : public AppExecFwk::Dumper {
+public:
+    void Dump(const std::string &message) override;
+    std::string GetTag() override;
+    std::string GetDumpInfo();
+private:
+    std::string dumpInfo_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
