@@ -14,6 +14,7 @@
  */
 
 #include "handler_checker.h"
+#include "xcollie_utils.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -22,11 +23,14 @@ void HandlerChecker::ScheduleCheck()
     if (!isCompleted_ || handler_ == nullptr) {
         return;
     }
+
     isCompleted_.store(false);
     auto f = [this] () {
         this->isCompleted_.store(true);
     };
-    handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE);
+    if (!handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
+        XCOLLIE_LOGE("XCollie Watchdog Task PostTask False.");
+    }
 }
 
 int HandlerChecker::GetCheckState()
@@ -44,9 +48,37 @@ int HandlerChecker::GetCheckState()
     }
 }
 
+std::string HandlerChecker::GetDumpInfo()
+{
+    std::string ret;
+    if (handler_ != nullptr) {
+        HandlerDumper handlerDumper;
+        handler_->Dump(handlerDumper);
+        ret = handlerDumper.GetDumpInfo();
+    }
+    return ret;
+}
+
+
 std::shared_ptr<AppExecFwk::EventHandler> HandlerChecker::GetHandler() const
 {
     return handler_;
+}
+
+void HandlerDumper::Dump(const std::string &message)
+{
+    XCOLLIE_LOGD("message is %{public}s", message.c_str());
+    dumpInfo_ += message;
+}
+
+std::string HandlerDumper::GetTag()
+{
+    return "";
+}
+
+std::string HandlerDumper::GetDumpInfo()
+{
+    return dumpInfo_;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

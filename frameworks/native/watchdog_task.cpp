@@ -89,7 +89,8 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     int32_t uid = getuid();
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
-        "\n" + msg;
+        "\n" + msg + "\n";
+    sendMsg += checker->GetDumpInfo();
     HiSysEvent::Write("FRAMEWORK", eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
