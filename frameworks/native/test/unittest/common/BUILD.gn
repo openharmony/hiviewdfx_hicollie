@@ -62,11 +62,36 @@ ohos_unittest("WatchdogUnitTest") {
   ]
 }
 
+ohos_unittest("HandlerCheckerTest") {
+  module_out_path = module_output_path
+  include_dirs = [
+    ".",
+    "${hicollie_part_path}/frameworks/native/",
+    "//commonlibrary/c_utils/base/include",
+  ]
+  sources = [ "handler_checker_test.cpp" ]
+
+  configs = [ ":module_private_config" ]
+
+  deps = [
+    "${hicollie_part_path}/frameworks/native:libhicollie_source",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "eventhandler:libeventhandler",
+    "hicollie_native:libhicollie",
+    "hilog_native:libhilog",
+  ]
+}
+
 ###############################################################################
 group("unittest") {
   testonly = true
   deps = [
     # deps file
+    ":HandlerCheckerTest",
     ":WatchdogUnitTest",
     ":XCollieUnitTest",
   ]
