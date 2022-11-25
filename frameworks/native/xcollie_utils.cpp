@@ -15,6 +15,7 @@
 
 #include "xcollie_utils.h"
 
+#include <algorithm>
 namespace OHOS {
 namespace HiviewDFX {
 uint64_t GetCurrentTickMillseconds()
@@ -23,11 +24,32 @@ uint64_t GetCurrentTickMillseconds()
         std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
+bool IsFileNameFormat(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return false;
+    }
+
+    if (c >= 'a' && c <= 'z') {
+        return false;
+    }
+
+    if (c >= 'A' && c <= 'Z') {
+        return false;
+    }
+
+    if (c == '.' || c == '-' || c == '_') {
+        return false;
+    }
+
+    return true;
+}
+
 std::string GetSelfProcName()
 {
     constexpr uint16_t READ_SIZE = 128;
     std::ifstream fin;
-    fin.open("/proc/self/cmdline", std::ifstream::in);
+    fin.open("/proc/self/comm", std::ifstream::in);
     if (!fin.is_open()) {
         XCOLLIE_LOGE("fin.is_open() false");
         return "";
@@ -35,7 +57,10 @@ std::string GetSelfProcName()
     char readStr[READ_SIZE] = {'\0'};
     fin.getline(readStr, READ_SIZE - 1);
     fin.close();
-    return std::string(readStr);
+
+    std::string ret = std::string(readStr);
+    ret.erase(std::remove_if(ret.begin(), ret.end(), IsFileNameFormat), ret.end());
+    return ret;
 }
 } // end of HiviewDFX
 } // end of OHOS
