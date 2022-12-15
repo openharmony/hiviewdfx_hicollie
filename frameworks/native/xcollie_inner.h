@@ -16,7 +16,7 @@
 #ifndef RELIABILITY_XCOLLIE_INNER_H
 #define RELIABILITY_XCOLLIE_INNER_H
 
-#include <time.h>
+#include <ctime>
 
 #include <condition_variable>
 #include <functional>
@@ -40,8 +40,8 @@ enum class CheckStatus {
     WAITED_HALF = 2,
 };
 
-static const std::string XCOLLIE_CHECKER_NAME = "XCollie";
-static const std::string XCOLLIE_LOOP_NAME = "XCollieLoop";
+const std::string XCOLLIE_CHECKER_NAME = "XCollie";
+const std::string XCOLLIE_LOOP_NAME = "XCollieLoop";
 
 class XCollieInner : public Singleton<XCollieInner> {
     DECLARE_SINGLETON(XCollieInner);

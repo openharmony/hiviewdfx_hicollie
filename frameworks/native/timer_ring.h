@@ -16,7 +16,7 @@
 #ifndef RELIABILITY_XCOLLIE_TIMERRING_H
 #define RELIABILITY_XCOLLIE_TIMERRING_H
 
-#include <time.h>
+#include <ctime>
 
 #include <condition_variable>
 #include <functional>
@@ -55,19 +55,19 @@ struct TaskNode {
     struct TimerTask timerTask;
 };
 
-static const unsigned int MAX_XCOLLIE_SHIFT = 7;
-static const unsigned int COOKIE_SHIFT = 8;
-static const unsigned int MAX_XCOLLIE_NUM = (1 << MAX_XCOLLIE_SHIFT);
-static const unsigned int TIMER_RING_CHECK_INTERVAL = 1;
-static const unsigned int MAX_TIMERRING_SIZE = 60;
-static const unsigned int MAX_DELAY_COUNT = 3;
-static const unsigned int MILLI_SECONDS = 1000;
+const unsigned int MAX_XCOLLIE_SHIFT = 7;
+const unsigned int COOKIE_SHIFT = 8;
+const unsigned int MAX_XCOLLIE_NUM = (1 << MAX_XCOLLIE_SHIFT);
+const unsigned int TIMER_RING_CHECK_INTERVAL = 1;
+const unsigned int MAX_TIMERRING_SIZE = 60;
+const unsigned int MAX_DELAY_COUNT = 3;
+const unsigned int MILLI_SECONDS = 1000;
 
 #define WRAP_SEQ(id) ((id) & ((1 << COOKIE_SHIFT) - 1))
 #define CALC_RING_POS(timeout) ((ringPos_ + (((timeout) - 1) / TIMER_RING_CHECK_INTERVAL + 1)) % MAX_TIMERRING_SIZE)
 #define CALC_RING_ROUND(timeout) (((timeout) / TIMER_RING_CHECK_INTERVAL) / MAX_TIMERRING_SIZE)
 
-static const std::string XCOLLIE_THREAD_NAME = "XCollieThread";
+const std::string XCOLLIE_THREAD_NAME = "XCollieThread";
 class TimerRing : public Thread {
 public:
     TimerRing();

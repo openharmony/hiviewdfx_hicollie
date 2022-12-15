@@ -24,7 +24,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-static constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0xD002D06, "XCollie"};
+constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0xD002D06, "XCollie"};
 #define XCOLLIE_LOGF(...) (void)OHOS::HiviewDFX::HiLog::Fatal(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) (void)OHOS::HiviewDFX::HiLog::Error(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGW(...) (void)OHOS::HiviewDFX::HiLog::Warn(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
