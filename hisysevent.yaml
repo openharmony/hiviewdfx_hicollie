@@ -15,27 +15,27 @@ domain: FRAMEWORK
 
 SERVICE_TIMEOUT:
   __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: timer timeout}
-  PID: {type: INT32, desc: pid}
-  TGID: {type: INT32, desc: gid}
-  UID: {type: INT32, desc: uid}
-  MODULE_NAME: {type: STRING, desc: package name}
+  PID: {type: INT32, desc: failure process pid}
+  TGID: {type: INT32, desc: failure process gid}
+  UID: {type: INT32, desc: failure process uid}
+  MODULE_NAME: {type: STRING, desc: failure module name}
   PROCESS_NAME: {type: STRING, desc: process name}
   MSG: {type: STRING, desc: event message}
 
 SERVICE_BLOCK:
   __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: watchdog timeout}
-  PID: {type: INT32, desc: pid}
-  TGID: {type: INT32, desc: gid}
-  UID: {type: INT32, desc: uid}
-  MODULE_NAME: {type: STRING, desc: package name}
+  PID: {type: INT32, desc: failure process pid}
+  TGID: {type: INT32, desc: failure process gid}
+  UID: {type: INT32, desc: failure process uid}
+  MODULE_NAME: {type: STRING, desc: failure module name}
   PROCESS_NAME: {type: STRING, desc: process name}
   MSG: {type: STRING, desc: event message}
 
 SERVICE_WARNING:
   __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: watchdog timeout}
-  PID: {type: INT32, desc: pid}
-  TGID: {type: INT32, desc: gid}
-  UID: {type: INT32, desc: uid}
-  MODULE_NAME: {type: STRING, desc: package name}
+  PID: {type: INT32, desc: failure process pid}
+  TGID: {type: INT32, desc: failure process gid}
+  UID: {type: INT32, desc: failure process uid}
+  MODULE_NAME: {type: STRING, desc: failure module name}
   PROCESS_NAME: {type: STRING, desc: process name}
   MSG: {type: STRING, desc: event message}
