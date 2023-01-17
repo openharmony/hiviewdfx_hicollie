@@ -149,7 +149,7 @@ void XCollieInner::SendEvent(int tid, const std::string &timerName, const std::s
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
         "timeout timer: " + timerName + "\n" + keyMsg;
-    HiSysEvent::Write("FRAMEWORK", "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
+    HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
         "UID", uid,
