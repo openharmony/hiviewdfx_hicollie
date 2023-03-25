@@ -169,6 +169,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         return queuedTask.nextTickTime - now;
     }
 
+    XCOLLIE_LOGD("Watchdog:start in %{public}s!", queuedTask.name.c_str());
     task = queuedTask;
     checkerQueue_.pop();
     return 0;
@@ -196,6 +197,7 @@ bool WatchdogInner::Start()
         if (leftTimeMill == 0) {
             task.Run(now);
             ReInsertTaskIfNeed(task);
+            XCOLLIE_LOGD("Watchdog:over in %{public}s!", task.name.c_str());
             continue;
         } else if (isNeedStop_) {
             break;
