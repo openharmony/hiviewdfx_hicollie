@@ -20,15 +20,39 @@
 
 #include <pthread.h>
 #include <unistd.h>
+#include <csignal>
+
+#include <securec.h>
 
 #include "hisysevent.h"
 #include "xcollie_utils.h"
 
+typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
+extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
 namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
+namespace {
+void ThreadInfo(char *buf  __attribute__((unused)),
+                size_t len  __attribute__((unused)),
+                void* ucontext  __attribute__((unused)))
+{
+    if (ucontext == nullptr) {
+        XCOLLIE_LOGI("ThreadInfo ucontext == nullptr");
+        return;
+    }
+
+    auto ret = memcpy_s(buf, len, WatchdogInner::GetInstance().currentScene_.c_str(),
+        WatchdogInner::GetInstance().currentScene_.size());
+    if (ret != 0) {
+        XCOLLIE_LOGE("memcpy_s ret = %d!", ret);
+    }
+}
+}
+
 WatchdogInner::WatchdogInner()
 {
+    currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
 }
 
 WatchdogInner::~WatchdogInner()
@@ -169,7 +193,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         return queuedTask.nextTickTime - now;
     }
 
-    XCOLLIE_LOGD("Watchdog:start in %{public}s!", queuedTask.name.c_str());
+    currentScene_ = "thread DfxWatchdog: Current scenario is task name: " + queuedTask.name + "\n";
     task = queuedTask;
     checkerQueue_.pop();
     return 0;
@@ -190,6 +214,10 @@ bool WatchdogInner::Start()
 {
     (void)pthread_setname_np(pthread_self(), "DfxWatchdog");
     XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", gettid());
+    if (SetThreadInfoCallback != nullptr) {
+        SetThreadInfoCallback(ThreadInfo);
+        XCOLLIE_LOGI("Watchdog Set Thread Info Callback");
+    }
     while (!isNeedStop_) {
         uint64_t now = GetCurrentTickMillseconds();
         WatchdogTask task;
@@ -197,7 +225,7 @@ bool WatchdogInner::Start()
         if (leftTimeMill == 0) {
             task.Run(now);
             ReInsertTaskIfNeed(task);
-            XCOLLIE_LOGD("Watchdog:over in %{public}s!", task.name.c_str());
+            currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
             continue;
         } else if (isNeedStop_) {
             break;
@@ -205,6 +233,9 @@ bool WatchdogInner::Start()
             std::unique_lock<std::mutex> lock(lock_);
             condition_.wait_for(lock, std::chrono::milliseconds(leftTimeMill));
         }
+    }
+    if (SetThreadInfoCallback != nullptr) {
+        SetThreadInfoCallback(NULL);
     }
     return true;
 }

@@ -39,6 +39,7 @@ public:
     void RunOneShotTask(const std::string& name, Task&& task, uint64_t delay);
     void RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay);
     void StopWatchdog();
+    std::string currentScene_;
 
 private:
     bool Start();
