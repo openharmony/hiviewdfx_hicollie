@@ -15,6 +15,7 @@
 
 #include "watchdog_inner.h"
 
+#include <cerrno>
 #include <climits>
 #include <mutex>
 
@@ -212,7 +213,10 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
 
 bool WatchdogInner::Start()
 {
-    (void)pthread_setname_np(pthread_self(), "DfxWatchdog");
+    if (pthread_setname_np(pthread_self(), "DfxWatchdog") != 0) {
+        XCOLLIE_LOGW("Failed to set threadName for watchdog, errno:%d.", errno);
+    }
+
     XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", gettid());
     if (SetThreadInfoCallback != nullptr) {
         SetThreadInfoCallback(ThreadInfo);
