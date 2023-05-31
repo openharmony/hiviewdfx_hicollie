@@ -239,7 +239,7 @@ bool WatchdogInner::Start()
         }
     }
     if (SetThreadInfoCallback != nullptr) {
-        SetThreadInfoCallback(NULL);
+        SetThreadInfoCallback(nullptr);
     }
     return true;
 }
