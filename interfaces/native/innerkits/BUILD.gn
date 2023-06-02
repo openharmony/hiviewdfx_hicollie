@@ -22,7 +22,10 @@ ohos_shared_library("libhicollie") {
   public_configs = [ ":libhicollie_pub_config" ]
   deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
 
-  innerapi_tags = [ "chipsetsdk" ]
+  innerapi_tags = [
+    "chipsetsdk",
+    "platformsdk",
+  ]
   external_deps = [ "hilog_native:libhilog" ]
   part_name = "hicollie_native"
   subsystem_name = "hiviewdfx"
