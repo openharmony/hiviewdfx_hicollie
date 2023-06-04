@@ -19,6 +19,8 @@
 #include <string>
 #include <thread>
 
+#include "directory_ex.h"
+#include "file_ex.h"
 #include "event_handler.h"
 #include "watchdog.h"
 
@@ -187,6 +189,55 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
      * @tc.expected: step3. SERVICE_BLOCK event has been created and fired
      */
     Sleep(BLOCK_TIME);
+}
+
+/**
+ * @tc.name: Watchdog handler checker without timeout callback
+ * @tc.desc: Check whether SERVICE_BLOCK hisysevent is fired
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_005, TestSize.Level1)
+{
+    constexpr int BLOCK_TIME = 5;
+    constexpr int CHECK_PERIOD = 3000;
+    auto blockFunc = []() {
+        printf("before block 5s in %d\n", gettid());
+        Sleep(BLOCK_TIME);
+        printf("after block 5s in %d\n", gettid());
+    };
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    bool ret = handler->PostTask(blockFunc, "Block10", 0, EventQueue::Priority::LOW);
+    ASSERT_EQ(ret, true);
+
+    int result = Watchdog::GetInstance().AddThread("HiCollieTestBlock10_0", handler, nullptr, CHECK_PERIOD);
+    int result2 = Watchdog::GetInstance().AddThread("HiCollieTestBlock10_2", handler, nullptr, CHECK_PERIOD);
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(result2, 0);
+
+    Sleep(BLOCK_TIME);
+
+    std::string pid = std::to_string(getpid());
+    std::vector<std::string> dir;
+    GetDirFiles("/data/log/eventlog", dir);
+    std::string logName = "";
+    for (const auto& file : dir) {
+        printf("curFileName:%s\n", file.c_str());
+        if (file.find(pid) != std::string::npos) {
+            logName = file;
+            break;
+        }
+    }
+
+    ASSERT_FALSE(logName.empty());
+    std::string content;
+    if (!OHOS::LoadStringFromFile(logName, content)) {
+        FAIL();
+    }
+
+    if (content.find("eventhandler") == std::string::npos) {
+        FAIL();
+    }
 }
 
 /**
