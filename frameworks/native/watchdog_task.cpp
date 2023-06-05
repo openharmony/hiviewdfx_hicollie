@@ -21,6 +21,7 @@
 
 #include <unistd.h>
 
+#include "backtrace_local.h"
 #include "hisysevent.h"
 #include "xcollie_utils.h"
 
@@ -97,7 +98,8 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "UID", uid,
         "MODULE_NAME", name,
         "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg);
+        "MSG", sendMsg,
+        "STACK", GetProcessStacktrace());
     XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
 }
 
@@ -115,14 +117,21 @@ int WatchdogTask::EvaluateCheckerState()
             SendEvent(description, "SERVICE_WARNING");
         }
     } else {
-        XCOLLIE_LOGI("Watchdog happened, send event twice, and skip exiting process");
+        XCOLLIE_LOGI("Watchdog happened, send event twice.");
         std::string description = GetBlockDescription(checkInterval / 1000) +
             ", report twice instead of exiting process."; // 1s = 1000ms
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
             SendEvent(description, "SERVICE_BLOCK");
-            std::this_thread::sleep_for(std::chrono::seconds(3)); // after 3s exit
+            // peer binder log is collected in hiview asynchronously
+            // if blocked process exit early, binder blocked state will change
+            // thus delay exit and let hiview have time to collect log.
+            int leftTime = 3;
+            while (leftTime > 0) {
+                leftTime = sleep(leftTime);
+            }
+            XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
             _exit(0);
         }
     }
