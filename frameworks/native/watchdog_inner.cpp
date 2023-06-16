@@ -27,6 +27,7 @@
 
 #include "hisysevent.h"
 #include "xcollie_utils.h"
+#include "xcollie_define.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -52,6 +53,7 @@ void ThreadInfo(char *buf  __attribute__((unused)),
 }
 
 WatchdogInner::WatchdogInner()
+    : cntCallback_(0), timeCallback_(0)
 {
     currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
 }
@@ -104,6 +106,77 @@ void WatchdogInner::RunOneShotTask(const std::string& name, Task&& task, uint64_
     InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0, true));
 }
 
+int64_t WatchdogInner::RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func,
+    void *arg, unsigned int flag)
+{
+    if (name.empty() || timeout == 0) {
+        XCOLLIE_LOGE("Add XCollieTask fail, invalid args!");
+        return INVALID_ID;
+    }
+
+    if (IsInAppspwan()) {
+        return INVALID_ID;
+    }
+
+    std::unique_lock<std::mutex> lock(lock_);
+    return InsertWatchdogTaskLocked(name, WatchdogTask(name, timeout, func, arg, flag));
+}
+
+void WatchdogInner::RemoveXCollieTask(int64_t id)
+{
+    std::priority_queue<WatchdogTask> tmpQueue;
+    std::unique_lock<std::mutex> lock(lock_);
+    size_t size = checkerQueue_.size();
+    if (size == 0) {
+        XCOLLIE_LOGE("Remove XCollieTask %{public}lld fail, empty queue!", static_cast<long long>(id));
+        return;
+    }
+    while (!checkerQueue_.empty())
+    {
+        const WatchdogTask& task = checkerQueue_.top();
+        if (task.id != id) {
+            tmpQueue.push(task);
+        }
+        checkerQueue_.pop();
+    }
+    if (tmpQueue.size() == size) {
+        XCOLLIE_LOGE("Remove XCollieTask fail, can not find timer %{public}lld, size=%{public}zu!", static_cast<long long>(id), size);
+        return;
+    }
+    tmpQueue.swap(checkerQueue_);
+}
+
+bool WatchdogInner::UpdateXCollieTask(int64_t id, uint64_t timeout)
+{
+    WatchdogTask saveTask;
+    std::priority_queue<WatchdogTask> tmpQueue;
+    std::unique_lock<std::mutex> lock(lock_);
+    size_t size = checkerQueue_.size();
+    if (size == 0) {
+        XCOLLIE_LOGE("Remove XCollieTask %{public}lld fail, empty queue!", static_cast<long long>(id));
+        return false;
+    }
+    while (!checkerQueue_.empty())
+    {
+        const WatchdogTask& task = checkerQueue_.top();
+        if (task.id != id) {
+            saveTask = task;
+        } else {
+            tmpQueue.push(task);
+        }
+        checkerQueue_.pop();
+    }
+    if (tmpQueue.size() == size) {
+        XCOLLIE_LOGE("Remove XCollieTask fail, can not find timer %{public}lld, size=%{public}zu!", static_cast<long long>(id), size);
+        return false;
+    }
+    tmpQueue.swap(checkerQueue_);
+    saveTask.timeout = timeout;
+    saveTask.nextTickTime = GetCurrentTickMillseconds() + timeout;
+    saveTask.id = id;
+    return (InsertWatchdogTaskLocked(saveTask.name, std::move(saveTask)) > 0);
+}
+
 void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay)
 {
     if (name.empty() || task == nullptr) {
@@ -139,30 +212,48 @@ bool WatchdogInner::IsExceedMaxTaskLocked()
     return false;
 }
 
-bool WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task)
+int64_t WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task)
 {
     if (!task.isOneshotTask && IsTaskExistLocked(name)) {
         XCOLLIE_LOGI("Task with %{public}s already exist, failed to insert.", name.c_str());
-        return false;
+        return 0;
     }
 
     if (IsExceedMaxTaskLocked()) {
         XCOLLIE_LOGE("Exceed max watchdog task, failed to insert.");
-        return false;
+        return 0;
     }
-
+    int64_t id = task.id;
     checkerQueue_.push(std::move(task));
     if (!task.isOneshotTask) {
         taskNameSet_.insert(name);
     }
     CreateWatchdogThreadIfNeed();
     condition_.notify_all();
-    return true;
+
+    return id;
 }
 
 void WatchdogInner::StopWatchdog()
 {
     Stop();
+}
+
+bool WatchdogInner::IsCallbackLimit(unsigned int flag)
+{
+    bool ret = false;
+    time_t startTime = time(nullptr);
+    if (!(flag & XCOLLIE_FLAG_LOG)) {
+        return ret;
+    }
+    if (timeCallback_ + XCOLLIE_CALLBACK_TIMEWIN_MAX < startTime) {
+        timeCallback_ = startTime;
+    } else {
+        if (++cntCallback_ > XCOLLIE_CALLBACK_HISTORY_MAX) {
+            ret = true;
+        }
+    }
+    return ret;
 }
 
 void WatchdogInner::CreateWatchdogThreadIfNeed()

@@ -23,14 +23,19 @@
 
 #include "backtrace_local.h"
 #include "hisysevent.h"
+#include "watchdog_inner.h"
+#include "xcollie_define.h"
 #include "xcollie_utils.h"
 
 namespace OHOS {
 namespace HiviewDFX {
+int64_t WatchdogTask::curId = 0;
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
-    : name(name), task(nullptr), timeOutCallback(timeOutCallback)
+    : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr),
+      arg(nullptr), flag(0)
 {
+    id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
@@ -39,12 +44,52 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
-    : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr)
+    : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
+      arg(nullptr), flag(0)
 {
+    id = ++curId;
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
     isTaskScheduled = false;
     isOneshotTask = isOneshot;
+}
+
+WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag)
+    : name(name), task(nullptr), timeOutCallback(nullptr), checker(nullptr), timeout(timeout), func(std::move(func)),
+      arg(arg), flag(flag)
+{
+    id = ++curId;
+    checkInterval = 0;
+    nextTickTime = GetCurrentTickMillseconds() + timeout;
+    isTaskScheduled = false;
+    isOneshotTask =true;
+}
+
+void WatchdogTask::DoCallback()
+{
+    if (func) {
+        XCOLLIE_LOGE("XCollieInner::DoTimerCallback %{public}s callback", name.c_str());
+        func(arg);
+    }
+    if (WatchdogInner::GetInstance().IsCallbackLimit(flag)) {
+        XCOLLIE_LOGE("Too Many callback triggered in a short time, %{public}s skip", name.c_str());
+        return;
+    }
+    if (flag & XCOLLIE_FLAG_LOG) {
+        /* send to freezedetetor */
+        std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "s ago";
+        SendXCollieEvent(name, msg);
+    }
+    if (flag & XCOLLIE_FLAG_RECOVERY) {
+        XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(), static_cast<long long>(timeout));
+        std::thread exitFunc([]() {
+            XCOLLIE_LOGE("timeout, exit...");
+            _exit(1);
+        });
+        if (exitFunc.joinable()) {
+            exitFunc.detach();
+        }
+    }
 }
 
 void WatchdogTask::Run(uint64_t now)
@@ -59,7 +104,9 @@ void WatchdogTask::Run(uint64_t now)
         return;
     }
 
-    if (task != nullptr) {
+    if (timeout != 0) {
+        DoCallback();
+    } else if (task != nullptr) {
         task();
     } else {
         RunHandlerCheckerTask();
@@ -101,6 +148,24 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "MSG", sendMsg,
         "STACK", GetProcessStacktrace());
     XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
+}
+
+void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
+{
+    int32_t pid = getpid();
+    int32_t gid = getgid();
+    int32_t uid = getuid();
+    time_t curTime = time(nullptr);
+    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
+        "timeout timer: " + timerName + "\n" +keyMsg;
+    HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
+        "PID", pid,
+        "TGID", gid,
+        "UID", uid,
+        "MODULE_NAME", timerName,
+        "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg);
+    XCOLLIE_LOGI("send event [FRAMERWORK,SERVICE_TIMEOUT], msg=%{public}s", keyMsg.c_str()); 
 }
 
 int WatchdogTask::EvaluateCheckerState()

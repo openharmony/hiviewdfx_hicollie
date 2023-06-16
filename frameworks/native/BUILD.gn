@@ -28,12 +28,10 @@ config("hicollie_include") {
 ohos_source_set("libhicollie_source") {
   sources = [
     "handler_checker.cpp",
-    "timer_ring.cpp",
     "watchdog.cpp",
     "watchdog_inner.cpp",
     "watchdog_task.cpp",
     "xcollie.cpp",
-    "xcollie_inner.cpp",
     "xcollie_utils.cpp",
   ]
   configs = [ ":hicollie_include" ]

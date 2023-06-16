@@ -40,7 +40,6 @@
                         "header_base": "//base/hiviewdfx/hicollie/interfaces/native/innerkits/include",
                         "header_files": [
                             "xcollie/xcollie.h",
-                            "xcollie/xcollie_checker.h",
                             "xcollie/xcollie_define.h",
                             "xcollie/watchdog.h"
                         ]

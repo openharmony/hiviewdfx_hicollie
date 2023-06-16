@@ -17,11 +17,12 @@
 
 #include <future>
 
-#include "xcollie_inner.h"
 #include "xcollie_utils.h"
+#include "watchdog_inner.h"
 
 namespace OHOS {
 namespace HiviewDFX {
+constexpr uint64_t TO_NANOSECOND_MULTPLE = 1000;
 XCollie::XCollie()
 {
 }
@@ -29,25 +30,20 @@ XCollie::~XCollie()
 {
 }
 
-void XCollie::RegisterXCollieChecker(const sptr<XCollieChecker> &checker, unsigned int type)
-{
-    return XCollieInner::GetInstance().RegisterXCollieChecker(checker, type);
-}
-
 int XCollie::SetTimer(const std::string &name, unsigned int timeout, std::function<void(void *)> func,
     void *arg, unsigned int flag)
 {
-    return XCollieInner::GetInstance().SetTimer(name, timeout, func, arg, flag);
+    return WatchdogInner::GetInstance().RunXCollieTask(name, timeout * TO_NANOSECOND_MULTPLE, func, arg, flag);
 }
 
 void XCollie::CancelTimer(int id)
 {
-    return XCollieInner::GetInstance().CancelTimer(id);
+    return WatchdogInner::GetInstance().RemoveXCollieTask(id);
 }
 
 bool XCollie::UpdateTimer(int id, unsigned int timeout)
 {
-    return XCollieInner::GetInstance().UpdateTimer(id, timeout);
+    return WatchdogInner::GetInstance().UpdateXCollieTask(id, timeout * TO_NANOSECOND_MULTPLE);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -19,7 +19,6 @@
 #include <string>
 
 #include "xcollie.h"
-#include "xcollie_checker_test.h"
 
 using namespace testing::ext;
 
@@ -42,44 +41,20 @@ void XCollieInterfaceTest::TearDown(void)
 }
 
 /**
- * @tc.name: XCollieRegisterCheckerParamTest
- * @tc.desc: Verify xcollie register checker interface param
- * @tc.type: FUNC
- * @tc.require: SR000CPN2F AR000CTAMB
- * @tc.author: yangjing
- */
-HWTEST_F(XCollieInterfaceTest, XCollieRegisterCheckerParam_001, TestSize.Level1)
-{
-    /**
-     * @tc.steps: step1. input param checker is null
-     * @tc.expected: step1. register checker failed;
-     */
-    XCollie::GetInstance().RegisterXCollieChecker(nullptr, XCOLLIE_LOCK | XCOLLIE_THREAD);
-
-    /**
-     * @tc.steps: step2. input param type is invalid
-     * @tc.expected: step2. register checker failed;
-     */
-    sptr<XCollieCheckerTest> checkerTest = new XCollieCheckerTest("CheckerTest_NoBlock");
-    XCollie::GetInstance().RegisterXCollieChecker(checkerTest, 0x100);
-    checkerTest = nullptr;
-}
-
-/**
  * @tc.name: XCollieTimerParamTest
  * @tc.desc: Verify xcollie timer interface param
  * @tc.type: FUNC
  * @tc.require: SR000CPN2F AR000CTAMB
  * @tc.author: yangjing
  */
-HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
+HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
 {
     /**
      * @tc.steps: step1. input param name include special string
      * @tc.expected: step1. set timer successfully;
      */
     int id = XCollie::GetInstance().SetTimer("TimeoutTimerxce!@#$%^&*()", 1, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
-    ASSERT_NE(id, INVALID_ID);
+    ASSERT_GT(id, 0);
 
     /**
      * @tc.steps: step2. input param name include special string,update timer
@@ -114,6 +89,60 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
      */
     ret = XCollie::GetInstance().UpdateTimer(10, 0);
     ASSERT_EQ(ret, false);
+
+    /**
+     * @tc.steps: step7. multple timer
+     * @tc.expected: step7. set modify and cancel timer successfully;
+     */
+    id = XCollie::GetInstance().SetTimer("MyTimeout", 2, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id, 0);
+    int id1 = XCollie::GetInstance().SetTimer("MyTimeout", 3, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id1, 0);
+    sleep(1);
+    XCollie::GetInstance().CancelTimer(id);
+    int id2 = XCollie::GetInstance().SetTimer("MyTimeout", 4, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id2, 0);
+    ret = XCollie::GetInstance().UpdateTimer(id1, 1);
+    ASSERT_EQ(ret, true);
+    sleep(2);
+    XCollie::GetInstance().CancelTimer(id1);
+    XCollie::GetInstance().CancelTimer(id2);
+
+    /**
+     * @tc.steps: step8. log event
+     * @tc.expected: step8. log event successfully
+     */
+    ret = XCollie::GetInstance().SetTimer("MyTimeout", 1, nullptr, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id, 0);
+    sleep(2);
+    XCollie::GetInstance().CancelTimer(id);
+
+    /**
+     * @tc.steps: step9. callback test
+     * @tc.expected: step9. callback can be executed successfully
+     */
+    bool flag = false;
+    XCollieCallback callbackFunc = [&flag](void *) {
+        flag = true;
+    };
+    id = XCollie::GetInstance().SetTimer("MyTimeout", 1, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id, 0);
+    sleep(2);
+    ASSERT_EQ(flag, true);
+    flag = false;
+    id1 = XCollie::GetInstance().SetTimer("MyTimeout", 2, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id1, 0);
+    sleep(1);
+    XCollie::GetInstance().CancelTimer(id1);
+    ASSERT_EQ(flag, false);
+
+    /**
+     * @tc.steps: step10. recover test
+     * @tc.expected: step10. recover can be executed successfully
+     */
+    id = XCollie::GetInstance().SetTimer("MyTimeout", 2, nullptr, nullptr, XCOLLIE_FLAG_RECOVERY);
+    ASSERT_GT(id, 0);
+    sleep(1);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
