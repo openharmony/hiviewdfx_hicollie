@@ -1,5 +1,5 @@
 {
-    "name": "@ohos/hicollie_native",
+    "name": "@ohos/hicollie",
     "description": "HiCollie provides the software watchdog capability.",
     "version": "3.1",
     "license": "Apache License 2.0",
@@ -10,7 +10,7 @@
     "dirs": {},
     "scripts": {},
     "component": {
-        "name": "hicollie_native",
+        "name": "hicollie",
         "subsystem": "hiviewdfx",
         "adapted_system_type": [
             "standard"

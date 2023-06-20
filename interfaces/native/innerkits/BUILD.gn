@@ -27,6 +27,6 @@ ohos_shared_library("libhicollie") {
     "platformsdk",
   ]
   external_deps = [ "hilog_native:libhilog" ]
-  part_name = "hicollie_native"
+  part_name = "hicollie"
   subsystem_name = "hiviewdfx"
 }
