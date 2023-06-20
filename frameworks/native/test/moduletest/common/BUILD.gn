@@ -32,33 +32,12 @@ config("module_private_config") {
 }
 
 ##############################unittest##########################################
-ohos_moduletest("XCollieModuleTest") {
-  module_out_path = module_output_path
-  sources = [
-    "${hicollie_part_path}/frameworks/native/test/xcollie_checker_test.cpp",
-    "${hicollie_part_path}/frameworks/native/timer_ring.cpp",
-    "${hicollie_part_path}/frameworks/native/xcollie.cpp",
-    "${hicollie_part_path}/frameworks/native/xcollie_inner.cpp",
-    "xcollie_watchdog_test.cpp",
-  ]
-
-  configs = [ ":module_private_config" ]
-
-  deps = [ "//third_party/googletest:gtest_main" ]
-
-  external_deps = [
-    "c_utils:utils",
-    "hilog_native:libhilog",
-    "hisysevent_native:libhisysevent",
-  ]
-}
-
 ohos_moduletest("XCollieTimeoutModuleTest") {
   module_out_path = module_output_path
   sources = [
-    "${hicollie_part_path}/frameworks/native/timer_ring.cpp",
-    "${hicollie_part_path}/frameworks/native/xcollie.cpp",
-    "${hicollie_part_path}/frameworks/native/xcollie_inner.cpp",
+    "${hicollie_part_path}/frameworks/native/watchdog_inner.cpp",
+    "${hicollie_part_path}/frameworks/native/watchdog_task.cpp",
+    "${hicollie_part_path}/frameworks/native/xcollie_utils.cpp",
     "xcollie_timeout_test.cpp",
   ]
 
@@ -78,7 +57,6 @@ group("moduletest") {
   testonly = true
   deps = [
     # deps file
-    ":XCollieModuleTest",
     ":XCollieTimeoutModuleTest",
   ]
 }

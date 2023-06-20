@@ -17,19 +17,14 @@
 #define RELIABILITY_XCOLLIE_H
 #include <string>
 #include "singleton.h"
-#include "xcollie_checker.h"
 #include "xcollie_define.h"
 
+using XCollieCallback = std::function<void (void *)>;
 namespace OHOS {
 namespace HiviewDFX {
 class XCollie : public Singleton<XCollie> {
     DECLARE_SINGLETON(XCollie);
 public:
-    // register XCollieChecker for service watchdog
-    // checker : XCollieChecker object
-    // type    : watchdog type. the value can be:XCOLLIE_LOCK, XCOLLIE_THREAD, XCOLLIE_LOCK|XCOLLIE_Thread
-    void RegisterXCollieChecker(const sptr<XCollieChecker> &checker, unsigned int type);
-
     // set timer
     // name : timer name
     // timeout : timeout, unit s
@@ -42,7 +37,7 @@ public:
     //                               XCOLLIE_FLAG_RECOVERY  : die when timeout
     // return: the timer id
     int SetTimer(const std::string &name, unsigned int timeout,
-        std::function<void (void *)> func, void *arg, unsigned int flag);
+        XCollieCallback func, void *arg, unsigned int flag);
 
     // cancel timer
     // id: timer id

@@ -24,13 +24,16 @@
 
 using Task = std::function<void()>;
 using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;
+using XCollieCallback = std::function<void (void *)>;
 namespace OHOS {
 namespace HiviewDFX {
 class WatchdogTask {
+    static int64_t curId;
 public:
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot);
+    WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag);
     WatchdogTask()
         : name(""),
           task(nullptr),
@@ -51,6 +54,8 @@ public:
     void Run(uint64_t now);
     void RunHandlerCheckerTask();
     void SendEvent(const std::string &msg, const std::string &eventName) const;
+    void SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const;
+    void DoCallback();
 
     int EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
@@ -58,6 +63,11 @@ public:
     Task task;
     TimeOutCallback timeOutCallback;
     std::shared_ptr<HandlerChecker> checker;
+    int64_t id;
+    uint64_t timeout;
+    XCollieCallback func;
+    void *arg;
+    unsigned int flag;
     uint64_t checkInterval;
     uint64_t nextTickTime;
     bool isTaskScheduled;

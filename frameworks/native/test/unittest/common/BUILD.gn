@@ -30,10 +30,7 @@ config("module_private_config") {
 ##############################unittest##########################################
 ohos_unittest("XCollieUnitTest") {
   module_out_path = module_output_path
-  sources = [
-    "${hicollie_part_path}/frameworks/native/test/xcollie_checker_test.cpp",
-    "xcollie_interface_test.cpp",
-  ]
+  sources = [ "xcollie_interface_test.cpp" ]
 
   configs = [ ":module_private_config" ]
 
@@ -62,81 +59,12 @@ ohos_unittest("WatchdogUnitTest") {
   ]
 }
 
-ohos_unittest("HandlerCheckerTest") {
-  module_out_path = module_output_path
-  include_dirs = [
-    ".",
-    "${hicollie_part_path}/frameworks/native/",
-    "//commonlibrary/c_utils/base/include",
-  ]
-  sources = [ "handler_checker_test.cpp" ]
-
-  configs = [ ":module_private_config" ]
-
-  deps = [
-    "${hicollie_part_path}/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
-
-  external_deps = [
-    "c_utils:utils",
-    "eventhandler:libeventhandler",
-    "hicollie_native:libhicollie",
-    "hilog_native:libhilog",
-  ]
-}
-
-ohos_unittest("XCollieCheckerInterfaceUnitTest") {
-  module_out_path = module_output_path
-  sources = [
-    "${hicollie_part_path}/frameworks/native/test/xcollie_checker_test.cpp",
-    "xcollie_checker_interface_test.cpp",
-  ]
-
-  configs = [ ":module_private_config" ]
-
-  deps = [ "//third_party/googletest:gtest_main" ]
-  external_deps = [
-    "c_utils:utils",
-    "hicollie_native:libhicollie",
-    "hilog_native:libhilog",
-  ]
-}
-
-ohos_unittest("XCollieInnerTestUnitTest") {
-  module_out_path = module_output_path
-  include_dirs = [
-    ".",
-    "${hicollie_part_path}/frameworks/native/",
-    "//commonlibrary/c_utils/base/include",
-  ]
-  sources = [
-    "${hicollie_part_path}/frameworks/native/test/xcollie_checker_test.cpp",
-    "xcollie_inner_test.cpp",
-  ]
-
-  configs = [ ":module_private_config" ]
-
-  deps = [
-    "${hicollie_part_path}/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
-  external_deps = [
-    "c_utils:utils",
-    "hicollie_native:libhicollie",
-    "hilog_native:libhilog",
-  ]
-}
-
 ###############################################################################
 group("unittest") {
   testonly = true
   deps = [
     # deps file
-    ":HandlerCheckerTest",
     ":WatchdogUnitTest",
-    ":XCollieCheckerInterfaceUnitTest",
-    ":XCollieInnerTestUnitTest",
     ":XCollieUnitTest",
   ]
 }

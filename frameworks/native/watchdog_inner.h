@@ -33,12 +33,18 @@ namespace HiviewDFX {
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
+    static const int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
+    static const int XCOLLIE_CALLBACK_TIMEWIN_MAX = 60;
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval);
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
     void RunOneShotTask(const std::string& name, Task&& task, uint64_t delay);
     void RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay);
+    int64_t RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func, void *arg, unsigned int flag);
+    void RemoveXCollieTask(int64_t id);
+    bool UpdateXCollieTask(int64_t id, uint64_t timeout);
     void StopWatchdog();
+    bool IsCallbackLimit(unsigned int flag);
     std::string currentScene_;
 
 private:
@@ -46,7 +52,7 @@ private:
     bool Stop();
     bool IsTaskExistLocked(const std::string& name);
     bool IsExceedMaxTaskLocked();
-    bool InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
+    int64_t InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
@@ -59,6 +65,8 @@ private:
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
     std::set<std::string> taskNameSet_;
+    int cntCallback_;
+    time_t timeCallback_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
