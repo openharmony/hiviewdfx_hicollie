@@ -40,8 +40,8 @@ ohos_source_set("libhicollie_source") {
     "c_utils:utils",
     "eventhandler:libeventhandler",
     "faultloggerd:libbacktrace_local",
-    "hilog_native:libhilog",
-    "hisysevent_native:libhisysevent",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
   ]
 
   part_name = "hicollie"
