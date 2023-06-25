@@ -159,7 +159,7 @@ bool WatchdogInner::UpdateXCollieTask(int64_t id, uint64_t timeout)
     while (!checkerQueue_.empty())
     {
         const WatchdogTask& task = checkerQueue_.top();
-        if (task.id != id) {
+        if (task.id == id) {
             saveTask = task;
         } else {
             tmpQueue.push(task);
