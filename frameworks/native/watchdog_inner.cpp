@@ -34,6 +34,13 @@ extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((we
 namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
+constexpr int INTERVAL_KICK_TIME = 6 * 1000;
+const std::string SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
+const std::string ON_KICK_TIME = "on,39";
+const std::string KICK_TIME = "kick";
+static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
+static bool g_wdgOpened = false;
+static bool g_existFile = true;
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
                 size_t len  __attribute__((unused)),
@@ -281,6 +288,12 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     }
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
+
+    if (g_existFile && queuedTask.name == WMS_FULL_NAME && now - g_nextKickTime > INTERVAL_KICK_TIME) {
+        if (KickWatchdog()) {
+            g_nextKickTime = now;
+        }
+    }
     if (queuedTask.nextTickTime > now) {
         return queuedTask.nextTickTime - now;
     }
@@ -333,6 +346,33 @@ bool WatchdogInner::Start()
         SetThreadInfoCallback(nullptr);
     }
     return true;
+}
+
+bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
+{
+    std::ofstream outFile;
+    outFile.open(SYS_KERNEL_HUNGTASK_USERLIST);
+    if (!outFile) {
+        XCOLLIE_LOGE("open hungtask file failed\n");
+        g_existFile = false;
+        return false;
+    }
+    outFile.flush();
+    outFile << msg.c_str() << std::endl;
+    outFile.close();
+    XCOLLIE_LOGE("Send %{public}s to hungtask Successful\n", msg.c_str());
+    return true;
+}
+
+bool WatchdogInner::KickWatchdog()
+{
+    if (!g_wdgOpened) {
+        if (!SendMsgToHungtask(ON_KICK_TIME)) {
+            return false;
+        }
+        g_wdgOpened = true;
+    }
+    return SendMsgToHungtask(KICK_TIME);
 }
 
 bool WatchdogInner::Stop()
