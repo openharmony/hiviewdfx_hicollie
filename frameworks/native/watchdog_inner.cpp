@@ -147,41 +147,11 @@ void WatchdogInner::RemoveXCollieTask(int64_t id)
         checkerQueue_.pop();
     }
     if (tmpQueue.size() == size) {
-        XCOLLIE_LOGE("Remove XCollieTask fail, can not find timer %{public}lld, size=%{public}zu!", static_cast<long long>(id), size);
+        XCOLLIE_LOGE("Remove XCollieTask fail, can not find timer %{public}lld, size=%{public}zu!",
+            static_cast<long long>(id), size);
         return;
     }
     tmpQueue.swap(checkerQueue_);
-}
-
-bool WatchdogInner::UpdateXCollieTask(int64_t id, uint64_t timeout)
-{
-    WatchdogTask saveTask;
-    std::priority_queue<WatchdogTask> tmpQueue;
-    std::unique_lock<std::mutex> lock(lock_);
-    size_t size = checkerQueue_.size();
-    if (size == 0) {
-        XCOLLIE_LOGE("Remove XCollieTask %{public}lld fail, empty queue!", static_cast<long long>(id));
-        return false;
-    }
-    while (!checkerQueue_.empty())
-    {
-        const WatchdogTask& task = checkerQueue_.top();
-        if (task.id == id) {
-            saveTask = task;
-        } else {
-            tmpQueue.push(task);
-        }
-        checkerQueue_.pop();
-    }
-    if (tmpQueue.size() == size) {
-        XCOLLIE_LOGE("Remove XCollieTask fail, can not find timer %{public}lld, size=%{public}zu!", static_cast<long long>(id), size);
-        return false;
-    }
-    tmpQueue.swap(checkerQueue_);
-    saveTask.timeout = timeout;
-    saveTask.nextTickTime = GetCurrentTickMillseconds() + timeout;
-    saveTask.id = id;
-    return (InsertWatchdogTaskLocked(saveTask.name, std::move(saveTask)) > 0);
 }
 
 void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay)

@@ -42,11 +42,6 @@ public:
     // cancel timer
     // id: timer id
     void CancelTimer(int id);
-
-    // update timer
-    // id: timer id
-    // timeout: timeout, unit s
-    bool UpdateTimer(int id, unsigned int timeout);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

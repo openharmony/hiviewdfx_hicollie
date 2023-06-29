@@ -38,12 +38,7 @@ int XCollie::SetTimer(const std::string &name, unsigned int timeout, std::functi
 
 void XCollie::CancelTimer(int id)
 {
-    return WatchdogInner::GetInstance().RemoveXCollieTask(id);
-}
-
-bool XCollie::UpdateTimer(int id, unsigned int timeout)
-{
-    return WatchdogInner::GetInstance().UpdateXCollieTask(id, timeout * TO_NANOSECOND_MULTPLE);
+    WatchdogInner::GetInstance().RemoveXCollieTask(id);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
