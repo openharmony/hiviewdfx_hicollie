@@ -57,11 +57,9 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
     ASSERT_GT(id, 0);
 
     /**
-     * @tc.steps: step2. input param name include special string,update timer
+     * @tc.steps: step2. input param name include special string,cancel timer
      * @tc.expected: step2. update timer successfully;
      */
-    bool ret = XCollie::GetInstance().UpdateTimer(id, 1);
-    ASSERT_EQ(ret, true);
     XCollie::GetInstance().CancelTimer(id);
 
     /**
@@ -73,58 +71,58 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
 
     /**
      * @tc.steps: step4. cancelTimer, input param id is invalid
+     * @tc.expected: step4. cancel timer failed;
      */
     XCollie::GetInstance().CancelTimer(-1);
 
     /**
-     * @tc.steps: step5. updateTimer, param id is invalid
-     * @tc.expected: step5. update timer failed;
-     */
-    ret = XCollie::GetInstance().UpdateTimer(-1, 10);
-    ASSERT_EQ(ret, false);
-
-    /**
-     * @tc.steps: step6. updateTimer, param timeout is invalid
-     * @tc.expected: step6. update timer failed;
-     */
-    ret = XCollie::GetInstance().UpdateTimer(10, 0);
-    ASSERT_EQ(ret, false);
-
-    /**
-     * @tc.steps: step7. multple timer
-     * @tc.expected: step7. set modify and cancel timer successfully;
-     */
-    id = XCollie::GetInstance().SetTimer("MyTimeout", 2, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
-    ASSERT_GT(id, 0);
-    int id1 = XCollie::GetInstance().SetTimer("MyTimeout", 3, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
-    ASSERT_GT(id1, 0);
-    sleep(1);
-    XCollie::GetInstance().CancelTimer(id);
-    int id2 = XCollie::GetInstance().SetTimer("MyTimeout", 4, nullptr, nullptr, XCOLLIE_FLAG_NOOP);
-    ASSERT_GT(id2, 0);
-    ret = XCollie::GetInstance().UpdateTimer(id1, 1);
-    ASSERT_EQ(ret, true);
-    sleep(2);
-    XCollie::GetInstance().CancelTimer(id1);
-    XCollie::GetInstance().CancelTimer(id2);
-
-    /**
-     * @tc.steps: step8. log event
-     * @tc.expected: step8. log event successfully
-     */
-    ret = XCollie::GetInstance().SetTimer("MyTimeout", 1, nullptr, nullptr, XCOLLIE_FLAG_LOG);
-    ASSERT_GT(id, 0);
-    sleep(2);
-    XCollie::GetInstance().CancelTimer(id);
-
-    /**
-     * @tc.steps: step9. callback test
-     * @tc.expected: step9. callback can be executed successfully
+     * @tc.steps: step5. multiple timer
+     * @tc.expected: step5. cancel timer successfully;
      */
     bool flag = false;
     XCollieCallback callbackFunc = [&flag](void *) {
         flag = true;
     };
+    bool flag1 = false;
+    XCollieCallback callbackFunc1 = [&flag1](void *) {
+        flag1 = true;
+    };
+    id = XCollie::GetInstance().SetTimer("MyTimeout", 2, callbackFunc, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id, 0);
+    int id1 = XCollie::GetInstance().SetTimer("MyTimeout", 3, callbackFunc1, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id1, 0);
+    sleep(1);
+    XCollie::GetInstance().CancelTimer(id);
+    sleep(3);
+    ASSERT_EQ(flag, false);
+    ASSERT_EQ(flag1, true);
+
+    flag = false;
+    flag1 = false;
+    id = XCollie::GetInstance().SetTimer("MyTimeout", 2, callbackFunc, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id, 0);
+    id1 = XCollie::GetInstance().SetTimer("MyTimeout", 3, callbackFunc1, nullptr, XCOLLIE_FLAG_NOOP);
+    ASSERT_GT(id1, 0);
+    sleep(1);
+    XCollie::GetInstance().CancelTimer(id1);
+    sleep(3);
+    ASSERT_EQ(flag, true);
+    ASSERT_EQ(flag1, false);
+
+    /**
+     * @tc.steps: step6. log event
+     * @tc.expected: step6. log event successfully
+     */
+    id = XCollie::GetInstance().SetTimer("MyTimeout", 1, nullptr, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id, 0);
+    sleep(2);
+    XCollie::GetInstance().CancelTimer(id);
+
+    /**
+     * @tc.steps: step7. callback test
+     * @tc.expected: step7. callback can be executed successfully
+     */
+    flag = false;
     id = XCollie::GetInstance().SetTimer("MyTimeout", 1, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
     ASSERT_GT(id, 0);
     sleep(2);
@@ -137,8 +135,8 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
     ASSERT_EQ(flag, false);
 
     /**
-     * @tc.steps: step10. recover test
-     * @tc.expected: step10. recover can be executed successfully
+     * @tc.steps: step8. recover test
+     * @tc.expected: step8. recover can be executed successfully
      */
     id = XCollie::GetInstance().SetTimer("MyTimeout", 2, nullptr, nullptr, XCOLLIE_FLAG_RECOVERY);
     ASSERT_GT(id, 0);

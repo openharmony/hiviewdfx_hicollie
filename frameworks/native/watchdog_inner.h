@@ -40,9 +40,9 @@ public:
         TimeOutCallback timeOutCallback, uint64_t interval);
     void RunOneShotTask(const std::string& name, Task&& task, uint64_t delay);
     void RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay);
-    int64_t RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func, void *arg, unsigned int flag);
+    int64_t RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func, void *arg,
+        unsigned int flag);
     void RemoveXCollieTask(int64_t id);
-    bool UpdateXCollieTask(int64_t id, uint64_t timeout);
     void StopWatchdog();
     bool IsCallbackLimit(unsigned int flag);
     std::string currentScene_;

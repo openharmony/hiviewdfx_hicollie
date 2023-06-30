@@ -72,7 +72,7 @@ void WatchdogTask::DoCallback()
         func(arg);
     }
     if (WatchdogInner::GetInstance().IsCallbackLimit(flag)) {
-        XCOLLIE_LOGE("Too Many callback triggered in a short time, %{public}s skip", name.c_str());
+        XCOLLIE_LOGE("Too many callback triggered in a short time, %{public}s skip", name.c_str());
         return;
     }
     if (flag & XCOLLIE_FLAG_LOG) {
@@ -81,7 +81,8 @@ void WatchdogTask::DoCallback()
         SendXCollieEvent(name, msg);
     }
     if (flag & XCOLLIE_FLAG_RECOVERY) {
-        XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(), static_cast<long long>(timeout));
+        XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(),
+            static_cast<long long>(timeout));
         std::thread exitFunc([]() {
             XCOLLIE_LOGE("timeout, exit...");
             _exit(1);
@@ -165,7 +166,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
         "MODULE_NAME", timerName,
         "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg);
-    XCOLLIE_LOGI("send event [FRAMERWORK,SERVICE_TIMEOUT], msg=%{public}s", keyMsg.c_str()); 
+    XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_TIMEOUT], msg=%{public}s", keyMsg.c_str());
 }
 
 int WatchdogTask::EvaluateCheckerState()
