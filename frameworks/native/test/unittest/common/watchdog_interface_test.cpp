@@ -78,10 +78,10 @@ static inline void Sleep(int second)
 
 HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_003, TestSize.Level1)
 {
-    constexpr int BLOCK_TIME = 10;
-    constexpr int MAX_THREAD = 5;
-    std::vector<std::thread> threads(MAX_THREAD);
-    for (int i = 0; i < MAX_THREAD; i++) {
+    constexpr int blockTime = 10;
+    constexpr int maxThread = 5;
+    std::vector<std::thread> threads(maxThread);
+    for (int i = 0; i < maxThread; i++) {
         threads[i] = std::thread(&WatchdogInterfaceTest::DoAddWatchThread, this);
     }
 
@@ -89,21 +89,21 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_003, TestSize.Level1)
         th.join();
     }
     ASSERT_EQ(g_ret, -4); // -4 : -1 * 4
-    Sleep(BLOCK_TIME);
+    Sleep(blockTime);
 }
 
 HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_004, TestSize.Level1)
 {
-    constexpr int BLOCK_TIME = 10;
-    constexpr int CHECK_PERIOD = 2000;
+    constexpr int blockTime = 10;
+    constexpr int checkPeriod = 2000;
     auto runner = EventRunner::Create("test_thread");
     auto handler = std::make_shared<TestEventHandler>(runner);
-    int ret = Watchdog::GetInstance().AddThread("BLOCK2S", handler, CHECK_PERIOD);
+    int ret = Watchdog::GetInstance().AddThread("BLOCK2S", handler, checkPeriod);
     ASSERT_EQ(ret, 0);
 
-    auto taskFunc = []() { Sleep(BLOCK_TIME); };
+    auto taskFunc = []() { Sleep(blockTime); };
     Watchdog::GetInstance().RunOneShotTask("block", taskFunc);
-    Sleep(BLOCK_TIME);
+    Sleep(blockTime);
 }
 
 /**
@@ -117,10 +117,10 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_001, TestSize.Level1)
      * @tc.steps: step1. post one task to handler
      * @tc.expected: step1. post task successfully
      */
-    constexpr int BLOCK_TIME = 70;
+    constexpr int blockTime = 70;
     auto blockFunc = []() {
         printf("before block 70s in %d\n", gettid());
-        Sleep(BLOCK_TIME);
+        Sleep(blockTime);
         printf("after block 70s in %d\n", gettid());
     };
     auto runner = EventRunner::Create(true);
@@ -142,7 +142,7 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_001, TestSize.Level1)
      * @tc.steps: step3. sleep a while until timeout
      * @tc.expected: step3. SERVICE_BLOCK event has been created and fired
      */
-    Sleep(BLOCK_TIME);
+    Sleep(blockTime);
 }
 
 /**
@@ -156,11 +156,11 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
      * @tc.steps: step1. post one task to handler
      * @tc.expected: step1. post task successfully
      */
-    constexpr int BLOCK_TIME = 30;
-    constexpr int CHECK_PERIOD = 3000;
+    constexpr int blockTime = 30;
+    constexpr int checkPeriod = 3000;
     auto blockFunc = []() {
         printf("before block 30s in %d\n", gettid());
-        Sleep(BLOCK_TIME);
+        Sleep(blockTime);
         printf("after block 30s in %d\n", gettid());
     };
     auto runner = EventRunner::Create(true);
@@ -175,12 +175,12 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
     auto timeOutCallback = [](const std::string &name, int waitState) {
         printf("TestBlock20 time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
     };
-    int result = Watchdog::GetInstance().AddThread("TestBlock20", handler, timeOutCallback, CHECK_PERIOD);
+    int result = Watchdog::GetInstance().AddThread("TestBlock20", handler, timeOutCallback, checkPeriod);
 
     auto timeOutCallback1 = [](const std::string &name, int waitState) {
         printf("TestBlock20_1 time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
     };
-    int result2 = Watchdog::GetInstance().AddThread("TestBlock20_1", handler, timeOutCallback1, CHECK_PERIOD);
+    int result2 = Watchdog::GetInstance().AddThread("TestBlock20_1", handler, timeOutCallback1, checkPeriod);
     ASSERT_EQ(result, 0);
     ASSERT_EQ(result2, 0);
 
@@ -188,7 +188,7 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
      * @tc.steps: step3. sleep a while until timeout
      * @tc.expected: step3. SERVICE_BLOCK event has been created and fired
      */
-    Sleep(BLOCK_TIME);
+    Sleep(blockTime);
 }
 
 /**
@@ -198,11 +198,11 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
  */
 HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_005, TestSize.Level1)
 {
-    constexpr int BLOCK_TIME = 5;
-    constexpr int CHECK_PERIOD = 3000;
+    constexpr int blockTime = 5;
+    constexpr int checkPeriod = 3000;
     auto blockFunc = []() {
         printf("before block 5s in %d\n", gettid());
-        Sleep(BLOCK_TIME);
+        Sleep(blockTime);
         printf("after block 5s in %d\n", gettid());
     };
     auto runner = EventRunner::Create(true);
@@ -210,12 +210,12 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_005, TestSize.Level1)
     bool ret = handler->PostTask(blockFunc, "Block10", 0, EventQueue::Priority::LOW);
     ASSERT_EQ(ret, true);
 
-    int result = Watchdog::GetInstance().AddThread("HiCollieTestBlock10_0", handler, nullptr, CHECK_PERIOD);
-    int result2 = Watchdog::GetInstance().AddThread("HiCollieTestBlock10_2", handler, nullptr, CHECK_PERIOD);
+    int result = Watchdog::GetInstance().AddThread("HiCollieTestBlock10_0", handler, nullptr, checkPeriod);
+    int result2 = Watchdog::GetInstance().AddThread("HiCollieTestBlock10_2", handler, nullptr, checkPeriod);
     ASSERT_EQ(result, 0);
     ASSERT_EQ(result2, 0);
 
-    Sleep(BLOCK_TIME);
+    Sleep(blockTime);
 
     std::string pid = std::to_string(getpid());
     std::vector<std::string> dir;
@@ -251,16 +251,16 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogRunTaskTest_001, TestSize.Level1)
      * @tc.steps: step1. create 2 oneshot task and add to watchdog
      * @tc.expected: step1. task has been executed
      */
-    constexpr int ONESHOT_TASK_TIME = 1;
-    constexpr int DELAYED_TASK_TIME = 3;
-    constexpr int DELAYED_TASK_TIME_MILLISECOND = 3000;
+    constexpr int oneshotTaskTime = 1;
+    constexpr int delayedTaskTime = 3;
+    constexpr int delayedTaskTimeMillisecond = 3000;
     int task1Result = 0;
     auto task1Func = [&task1Result]() { task1Result = 1; };
     int task2Result = 0;
     auto task2Func = [&task2Result]() { task2Result = 1; };
     Watchdog::GetInstance().RunOneShotTask("task1", task1Func);
     Watchdog::GetInstance().RunOneShotTask("task2", task2Func);
-    Sleep(ONESHOT_TASK_TIME);
+    Sleep(oneshotTaskTime);
     ASSERT_EQ(task1Result, 1);
     ASSERT_EQ(task2Result, 1);
 
@@ -270,9 +270,9 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogRunTaskTest_001, TestSize.Level1)
      */
     int delayedTaskResult = 0;
     auto delayedTaskFunc = [&delayedTaskResult]() { delayedTaskResult = 1; };
-    Watchdog::GetInstance().RunOneShotTask("task3", delayedTaskFunc, DELAYED_TASK_TIME_MILLISECOND);
+    Watchdog::GetInstance().RunOneShotTask("task3", delayedTaskFunc, delayedTaskTimeMillisecond);
     ASSERT_EQ(delayedTaskResult, 0);
-    Sleep(ONESHOT_TASK_TIME + DELAYED_TASK_TIME);
+    Sleep(oneshotTaskTime + delayedTaskTime);
     ASSERT_EQ(delayedTaskResult, 1);
 }
 

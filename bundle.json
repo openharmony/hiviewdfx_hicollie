@@ -25,7 +25,8 @@
                 "hilog",
                 "hisysevent",
                 "c_utils",
-                "eventhandler"
+                "eventhandler",
+                "faultloggerd"
             ],
             "third_party": []
         },

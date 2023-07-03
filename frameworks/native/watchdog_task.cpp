@@ -95,8 +95,8 @@ void WatchdogTask::DoCallback()
 
 void WatchdogTask::Run(uint64_t now)
 {
-    constexpr int RESET_RATIO = 2;
-    if ((checkInterval != 0) && (now - nextTickTime > (RESET_RATIO * checkInterval))) {
+    constexpr int resetRatio = 2;
+    if ((checkInterval != 0) && (now - nextTickTime > (resetRatio * checkInterval))) {
         XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."
             "now:%{public}" PRIu64 " expect:%{public}" PRIu64 " interval:%{public}" PRIu64 "",
             now, nextTickTime, checkInterval);
@@ -193,7 +193,7 @@ int WatchdogTask::EvaluateCheckerState()
             // peer binder log is collected in hiview asynchronously
             // if blocked process exit early, binder blocked state will change
             // thus delay exit and let hiview have time to collect log.
-            int leftTime = 3;
+            unsigned int leftTime = 3;
             while (leftTime > 0) {
                 leftTime = sleep(leftTime);
             }
