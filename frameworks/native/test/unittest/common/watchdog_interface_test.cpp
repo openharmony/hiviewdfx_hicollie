@@ -76,6 +76,26 @@ static inline void Sleep(int second)
     }
 }
 
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_006, TestSize.Level1)
+{
+    constexpr int BLOCK_TIME = 6;
+    auto blockFunc = []() {
+        printf("start verify kickWatchdog  in tid %d\n", gettid());
+    };
+    auto runner =EventRunner::Create(true);
+    auto handler =std::make_shared<TestEventHandler>(runner);
+    bool ret = handler->PostTask(blockFunc, "kickWatchdog", 0, EventQueue::Priority::LOW);
+    ASSERT_EQ(ret, true);
+
+    auto timeOutCallback = [](const std::string &name, int waitState) {
+        printf("verify kickWatchdog in %d, name is %s, waitstate in %d\n", gettid(), name.c_str(), waitState);
+    };
+    int result = Watchdog::GetInstance().AddThread("WindowManagerService", handler, timeOutCallback);
+    ASSERT_EQ(result, 0);
+    Sleep(BLOCK_TIME);
+}
+
+
 HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_003, TestSize.Level1)
 {
     constexpr int BLOCK_TIME = 10;
