@@ -328,7 +328,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
         return false;
     }
     outFile.flush();
-    outFile << msg.c_str() << std::endl;
+    outFile << msg << std::endl;
     outFile.close();
     XCOLLIE_LOGE("Send %{public}s to hungtask Successful\n", msg.c_str());
     return true;

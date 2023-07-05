@@ -50,7 +50,7 @@ public:
 private:
     bool Start();
     bool Stop();
-    bool SendMsgToHungtask(const std::string& name);
+    bool SendMsgToHungtask(const std::string& msg);
     bool KickWatchdog();
     bool IsTaskExistLocked(const std::string& name);
     bool IsExceedMaxTaskLocked();
