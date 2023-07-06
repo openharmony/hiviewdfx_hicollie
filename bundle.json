@@ -22,10 +22,11 @@
         "ram": "",
         "deps": {
             "components": [
+                "c_utils",
+                "eventhandler",
                 "hilog_native",
                 "hisysevent_native",
-                "c_utils",
-                "eventhandler"
+                "ipc"
             ],
             "third_party": []
         },

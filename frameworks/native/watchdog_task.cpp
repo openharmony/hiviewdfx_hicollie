@@ -180,7 +180,9 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
-            SendEvent(description, "SERVICE_WARNING");
+            if (name.compare(BINDER_FULL) != 0) {
+                SendEvent(description, "SERVICE_WARNING");
+            }
         }
     } else {
         XCOLLIE_LOGI("Watchdog happened, send event twice.");
@@ -189,7 +191,11 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
-            SendEvent(description, "SERVICE_BLOCK");
+            if (name.compare(BINDER_FULL == 0)) {
+                SendEvent(description, BINDER_FULL);
+            } else {
+                SendEvent(description, "SERVICE_BLOCK");
+            }
             // peer binder log is collected in hiview asynchronously
             // if blocked process exit early, binder blocked state will change
             // thus delay exit and let hiview have time to collect log.

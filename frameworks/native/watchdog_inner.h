@@ -67,6 +67,7 @@ private:
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
     std::set<std::string> taskNameSet_;
+    std::shared_ptr<AppExecFwk::EventHandler> binderCheckHander_;
     int cntCallback_;
     time_t timeCallback_;
 };
