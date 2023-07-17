@@ -50,7 +50,7 @@ public:
 private:
     bool Start();
     bool Stop();
-    bool SendMsgToHungtask(const std::string& name);
+    bool SendMsgToHungtask(const std::string& msg);
     bool KickWatchdog();
     bool IsTaskExistLocked(const std::string& name);
     bool IsExceedMaxTaskLocked();
@@ -67,6 +67,7 @@ private:
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
     std::set<std::string> taskNameSet_;
+    std::shared_ptr<AppExecFwk::EventHandler> binderCheckHander_;
     int cntCallback_;
     time_t timeCallback_;
 };

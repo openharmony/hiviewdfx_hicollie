@@ -26,7 +26,8 @@
                 "hisysevent",
                 "c_utils",
                 "eventhandler",
-                "faultloggerd"
+                "faultloggerd",
+                "ipc"
             ],
             "third_party": []
         },

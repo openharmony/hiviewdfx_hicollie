@@ -18,6 +18,7 @@ config("hicollie_include") {
   include_dirs = [
     ".",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
+    "/foundation/communication/ipc/interfaces/innerkits/ipc_core/include",
     "//commonlibrary/c_utils/base/include",
   ]
   if (is_ohos) {
@@ -42,6 +43,7 @@ ohos_source_set("libhicollie_source") {
     "faultloggerd:libbacktrace_local",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
+    "ipc:ipc_single",
   ]
 
   part_name = "hicollie"

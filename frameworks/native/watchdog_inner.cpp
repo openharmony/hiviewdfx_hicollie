@@ -92,6 +92,16 @@ int WatchdogInner::AddThread(const std::string &name,
 
     XCOLLIE_LOGI("Add thread %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
+    if (name.compare(WMS_FULL_NAME) == 0) {
+        if (binderCheckHander_ == nullptr) {
+            auto runner = AppExecFwk::EventRunner::Create(BINDER_CHECKER);
+            binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
+            if (!InsertWatchdogTaskLocked(BINDER_CHECKER, WatchdogTask(BINDER_FULL, binderCheckHander_, nullptr, interval))) {
+                XCOLLIE_LOGE("Add %{public}s thread fail", BINDER_CHECKER);
+            }
+        }
+    }
+
     if (!InsertWatchdogTaskLocked(name, WatchdogTask(name, handler, timeOutCallback, interval))) {
         return -1;
     }
@@ -328,7 +338,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
         return false;
     }
     outFile.flush();
-    outFile << msg.c_str() << std::endl;
+    outFile << msg << std::endl;
     outFile.close();
     XCOLLIE_LOGE("Send %{public}s to hungtask Successful\n", msg.c_str());
     return true;
