@@ -24,11 +24,11 @@ void HandlerChecker::ScheduleCheck()
     if (!isCompleted_ || handler_ == nullptr) {
         return;
     }
-    if(name_.compare(BINDER_FULL) == 0) {
+    if (name_.compare(BINDER_FULL) == 0) {
         auto fb = [] {
             IPCDfx::BlockUntilThreadAvailable();
         };
-        if (!handle_->PostTask(fb, "BinderCheck Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
+        if (!handler_->PostTask(fb, "BinderCheck Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
             XCOLLIE_LOGE("XCollie BinderCheck Task PostTask failed.");
         }
     }

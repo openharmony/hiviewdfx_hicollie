@@ -47,8 +47,8 @@ ohos_moduletest("XCollieTimeoutModuleTest") {
 
   external_deps = [
     "c_utils:utils",
-    "hilog_native:libhilog",
-    "hisysevent_native:libhisysevent",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
   ]
 }
 

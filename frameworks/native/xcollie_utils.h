@@ -24,7 +24,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-static constexpr char WMS_FULL_NAME = "WindowManagerService";
+static constexpr char WMS_FULL_NAME[] = "WindowManagerService";
 static constexpr char BINDER_FULL[] = "BINDER_FULL";
 static constexpr char BINDER_CHECKER[] = "BinderChecker";
 constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0xD002D06, "XCollie"};

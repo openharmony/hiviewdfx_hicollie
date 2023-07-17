@@ -94,7 +94,7 @@ int WatchdogInner::AddThread(const std::string &name,
     std::unique_lock<std::mutex> lock(lock_);
     if (name.compare(WMS_FULL_NAME) == 0) {
         if (binderCheckHander_ == nullptr) {
-            auto runner = AppExecFwk::EventRunner::create(BINDER_CHECKER);
+            auto runner = AppExecFwk::EventRunner::Create(BINDER_CHECKER);
             binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
             if (!InsertWatchdogTaskLocked(BINDER_CHECKER, WatchdogTask(BINDER_FULL, binderCheckHander_, nullptr, interval))) {
                 XCOLLIE_LOGE("Add %{public}s thread fail", BINDER_CHECKER);

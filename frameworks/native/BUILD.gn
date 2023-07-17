@@ -38,15 +38,15 @@ ohos_source_set("libhicollie_source") {
   configs = [ ":hicollie_include" ]
 
   external_deps = [
-    "ipc:ipc_single",
     "c_utils:utils",
     "eventhandler:libeventhandler",
     "faultloggerd:libbacktrace_local",
-    "hilog_native:libhilog",
-    "hisysevent_native:libhisysevent",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
+    "ipc:ipc_single",
   ]
 
-  part_name = "hicollie_native"
+  part_name = "hicollie"
   subsystem_name = "hiviewdfx"
 }
 

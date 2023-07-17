@@ -37,9 +37,9 @@ ohos_unittest("XCollieUnitTest") {
   deps = [ "//third_party/googletest:gtest_main" ]
   external_deps = [
     "c_utils:utils",
-    "hicollie_native:libhicollie",
-    "hilog_native:libhilog",
-    "hisysevent_native:libhisysevent",
+    "hicollie:libhicollie",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
   ]
 }
 
@@ -53,9 +53,9 @@ ohos_unittest("WatchdogUnitTest") {
   external_deps = [
     "c_utils:utils",
     "eventhandler:libeventhandler",
-    "hicollie_native:libhicollie",
-    "hilog_native:libhilog",
-    "hisysevent_native:libhisysevent",
+    "hicollie:libhicollie",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
   ]
 }
 
