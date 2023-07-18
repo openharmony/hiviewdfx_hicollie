@@ -35,6 +35,7 @@ namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
+constexpr int32_t WATCHED_UID = 5523;
 const std::string SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const std::string ON_KICK_TIME = "on,39";
 const std::string KICK_TIME = "kick";
@@ -92,12 +93,12 @@ int WatchdogInner::AddThread(const std::string &name,
 
     XCOLLIE_LOGI("Add thread %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    if (name.compare(WMS_FULL_NAME) == 0) {
+    if (getuid() == WATCHED_UID) {
         if (binderCheckHander_ == nullptr) {
-            auto runner = AppExecFwk::EventRunner::Create(BINDER_CHECKER);
+            auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
             binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
-            if (!InsertWatchdogTaskLocked(BINDER_CHECKER, WatchdogTask(BINDER_FULL, binderCheckHander_, nullptr, interval))) {
-                XCOLLIE_LOGE("Add %{public}s thread fail", BINDER_CHECKER);
+            if (!InsertWatchdogTaskLocked(IPC_CHECKER, WatchdogTask(IPC_FULL, binderCheckHander_, nullptr, interval))) {
+                XCOLLIE_LOGE("Add %{public}s thread fail", IPC_CHECKER);
             }
         }
     }
