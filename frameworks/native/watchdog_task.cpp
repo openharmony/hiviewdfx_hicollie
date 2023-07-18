@@ -180,7 +180,7 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
-            if (name.compare(BINDER_FULL) != 0) {
+            if (name.compare(IPC_FULL) != 0) {
                 SendEvent(description, "SERVICE_WARNING");
             }
         }
@@ -191,8 +191,8 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
-            if (name.compare(BINDER_FULL) == 0) {
-                SendEvent(description, BINDER_FULL);
+            if (name.compare(IPC_FULL) == 0) {
+                SendEvent(description, IPC_FULL);
             } else {
                 SendEvent(description, "SERVICE_BLOCK");
             }

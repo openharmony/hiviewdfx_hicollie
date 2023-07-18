@@ -42,8 +42,8 @@ SERVICE_WARNING:
   MSG: {type: STRING, desc: event message}
   STACK: {type: STRING, desc: stacktrace of service process}
 
-BINDER_FULL:
-  __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: binder full}
+IPC_FULL:
+  __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: ipc full}
   PID: {type: INT32, desc: failure process pid}
   TGID: {type: INT32, desc: failure process gid}
   UID: {type: INT32, desc: failure process uid}
