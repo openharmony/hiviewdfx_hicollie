@@ -97,7 +97,8 @@ int WatchdogInner::AddThread(const std::string &name,
         if (binderCheckHander_ == nullptr) {
             auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
             binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
-            if (!InsertWatchdogTaskLocked(IPC_CHECKER, WatchdogTask(IPC_FULL, binderCheckHander_, nullptr, interval))) {
+            if (!InsertWatchdogTaskLocked(IPC_CHECKER, WatchdogTask(IPC_FULL, binderCheckHander_,
+                nullptr, interval))) {
                 XCOLLIE_LOGE("Add %{public}s thread fail", IPC_CHECKER);
             }
         }

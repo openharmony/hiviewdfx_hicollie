@@ -133,9 +133,9 @@ void WatchdogTask::RunHandlerCheckerTask()
 
 void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
 {
-    int32_t pid = getpid();
-    int32_t gid = getgid();
-    int32_t uid = getuid();
+    uint32_t pid = getpid();
+    uint32_t gid = getgid();
+    uint32_t uid = getuid();
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
@@ -153,9 +153,9 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
 {
-    int32_t pid = getpid();
-    int32_t gid = getgid();
-    int32_t uid = getuid();
+    uint32_t pid = getpid();
+    uint32_t gid = getgid();
+    uint32_t uid = getuid();
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
         "timeout timer: " + timerName + "\n" +keyMsg;
