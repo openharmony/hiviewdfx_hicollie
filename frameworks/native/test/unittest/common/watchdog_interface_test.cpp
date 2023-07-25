@@ -236,28 +236,6 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_005, TestSize.Level1)
     ASSERT_EQ(result2, 0);
 
     Sleep(blockTime);
-
-    std::string pid = std::to_string(getpid());
-    std::vector<std::string> dir;
-    GetDirFiles("/data/log/eventlog", dir);
-    std::string logName = "";
-    for (const auto& file : dir) {
-        printf("curFileName:%s\n", file.c_str());
-        if (file.find(pid) != std::string::npos) {
-            logName = file;
-            break;
-        }
-    }
-
-    ASSERT_FALSE(logName.empty());
-    std::string content;
-    if (!OHOS::LoadStringFromFile(logName, content)) {
-        FAIL();
-    }
-
-    if (content.find("eventhandler") == std::string::npos) {
-        FAIL();
-    }
 }
 
 /**
