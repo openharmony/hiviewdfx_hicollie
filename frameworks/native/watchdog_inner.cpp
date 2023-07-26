@@ -19,6 +19,9 @@
 #include <climits>
 #include <mutex>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <csignal>
@@ -36,11 +39,12 @@ namespace HiviewDFX {
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
-const std::string SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
+const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const std::string ON_KICK_TIME = "on,39";
 const std::string KICK_TIME = "kick";
+const int32_t NOT_INIT = -1;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
-static bool g_wdgOpened = false;
+static int32_t g_fd = -1;
 static bool g_existFile = true;
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
@@ -332,27 +336,32 @@ bool WatchdogInner::Start()
 
 bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 {
-    std::ofstream outFile;
-    outFile.open(SYS_KERNEL_HUNGTASK_USERLIST);
-    if (!outFile) {
-        XCOLLIE_LOGE("open hungtask file failed\n");
-        g_existFile = false;
+    if (g_fd == NOT_INIT) {
+        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
+        if(g_fd < 0) {
+            XCOLLIE_LOGE("can't open hungtask file");
+            g_existFile = false;
+            return false;
+        }
+    }
+    size_t watchdogWrite;
+    watchdogWrite = write(g_fd, msg.c_str(), strlen(msg.c_str()));
+    if(watchdogWrite < 0 || watchdogWrite != strlen(msg.c_str())) {
+        XCOLLIE_LOGE("watchdogWrite msg failed");
+        close(g_fd);
         return false;
     }
-    outFile.flush();
-    outFile << msg << std::endl;
-    outFile.close();
     XCOLLIE_LOGE("Send %{public}s to hungtask Successful\n", msg.c_str());
     return true;
 }
 
 bool WatchdogInner::KickWatchdog()
 {
-    if (!g_wdgOpened) {
+    if (g_fd == NOT_INIT) {
         if (!SendMsgToHungtask(ON_KICK_TIME)) {
+            XCOLLIE_LOGE("KickWatchdog SendMsgToHungtask false");
             return false;
         }
-        g_wdgOpened = true;
     }
     return SendMsgToHungtask(KICK_TIME);
 }
