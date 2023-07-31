@@ -22,6 +22,7 @@
 #include "directory_ex.h"
 #include "file_ex.h"
 #include "event_handler.h"
+#include "ffrt_inner.h"
 #include "watchdog.h"
 
 using namespace testing::ext;
@@ -74,6 +75,16 @@ static inline void Sleep(int second)
     while (left > 0) {
         left = sleep(left);
     }
+}
+
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_007, TestSize.Level1)
+{
+    printf("WatchdogHandlerCheckerTest_007 begin\n");
+    Watchdog::GetInstance().InitFfrtWatchdog();
+    ffrt::queue* testQueue = new ffrt::queue("test_queue");
+    auto t = testQueue->submit_h([] { sleep(70); }, {});
+    testQueue->wait(t);
+    delete testQueue;
 }
 
 HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_006, TestSize.Level1)

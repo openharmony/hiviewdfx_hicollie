@@ -52,5 +52,10 @@ void Watchdog::StopWatchdog()
 {
     return WatchdogInner::GetInstance().StopWatchdog();
 }
+
+void Watchdog::InitFfrtWatchdog()
+{
+    return WatchdogInner::GetInstance().InitFfrtWatchdog();
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

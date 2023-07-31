@@ -27,6 +27,7 @@
                 "c_utils",
                 "eventhandler",
                 "faultloggerd",
+                "ffrt",
                 "ipc"
             ],
             "third_party": []
