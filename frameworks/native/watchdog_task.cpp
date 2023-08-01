@@ -133,7 +133,7 @@ void WatchdogTask::RunHandlerCheckerTask()
 
 void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
 {
-    uint32_t pid = getpid();
+    int32_t pid = getpid();
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
@@ -153,7 +153,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
 {
-    uint32_t pid = getpid();
+    int32_t pid = getpid();
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
