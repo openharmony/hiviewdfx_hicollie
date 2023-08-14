@@ -45,7 +45,7 @@ constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
 constexpr int  SERVICE_WARNING = 1;
 const int BUF_SIZE_512 = 512;
-const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
+const char* g_sysKernelHungtaskUserlist = "/sys/kernel/hungtask/userlist";
 const std::string ON_KICK_TIME = "on,63";
 const std::string KICK_TIME = "kick";
 const int32_t NOT_OPEN = -1;
@@ -335,7 +335,7 @@ bool WatchdogInner::Start()
 bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 {
     if (g_fd == NOT_OPEN) {
-        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
+        g_fd = open(g_sysKernelHungtaskUserlist, O_WRONLY);
         if (g_fd < 0) {
             XCOLLIE_LOGE("can't open hungtask file");
             g_existFile = false;
