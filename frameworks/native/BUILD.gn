@@ -41,6 +41,7 @@ ohos_source_set("libhicollie_source") {
     "c_utils:utils",
     "eventhandler:libeventhandler",
     "faultloggerd:libbacktrace_local",
+    "ffrt:libffrt",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
     "ipc:ipc_single",

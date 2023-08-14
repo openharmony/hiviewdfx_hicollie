@@ -79,6 +79,12 @@ public:
      *
      */
     void StopWatchdog();
+
+    /**
+     * watchdog adapt ffrt and not influence ipc full, hungtask delete watchdog, merge xcollie and watchdog.
+     *
+     */
+    void InitFfrtWatchdog();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

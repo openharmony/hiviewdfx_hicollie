@@ -28,6 +28,7 @@
 
 #include <securec.h>
 
+#include "backtrace_local.h"
 #include "hisysevent.h"
 #include "xcollie_utils.h"
 #include "xcollie_define.h"
@@ -37,10 +38,15 @@ extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((we
 namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
+constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
+constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
+constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
+constexpr int  SERVICE_WARNING = 1;
+const int BUF_SIZE_512 = 512;
 const char* g_sysKernelHungtaskUserlist = "/sys/kernel/hungtask/userlist";
-const std::string ON_KICK_TIME = "on,39";
+const std::string ON_KICK_TIME = "on,63";
 const std::string KICK_TIME = "kick";
 const int32_t NOT_OPEN = -1;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
@@ -97,16 +103,8 @@ int WatchdogInner::AddThread(const std::string &name,
 
     XCOLLIE_LOGI("Add thread %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    if (getuid() == WATCHED_UID) {
-        if (binderCheckHander_ == nullptr) {
-            auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
-            binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
-            if (!InsertWatchdogTaskLocked(IPC_CHECKER, WatchdogTask(IPC_FULL, binderCheckHander_,
-                nullptr, interval))) {
-                XCOLLIE_LOGE("Add %{public}s thread fail", IPC_CHECKER);
-            }
-        }
-    }
+
+    IpcCheck();
 
     if (!InsertWatchdogTaskLocked(name, WatchdogTask(name, handler, timeOutCallback, interval))) {
         return -1;
@@ -275,7 +273,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
 
-    if (g_existFile && queuedTask.name == WMS_FULL_NAME && now - g_nextKickTime > INTERVAL_KICK_TIME) {
+    if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
             g_nextKickTime = now;
         }
@@ -344,7 +342,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
             return false;
         }
     }
-    
+
     size_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
     if (watchdogWrite < 0 || watchdogWrite != msg.size()) {
         XCOLLIE_LOGE("watchdogWrite msg failed");
@@ -365,6 +363,71 @@ bool WatchdogInner::KickWatchdog()
         }
     }
     return SendMsgToHungtask(KICK_TIME);
+}
+
+void WatchdogInner::IpcCheck()
+{
+    if (getuid() == WATCHED_UID) {
+        if (binderCheckHander_ == nullptr) {
+            auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
+            binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
+            if (!InsertWatchdogTaskLocked(IPC_CHECKER, WatchdogTask(IPC_FULL, binderCheckHander_,
+                nullptr, IPC_CHECKER_TIME))) {
+                XCOLLIE_LOGE("Add %{public}s thread fail", IPC_CHECKER);
+            }
+        }
+    }
+}
+
+void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount)
+{
+    std::string desc = "FfrtCallback: task(";
+    desc += taskInfo;
+    desc += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
+    auto map = WatchdogInner::GetInstance().taskIdCnt;
+    auto search = map.find(taskId);
+    if (search != map.end()) {
+        search = map.erase(search);
+        desc += ", report twice instead of exiting process."; // 1s = 1000ms
+        WatchdogInner::SendFfrtEvent(desc, "SERVICE_BLOCK", taskInfo);
+        unsigned int leftTime = 3;
+        while (leftTime > 0) {
+            leftTime = sleep(leftTime);
+        }
+        XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", desc.c_str());
+        _exit(0);
+    } else {
+        map[taskId] = SERVICE_WARNING;
+        WatchdogInner::SendFfrtEvent(desc, "SERVICE_WARNING", taskInfo);
+    }
+}
+
+void WatchdogInner::InitFfrtWatchdog()
+{
+    CreateWatchdogThreadIfNeed();
+    IpcCheck();
+    ffrt_watchdog_register(FfrtCallback, FFRT_CALLBACK_TIME, FFRT_CALLBACK_TIME);
+}
+
+void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
+{
+    uint32_t pid = getpid();
+    uint32_t gid = getgid();
+    uint32_t uid = getuid();
+    time_t curTime = time(nullptr);
+    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
+        "\n" + msg + "\n";
+    char buff[BUF_SIZE_512] = {0};
+    ffrt_watchdog_dumpinfo(buff, BUF_SIZE_512);
+    sendMsg += buff;
+    HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+        "PID", pid,
+        "TGID", gid,
+        "UID", uid,
+        "MODULE_NAME", taskInfo,
+        "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg);
+    XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
 }
 
 bool WatchdogInner::Stop()

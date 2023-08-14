@@ -26,6 +26,7 @@
 #include <thread>
 
 #include "watchdog_task.h"
+#include "c/ffrt_watchdog.h"
 #include "singleton.h"
 
 namespace OHOS {
@@ -35,6 +36,7 @@ class WatchdogInner : public Singleton<WatchdogInner> {
 public:
     static const int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
     static const int XCOLLIE_CALLBACK_TIMEWIN_MAX = 60;
+    std::map<int64_t, int> taskIdCnt;
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval);
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
@@ -45,6 +47,10 @@ public:
     void RemoveXCollieTask(int64_t id);
     void StopWatchdog();
     bool IsCallbackLimit(unsigned int flag);
+    void IpcCheck();
+    void InitFfrtWatchdog();
+    static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
+    static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo);
     std::string currentScene_;
 
 private:
