@@ -343,7 +343,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
         }
     }
 
-    size_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
+    ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
     if (watchdogWrite < 0 || watchdogWrite != msg.size()) {
         XCOLLIE_LOGE("watchdogWrite msg failed");
         close(g_fd);
