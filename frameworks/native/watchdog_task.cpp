@@ -77,7 +77,7 @@ void WatchdogTask::DoCallback()
     }
     if (flag & XCOLLIE_FLAG_LOG) {
         /* send to freezedetetor */
-        std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "s ago";
+        std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
         SendXCollieEvent(name, msg);
     }
     if (flag & XCOLLIE_FLAG_RECOVERY) {
@@ -85,6 +85,10 @@ void WatchdogTask::DoCallback()
             static_cast<long long>(timeout));
         std::thread exitFunc([]() {
             XCOLLIE_LOGE("timeout, exit...");
+            unsigned int leftTime = 3;
+            while (leftTime > 0) {
+                leftTime = sleep(leftTime);
+            }
             _exit(1);
         });
         if (exitFunc.joinable()) {
