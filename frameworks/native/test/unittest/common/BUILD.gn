@@ -21,6 +21,7 @@ config("module_private_config") {
   visibility = [ ":*" ]
   include_dirs = [
     ".",
+    "${hicollie_part_path}/frameworks/native",
     "${hicollie_part_path}/frameworks/native/test",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
     "//commonlibrary/c_utils/base/include",
@@ -60,11 +61,29 @@ ohos_unittest("WatchdogUnitTest") {
   ]
 }
 
+ohos_unittest("WatchdogInnerUnitTest") {
+  module_out_path = module_output_path
+  sources = [ "watchdog_inner_test.cpp" ]
+
+  configs = [ ":module_private_config" ]
+
+  deps = [ "//third_party/googletest:gtest_main" ]
+  external_deps = [
+    "c_utils:utils",
+    "eventhandler:libeventhandler",
+    "ffrt:libffrt",
+    "hicollie:libhicollie",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
+  ]
+}
+
 ###############################################################################
 group("unittest") {
   testonly = true
   deps = [
     # deps file
+    ":WatchdogInnerUnitTest",
     ":WatchdogUnitTest",
     ":XCollieUnitTest",
   ]
