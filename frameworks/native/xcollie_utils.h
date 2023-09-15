@@ -18,6 +18,7 @@
 
 #include <chrono>
 #include <string>
+#include <sys/ioctl.h>
 #include <fstream>
 
 #include "hilog/log.h"
@@ -27,12 +28,16 @@ namespace HiviewDFX {
 constexpr char WMS_FULL_NAME[] = "WindowManagerService";
 constexpr char IPC_FULL[] = "IPC_FULL";
 constexpr char IPC_CHECKER[] = "IpcChecker";
+const int BUFF_STACK_SIZE = 4096;
 constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0xD002D06, "XCollie"};
 #define XCOLLIE_LOGF(...) (void)OHOS::HiviewDFX::HiLog::Fatal(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) (void)OHOS::HiviewDFX::HiLog::Error(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGW(...) (void)OHOS::HiviewDFX::HiLog::Warn(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGI(...) (void)OHOS::HiviewDFX::HiLog::Info(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGD(...) (void)OHOS::HiviewDFX::HiLog::Debug(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
+#define MAGIC_NUM           0x9517
+#define HTRANSIO            0xAB
+#define LOGGER_GET_STACK    _IO(HTRANSIO, 9)
 
 uint64_t GetCurrentTickMillseconds();
 
