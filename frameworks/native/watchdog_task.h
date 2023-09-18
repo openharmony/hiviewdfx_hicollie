@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <string>
+#include <sys/types.h>
 
 #include "event_handler.h"
 #include "handler_checker.h"
@@ -72,6 +73,7 @@ public:
     uint64_t nextTickTime;
     bool isTaskScheduled;
     bool isOneshotTask;
+    pid_t watchdogTid;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

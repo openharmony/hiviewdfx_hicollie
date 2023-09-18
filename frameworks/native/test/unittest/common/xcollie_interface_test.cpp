@@ -142,5 +142,20 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
     ASSERT_GT(id, 0);
     sleep(1);
 }
+
+HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
+{
+    bool flag = false;
+    XCollieCallback callbackFunc = [&flag](void *) {
+        flag = true;
+    };
+    int id = XCollie::GetInstance().SetTimer("MyTimeout", 3, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id, 0);
+    sleep(5);
+    XCollie::GetInstance().CancelTimer(id);
+    ASSERT_EQ(flag, true);
+}
+
+
 } // namespace HiviewDFX
 } // namespace OHOS

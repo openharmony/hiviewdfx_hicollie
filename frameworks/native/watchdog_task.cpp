@@ -17,8 +17,12 @@
 
 #include <cinttypes>
 #include <ctime>
+#include <cstdio>
+#include <securec.h>
 #include <thread>
 
+#include <fcntl.h>
+#include <dlfcn.h>
 #include <unistd.h>
 
 #include "backtrace_local.h"
@@ -30,6 +34,12 @@
 namespace OHOS {
 namespace HiviewDFX {
 int64_t WatchdogTask::curId = 0;
+const char* g_bboxPath = "/dev/bbox";
+struct HstackVal {
+    uint32_t magic;
+    pid_t tid;
+    char hstackLogBuff[BUFF_STACK_SIZE];
+};
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr),
@@ -63,6 +73,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isTaskScheduled = false;
     isOneshotTask =true;
+    watchdogTid = gettid();
 }
 
 void WatchdogTask::DoCallback()
@@ -163,13 +174,35 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
         "timeout timer: " + timerName + "\n" +keyMsg;
+
+    struct HstackVal val;
+    if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {
+        XCOLLIE_LOGE("memset val failed\n");
+        return;
+    }
+    val.tid = watchdogTid;
+    val.magic = MAGIC_NUM;
+    int fd = open(g_bboxPath, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        XCOLLIE_LOGE("open %s failed", name.c_str());
+        return;
+    }
+    int ret = ioctl(fd, LOGGER_GET_STACK, &val);
+    close(fd);
+    if (ret != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
+        return;
+    }
+    XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
+
     HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
         "UID", uid,
         "MODULE_NAME", timerName,
         "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg);
+        "MSG", sendMsg,
+        "STACK", GetProcessStacktrace()+ "\n"+ val.hstackLogBuff);
     XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_TIMEOUT], msg=%{public}s", keyMsg.c_str());
 }
 
