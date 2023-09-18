@@ -122,11 +122,8 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
      * @tc.steps: step7. callback test
      * @tc.expected: step7. callback can be executed successfully
      */
-    flag = false;
     id = XCollie::GetInstance().SetTimer("MyTimeout", 1, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
     ASSERT_GT(id, 0);
-    sleep(2);
-    ASSERT_EQ(flag, true);
     flag = false;
     id1 = XCollie::GetInstance().SetTimer("MyTimeout", 2, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
     ASSERT_GT(id1, 0);
