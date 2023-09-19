@@ -49,6 +49,7 @@ const char* g_sysKernelHungtaskUserlist = "/sys/kernel/hungtask/userlist";
 const std::string ON_KICK_TIME = "on,63";
 const std::string KICK_TIME = "kick";
 const int32_t NOT_OPEN = -1;
+std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
@@ -384,10 +385,19 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     std::string desc = "FfrtCallback: task(";
     desc += taskInfo;
     desc += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
-    auto map = WatchdogInner::GetInstance().taskIdCnt;
-    auto search = map.find(taskId);
-    if (search != map.end()) {
-        search = map.erase(search);
+    bool isExist = false;
+    {
+        std::unique_lock<std::mutex> lock(lockFfrt_);
+        auto &map = WatchdogInner::GetInstance().taskIdCnt;
+        auto search = map.find(taskId);
+        if (search != map.end()) {
+            isExist = true;
+        } else {
+            map[taskId] = SERVICE_WARNING;
+        }
+    }
+
+    if (isExist) {
         desc += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(desc, "SERVICE_BLOCK", taskInfo);
         unsigned int leftTime = 3;
@@ -397,7 +407,6 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", desc.c_str());
         _exit(0);
     } else {
-        map[taskId] = SERVICE_WARNING;
         WatchdogInner::SendFfrtEvent(desc, "SERVICE_WARNING", taskInfo);
     }
 }
@@ -417,8 +426,8 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
-    char buff[BUF_SIZE_512] = {0};
-    ffrt_watchdog_dumpinfo(buff, BUF_SIZE_512);
+    char buff[BUFF_STACK_SIZE] = {0};
+    ffrt_watchdog_dumpinfo(buff, BUFF_STACK_SIZE);
     sendMsg += buff;
     HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
