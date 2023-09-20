@@ -69,6 +69,7 @@ private:
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
     std::unique_ptr<std::thread> threadLoop_;
     std::mutex lock_;
+    static std::mutex lockFfrt_;
     std::condition_variable condition_;
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
