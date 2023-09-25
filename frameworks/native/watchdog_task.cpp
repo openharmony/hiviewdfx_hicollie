@@ -30,6 +30,7 @@
 #include "watchdog_inner.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
+#include "dfx_define.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -102,6 +103,8 @@ void WatchdogTask::DoCallback()
             }
             _exit(1);
         });
+        uint32_t pid = getpid();
+        WatchdogInner::WriteStringToFile(pid, "0");
         if (exitFunc.joinable()) {
             exitFunc.detach();
         }
@@ -242,6 +245,7 @@ int WatchdogTask::EvaluateCheckerState()
             }
             XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
             _exit(0);
+            WatchdogInner::WriteStringToFile(pid, "0");
         }
     }
     return waitState;
