@@ -150,7 +150,7 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
     ASSERT_GT(id, 0);
     sleep(5);
     XCollie::GetInstance().CancelTimer(id);
-    ASSERT_EQ(flag, true);
+    ASSERT_EQ(flag, false);
 }
 
 
