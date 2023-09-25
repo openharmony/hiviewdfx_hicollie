@@ -21,6 +21,7 @@ SERVICE_TIMEOUT:
   MODULE_NAME: {type: STRING, desc: failure module name}
   PROCESS_NAME: {type: STRING, desc: process name}
   MSG: {type: STRING, desc: event message}
+  STACK: {type: STRING, desc: stacktrace of service process}
 
 SERVICE_BLOCK:
   __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: watchdog timeout}
