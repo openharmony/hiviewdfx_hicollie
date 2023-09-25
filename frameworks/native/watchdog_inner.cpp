@@ -32,6 +32,7 @@
 #include "hisysevent.h"
 #include "xcollie_utils.h"
 #include "xcollie_define.h"
+#include "dfx_define.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));

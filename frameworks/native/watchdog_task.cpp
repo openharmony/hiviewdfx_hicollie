@@ -30,7 +30,6 @@
 #include "watchdog_inner.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
-#include "dfx_define.h"
 
 namespace OHOS {
 namespace HiviewDFX {
