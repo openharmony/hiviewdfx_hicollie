@@ -210,6 +210,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 
 int WatchdogTask::EvaluateCheckerState()
 {
+    int32_t pid = getpid();
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
         return waitState;
