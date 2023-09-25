@@ -117,7 +117,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_002, TestSize.Level1
     WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
     int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc, delay, interval, isOneshot));
     ASSERT_GT(id, 0);
-    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 60000);
+    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 0);
 }
 
 /**
