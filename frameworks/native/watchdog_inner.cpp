@@ -32,6 +32,7 @@
 #include "hisysevent.h"
 #include "xcollie_utils.h"
 #include "xcollie_define.h"
+#include "dfx_define.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -380,6 +381,24 @@ void WatchdogInner::IpcCheck()
     }
 }
 
+void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str) {
+    char file[PATH_LEN] = {0};
+    if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", pid) == -1) {
+        XCOLLIE_LOGI("failed to build path for %d.", pid);
+    }
+    int fd = open(file, O_RDWR);
+    if (fd == -1) {
+        return;
+    }
+    if (write(fd, str, strlen(str)) < 0) {
+        XCOLLIE_LOGI("failed to write 0 for %s", file);
+        close(fd);
+        return;
+    }
+    close(fd);
+    return;
+}
+
 void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount)
 {
     std::string desc = "FfrtCallback: task(";
@@ -390,6 +409,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         std::unique_lock<std::mutex> lock(lockFfrt_);
         auto &map = WatchdogInner::GetInstance().taskIdCnt;
         auto search = map.find(taskId);
+        uint32_t pid = getpid();
         if (search != map.end()) {
             isExist = true;
         } else {
@@ -406,6 +426,8 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         }
         XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", desc.c_str());
         _exit(0);
+        uint32_t pid = getpid();
+        WatchdogInner::WriteStringToFile(pid, "0");
     } else {
         WatchdogInner::SendFfrtEvent(desc, "SERVICE_WARNING", taskInfo);
     }

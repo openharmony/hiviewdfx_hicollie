@@ -102,6 +102,8 @@ void WatchdogTask::DoCallback()
             }
             _exit(1);
         });
+        uint32_t pid = getpid();
+        WatchdogInner::WriteStringToFile(pid, "0");
         if (exitFunc.joinable()) {
             exitFunc.detach();
         }
@@ -208,6 +210,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 
 int WatchdogTask::EvaluateCheckerState()
 {
+    int32_t pid = getpid();
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
         return waitState;
@@ -242,6 +245,7 @@ int WatchdogTask::EvaluateCheckerState()
             }
             XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
             _exit(0);
+            WatchdogInner::WriteStringToFile(pid, "0");
         }
     }
     return waitState;
