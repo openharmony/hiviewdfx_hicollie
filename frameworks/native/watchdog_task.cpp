@@ -100,10 +100,10 @@ void WatchdogTask::DoCallback()
             while (leftTime > 0) {
                 leftTime = sleep(leftTime);
             }
+            uint32_t pid = getpid();
+            WatchdogInner::WriteStringToFile(pid, "0");
             _exit(1);
         });
-        uint32_t pid = getpid();
-        WatchdogInner::WriteStringToFile(pid, "0");
         if (exitFunc.joinable()) {
             exitFunc.detach();
         }
@@ -244,8 +244,8 @@ int WatchdogTask::EvaluateCheckerState()
                 leftTime = sleep(leftTime);
             }
             XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
-            _exit(0);
             WatchdogInner::WriteStringToFile(pid, "0");
+            _exit(0);
         }
     }
     return waitState;

@@ -381,7 +381,8 @@ void WatchdogInner::IpcCheck()
     }
 }
 
-void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str) {
+void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
+{
     char file[PATH_LEN] = {0};
     if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", pid) == -1) {
         XCOLLIE_LOGI("failed to build path for %d.", pid);
@@ -425,9 +426,9 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
             leftTime = sleep(leftTime);
         }
         XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", desc.c_str());
-        _exit(0);
         uint32_t pid = getpid();
         WatchdogInner::WriteStringToFile(pid, "0");
+        _exit(0);
     } else {
         WatchdogInner::SendFfrtEvent(desc, "SERVICE_WARNING", taskInfo);
     }
