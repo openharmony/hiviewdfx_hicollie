@@ -85,7 +85,7 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_007, TestSize.Level1)
     auto t = testQueue->submit_h([] {
         ffrt::mutex lock;
         lock.lock();
-        lock.lock();
+        lock.unlock();
     }, {});
     testQueue->wait(t);
     delete testQueue;
