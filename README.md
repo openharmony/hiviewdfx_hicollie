@@ -35,5 +35,23 @@ For details, see the  _HiCollie Development Guide_.
 
 ## Repositories Involved<a name="section1134984213235"></a>
 
-[Hivew](https://gitee.com/openharmony)
+DFX Subsystem：
+
+[DFX Subsystem](https://gitee.com/openharmony/docs/blob/master/en/readme/dfx.md)
+
+DFX Component：
+
+[hiviewdfx\_hiview](https://gitee.com/openharmony/hiviewdfx_hiview/blob/master/README.md)
+
+[hiviewdfx\_hilog](https://gitee.com/openharmony/hiviewdfx_hilog/blob/master/README.md)
+
+[hiviewdfx\_hitrace](https://gitee.com/openharmony/hiviewdfx_hitrace/blob/master/README.md)
+
+**hiviewdfx\_hicollie**
+
+[hiviewdfx\_hidumper](https://gitee.com/openharmony/hiviewdfx_hidumper/blob/master/README.md)
+
+[hiviewdfx\_hiappevent](https://gitee.com/openharmony/hiviewdfx_hiappevent/blob/master/README.md)
+
+[hiviewdfx\_hisysevent](https://gitee.com/openharmony/hiviewdfx_hisysevent/blob/master/README.md)
 

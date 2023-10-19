@@ -40,21 +40,21 @@ HiCollie接口单个进程最多可以注册128个定时器。超出上限的定
 
 DFX子系统：
 
-hmf/hiviwdfx
+[DFX子系统](https://gitee.com/openharmony/docs/blob/master/zh-cn/readme/DFX%E5%AD%90%E7%B3%BB%E7%BB%9F.md)
 
 DFX组件：
 
-hmf/hiviwdfx/hilog
+[hiviewdfx\_hiview](https://gitee.com/openharmony/hiviewdfx_hiview/blob/master/README_zh.md)
 
-hmf/hiviwdfx/hitrace
+[hiviewdfx\_hilog](https://gitee.com/openharmony/hiviewdfx_hilog/blob/master/README_zh.md)
 
-**hmf/hiviwdfx/hicollie**
+[hiviewdfx\_hitrace](https://gitee.com/openharmony/hiviewdfx_hitrace/blob/master/README_zh.md)
 
-hmf/hiviwdfx/hidumper
+**hiviewdfx\_hicollie**
 
-hmf/hiviwdfx/hiappevent
+[hiviewdfx\_hidumper](https://gitee.com/openharmony/hiviewdfx_hidumper/blob/master/README_zh.md)
 
-hmf/hiviwdfx/hisysevent
+[hiviewdfx\_hiappevent](https://gitee.com/openharmony/hiviewdfx_hiappevent/blob/master/README_zh.md)
 
-hmf/hiviwdfx/debug
+[hiviewdfx\_hisysevent](https://gitee.com/openharmony/hiviewdfx_hisysevent/blob/master/README_zh.md)
 
