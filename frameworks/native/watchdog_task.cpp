@@ -235,17 +235,11 @@ int WatchdogTask::EvaluateCheckerState()
                 SendEvent(description, IPC_FULL);
             } else {
                 SendEvent(description, "SERVICE_BLOCK");
+                // peer binder log is collected in hiview asynchronously
+                // if blocked process exit early, binder blocked state will change
+                // thus delay exit and let hiview have time to collect log.
+                WatchdogInner::LeftTimeExitProcess(description.c_str());
             }
-            // peer binder log is collected in hiview asynchronously
-            // if blocked process exit early, binder blocked state will change
-            // thus delay exit and let hiview have time to collect log.
-            unsigned int leftTime = 3;
-            while (leftTime > 0) {
-                leftTime = sleep(leftTime);
-            }
-            XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
-            WatchdogInner::WriteStringToFile(pid, "0");
-            _exit(0);
         }
     }
     return waitState;

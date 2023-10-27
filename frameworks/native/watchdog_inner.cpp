@@ -462,6 +462,16 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
 }
 
+void WatchdogInner::LeftTimeExitProcess(const std::string &description)
+{
+    unsigned int leftTime = 3;
+    while (leftTime > 0) {
+        leftTime = sleep(leftTime);
+    }
+    XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
+    _exit(0);
+}
+
 bool WatchdogInner::Stop()
 {
     isNeedStop_.store(true);
