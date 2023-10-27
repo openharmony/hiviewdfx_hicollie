@@ -193,10 +193,10 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     close(fd);
     if (ret != 0) {
         XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
-        return;
+    } else {
+        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
     }
-    XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
-
+    
     HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
@@ -204,7 +204,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
         "MODULE_NAME", timerName,
         "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg,
-        "STACK", GetProcessStacktrace()+ "\n"+ val.hstackLogBuff);
+        "STACK", GetProcessStacktrace()+ "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
     XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_TIMEOUT], msg=%{public}s", keyMsg.c_str());
 }
 
