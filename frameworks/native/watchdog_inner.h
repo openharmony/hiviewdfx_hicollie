@@ -52,6 +52,7 @@ public:
     static void WriteStringToFile(uint32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
     static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo);
+    static void LeftTimeExitProcess(const std::string &description);
     std::string currentScene_;
 
 private:
