@@ -42,8 +42,8 @@ public:
           checker(nullptr),
           checkInterval(0),
           nextTickTime(0),
-          isTaskScheduled(false),
-          isOneshotTask(false) {};
+          isOneshotTask(false),
+          watchdogTid(0) {};
     ~WatchdogTask() {};
 
     bool operator<(const WatchdogTask &obj) const

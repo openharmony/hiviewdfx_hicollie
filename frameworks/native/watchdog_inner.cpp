@@ -346,7 +346,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
     }
 
     ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
-    if (watchdogWrite < 0 || watchdogWrite != msg.size()) {
+    if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
         XCOLLIE_LOGE("watchdogWrite msg failed");
         close(g_fd);
         g_fd = -1;
@@ -443,7 +443,7 @@ void WatchdogInner::InitFfrtWatchdog()
 
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
 {
-    uint32_t pid = getpid();
+    int32_t pid = getpid();
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
