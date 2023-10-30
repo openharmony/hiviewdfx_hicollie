@@ -95,14 +95,8 @@ void WatchdogTask::DoCallback()
         XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(),
             static_cast<long long>(timeout));
         std::thread exitFunc([]() {
-            XCOLLIE_LOGE("timeout, exit...");
-            unsigned int leftTime = 3;
-            while (leftTime > 0) {
-                leftTime = sleep(leftTime);
-            }
-            uint32_t pid = getpid();
-            WatchdogInner::WriteStringToFile(pid, "0");
-            _exit(1);
+            std::string description = "timeout, exit...";
+            WatchdogInner::LeftTimeExitProcess(description.c_str());
         });
         if (exitFunc.joinable()) {
             exitFunc.detach();
@@ -210,7 +204,6 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 
 int WatchdogTask::EvaluateCheckerState()
 {
-    int32_t pid = getpid();
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
         return waitState;
