@@ -402,9 +402,9 @@ void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
 
 void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount)
 {
-    std::string desc = "FfrtCallback: task(";
-    desc += taskInfo;
-    desc += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
+    std::string description = "FfrtCallback: task(";
+    description += taskInfo;
+    description += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
     bool isExist = false;
     {
         std::unique_lock<std::mutex> lock(lockFfrt_);
@@ -419,18 +419,11 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     }
 
     if (isExist) {
-        desc += ", report twice instead of exiting process."; // 1s = 1000ms
-        WatchdogInner::SendFfrtEvent(desc, "SERVICE_BLOCK", taskInfo);
-        unsigned int leftTime = 3;
-        while (leftTime > 0) {
-            leftTime = sleep(leftTime);
-        }
-        XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", desc.c_str());
-        uint32_t pid = getpid();
-        WatchdogInner::WriteStringToFile(pid, "0");
-        _exit(0);
+        description += ", report twice instead of exiting process."; // 1s = 1000ms
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
+        WatchdogInner::LeftTimeExitProcess(description.c_str());
     } else {
-        WatchdogInner::SendFfrtEvent(desc, "SERVICE_WARNING", taskInfo);
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
     }
 }
 
@@ -465,10 +458,12 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 {
     unsigned int leftTime = 3;
+    int32_t pid = getpid();
     while (leftTime > 0) {
         leftTime = sleep(leftTime);
     }
     XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
+    WatchdogInner::WriteStringToFile(pid, "0");
     _exit(0);
 }
 
