@@ -34,6 +34,7 @@ void HandlerChecker::ScheduleCheck()
     }
 
     isCompleted_.store(false);
+    taskSlow = false;
     auto f = [this] () {
         this->isCompleted_.store(true);
     };

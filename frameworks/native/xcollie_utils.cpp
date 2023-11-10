@@ -14,14 +14,18 @@
  */
 
 #include "xcollie_utils.h"
+#include "time.h"
 
 #include <algorithm>
 namespace OHOS {
 namespace HiviewDFX {
 uint64_t GetCurrentTickMillseconds()
 {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
+    struct timespec t;
+    t.tv_sec = 0;
+    t.tv_nsec = 0;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (int64_t)((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
 bool IsFileNameFormat(char c)
