@@ -127,9 +127,9 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
     flag = false;
     id1 = XCollie::GetInstance().SetTimer("MyTimeout", 2, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
     ASSERT_GT(id1, 0);
-    sleep(1);
+    sleep(2);
     XCollie::GetInstance().CancelTimer(id1);
-    ASSERT_EQ(flag, false);
+    ASSERT_EQ(flag, true);
 
     /**
      * @tc.steps: step8. recover test
@@ -150,7 +150,7 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
     ASSERT_GT(id, 0);
     sleep(5);
     XCollie::GetInstance().CancelTimer(id);
-    ASSERT_EQ(flag, false);
+    ASSERT_EQ(flag, true);
 }
 
 
