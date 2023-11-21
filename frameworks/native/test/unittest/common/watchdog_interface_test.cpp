@@ -77,50 +77,6 @@ static inline void Sleep(int second)
     }
 }
 
-HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_007, TestSize.Level1)
-{
-    printf("WatchdogHandlerCheckerTest_007 begin\n");
-    Watchdog::GetInstance().InitFfrtWatchdog();
-    ffrt::queue* testQueue = new ffrt::queue("test_queue");
-    auto t = testQueue->submit_h([] {
-        ffrt::mutex lock;
-        lock.lock();
-        lock.unlock();
-    }, {});
-    testQueue->wait(t);
-    delete testQueue;
-}
-
-HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_003, TestSize.Level1)
-{
-    constexpr int blockTime = 10;
-    constexpr int maxThread = 5;
-    std::vector<std::thread> threads(maxThread);
-    for (int i = 0; i < maxThread; i++) {
-        threads[i] = std::thread(&WatchdogInterfaceTest::DoAddWatchThread, this);
-    }
-
-    for (auto& th : threads) {
-        th.join();
-    }
-    ASSERT_EQ(g_ret, -4); // -4 : -1 * 4
-    Sleep(blockTime);
-}
-
-HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_004, TestSize.Level1)
-{
-    constexpr int blockTime = 10;
-    constexpr int checkPeriod = 2000;
-    auto runner = EventRunner::Create("test_thread");
-    auto handler = std::make_shared<TestEventHandler>(runner);
-    int ret = Watchdog::GetInstance().AddThread("BLOCK2S", handler, checkPeriod);
-    ASSERT_EQ(ret, 0);
-
-    auto taskFunc = []() { Sleep(blockTime); };
-    Watchdog::GetInstance().RunOneShotTask("block", taskFunc);
-    Sleep(blockTime);
-}
-
 /**
  * @tc.name: Watchdog handler checker with default timeout
  * @tc.desc: Verify default timeout in handler checker interface
@@ -206,6 +162,36 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
     Sleep(blockTime);
 }
 
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_003, TestSize.Level1)
+{
+    constexpr int blockTime = 10;
+    constexpr int maxThread = 5;
+    std::vector<std::thread> threads(maxThread);
+    for (int i = 0; i < maxThread; i++) {
+        threads[i] = std::thread(&WatchdogInterfaceTest::DoAddWatchThread, this);
+    }
+
+    for (auto& th : threads) {
+        th.join();
+    }
+    ASSERT_EQ(g_ret, -4); // -4 : -1 * 4
+    Sleep(blockTime);
+}
+
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_004, TestSize.Level1)
+{
+    constexpr int blockTime = 10;
+    constexpr int checkPeriod = 2000;
+    auto runner = EventRunner::Create("test_thread");
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    int ret = Watchdog::GetInstance().AddThread("BLOCK2S", handler, checkPeriod);
+    ASSERT_EQ(ret, 0);
+
+    auto taskFunc = []() { Sleep(blockTime); };
+    Watchdog::GetInstance().RunOneShotTask("block", taskFunc);
+    Sleep(blockTime);
+}
+
 /**
  * @tc.name: Watchdog handler checker without timeout callback
  * @tc.desc: Check whether SERVICE_BLOCK hisysevent is fired
@@ -231,6 +217,20 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_005, TestSize.Level1)
     ASSERT_EQ(result2, 0);
 
     Sleep(blockTime);
+}
+
+HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_006, TestSize.Level1)
+{
+    printf("WatchdogHandlerCheckerTest_007 begin\n");
+    Watchdog::GetInstance().InitFfrtWatchdog();
+    ffrt::queue* testQueue = new ffrt::queue("test_queue");
+    auto t = testQueue->submit_h([] {
+        ffrt::mutex lock;
+        lock.lock();
+        lock.unlock();
+    }, {});
+    testQueue->wait(t);
+    delete testQueue;
 }
 
 /**
