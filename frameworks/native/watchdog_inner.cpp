@@ -275,6 +275,12 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
 
+    if (&(queuedTask.name) == nullptr) {
+        checkerQueue_.pop();
+        XCOLLIE_LOGW("queuedTask, failed.");
+        return DEFAULT_TIMEOUT;
+    }
+
     if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
             g_nextKickTime = now;
