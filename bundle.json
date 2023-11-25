@@ -34,7 +34,8 @@
         },
         "build": {
             "sub_component": [
-                "//base/hiviewdfx/hicollie/interfaces/native/innerkits:libhicollie"
+                "//base/hiviewdfx/hicollie/interfaces/native/innerkits:libhicollie",
+                "//base/hiviewdfx/hicollie/interfaces/rust:hicollie_rust"
             ],
             "inner_kits": [
                 {
@@ -46,6 +47,13 @@
                             "xcollie/xcollie_define.h",
                             "xcollie/watchdog.h"
                         ]
+                    }
+                },
+                {
+                    "name": "//base/hiviewdfx/hicollie/interfaces/rust:hicollie_rust",
+                    "header": {
+                        "header_base": [],
+                        "header_files": []
                     }
                 }
             ],
