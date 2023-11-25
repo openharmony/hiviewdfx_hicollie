@@ -42,3 +42,17 @@ void XCollie::CancelTimer(int id)
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
+
+typedef void (*XCollieCallbackRust)(void *);
+
+extern "C" int SetTimerRust(const char* data, unsigned int timeout,
+                            XCollieCallbackRust func, void *arg, unsigned int flag)
+{
+    std::string str = data;
+    return OHOS::HiviewDFX::XCollie::GetInstance().SetTimer(str, timeout, func, arg, flag);
+}
+
+extern "C" void CancelTimerRust(int id)
+{
+    OHOS::HiviewDFX::XCollie::GetInstance().CancelTimer(id);
+}
