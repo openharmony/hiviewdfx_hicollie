@@ -44,6 +44,7 @@ ohos_source_set("libhicollie_source") {
     "ffrt:libffrt",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
+    "init:libbegetutil",
     "ipc:ipc_core",
   ]
 
