@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <csignal>
+#include <string>
 
 #include <securec.h>
 
@@ -33,6 +34,7 @@
 #include "xcollie_utils.h"
 #include "xcollie_define.h"
 #include "dfx_define.h"
+#include "parameter.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -470,6 +472,17 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
     }
     XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
     WatchdogInner::WriteStringToFile(pid, "0");
+
+    const int buffSize = 128;
+    char param[buffSize] = {0};
+    GetParameter("hiviewdfx.appfreeze.filter_bundle_name", "", param, buffSize - 1);
+    std::string debugBundle(param);
+
+    std::string procCmdlineContent = GetProcessNameFromProcCmdline(pid);
+    if (procCmdlineContent.compare(debugBundle) == 0) {
+        return;
+    }
+
     _exit(0);
 }
 

@@ -66,5 +66,38 @@ std::string GetSelfProcName()
     ret.erase(std::remove_if(ret.begin(), ret.end(), IsFileNameFormat), ret.end());
     return ret;
 }
+
+std::string GetFirstLine(const std::string& path)
+{
+    std::ifstream inFile(path.c_str());
+    if (!inFile) {
+        return "";
+    }
+    std::string firstLine;
+    getline(inFile, firstLine);
+    inFile.close();
+    return firstLine;
+}
+
+std::string GetProcessNameFromProcCmdline(int32_t pid)
+{
+    std::string procCmdlinePath = "/proc/" + std::to_string(pid) + "/cmdline";
+    std::string procCmdlineContent = GetFirstLine(procCmdlinePath);
+    if (procCmdlineContent.empty()) {
+        return "";
+    }
+
+    size_t procNameStartPos = 0;
+    size_t procNameEndPos = procCmdlineContent.size();
+    for (size_t i = 0; i < procCmdlineContent.size(); i++) {
+        if (procCmdlineContent[i] == '/') {
+            procNameStartPos = i + 1;
+        } else if (procCmdlineContent[i] == '\0') {
+            procNameEndPos = i;
+            break;
+        }
+    }
+    return procCmdlineContent.substr(procNameStartPos, procNameEndPos - procNameStartPos);
+}
 } // end of HiviewDFX
 } // end of OHOS

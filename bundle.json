@@ -28,7 +28,8 @@
                 "eventhandler",
                 "faultloggerd",
                 "ffrt",
-                "ipc"
+                "ipc",
+                "init"
             ],
             "third_party": []
         },
