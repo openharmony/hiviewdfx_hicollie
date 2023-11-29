@@ -105,12 +105,13 @@ int WatchdogInner::AddThread(const std::string &name,
         return -1;
     }
 
-    XCOLLIE_LOGI("Add thread %{public}s to watchdog.", name.c_str());
+    std::string limitedName = GetLimitedSizeName(name);
+    XCOLLIE_LOGI("Add thread %{public}s to watchdog.", limitedName.c_str());
     std::unique_lock<std::mutex> lock(lock_);
 
     IpcCheck();
 
-    if (!InsertWatchdogTaskLocked(name, WatchdogTask(name, handler, timeOutCallback, interval))) {
+    if (!InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, handler, timeOutCallback, interval))) {
         return -1;
     }
     return 0;
@@ -128,7 +129,8 @@ void WatchdogInner::RunOneShotTask(const std::string& name, Task&& task, uint64_
     }
 
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, 0, true));
+    std::string limitedName = GetLimitedSizeName(name);
+    InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, std::move(task), delay, 0, true));
 }
 
 int64_t WatchdogInner::RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func,
@@ -144,7 +146,8 @@ int64_t WatchdogInner::RunXCollieTask(const std::string& name, uint64_t timeout,
     }
 
     std::unique_lock<std::mutex> lock(lock_);
-    return InsertWatchdogTaskLocked(name, WatchdogTask(name, timeout, func, arg, flag));
+    std::string limitedName = GetLimitedSizeName(name);
+    return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeout, func, arg, flag));
 }
 
 void WatchdogInner::RemoveXCollieTask(int64_t id)
@@ -183,9 +186,10 @@ void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint
         return;
     }
 
+    std::string limitedName = GetLimitedSizeName(name);
     XCOLLIE_LOGI("Add periodical task %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked(name, WatchdogTask(name, std::move(task), delay, interval, false));
+    InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, std::move(task), delay, interval, false));
 }
 
 bool WatchdogInner::IsTaskExistLocked(const std::string& name)
