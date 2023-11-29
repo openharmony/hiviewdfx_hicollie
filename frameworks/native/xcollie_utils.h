@@ -31,6 +31,7 @@ constexpr char IPC_CHECKER[] = "IpcChecker";
 constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
 const int BUFF_STACK_SIZE = 20 * 1024;
+const int MAX_NAME_SIZE = 128;
 constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0xD002D06, "XCollie"};
 #define XCOLLIE_LOGF(...) (void)OHOS::HiviewDFX::HiLog::Fatal(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) (void)OHOS::HiviewDFX::HiLog::Error(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
@@ -48,6 +49,8 @@ std::string GetSelfProcName();
 std::string GetFirstLine(const std::string& path);
 
 std::string GetProcessNameFromProcCmdline(int32_t pid);
+
+std::string GetLimitedSizeName(std::string name);
 } // end of HiviewDFX
 } // end of OHOS
 #endif
