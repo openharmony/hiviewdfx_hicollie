@@ -79,6 +79,7 @@ private:
     std::shared_ptr<AppExecFwk::EventHandler> binderCheckHander_;
     int cntCallback_;
     time_t timeCallback_;
+    bool isHmos = false;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

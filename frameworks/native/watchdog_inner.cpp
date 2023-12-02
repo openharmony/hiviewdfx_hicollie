@@ -49,8 +49,11 @@ constexpr int32_t WATCHED_UID = 5523;
 constexpr int  SERVICE_WARNING = 1;
 const int BUF_SIZE_512 = 512;
 const char* g_sysKernelHungtaskUserlist = "/sys/kernel/hungtask/userlist";
+const char* g_hmosHungtaskUserlist = "/proc/sys/hguard/user_list";
 const std::string ON_KICK_TIME = "on,63";
+const std::string ON_KICK_TIME_HMOS = "on,63,foundation";
 const std::string KICK_TIME = "kick";
+const std::string KICK_TIME_HMOS = "kick,foundation";
 const int32_t NOT_OPEN = -1;
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
@@ -351,9 +354,16 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
     if (g_fd == NOT_OPEN) {
         g_fd = open(g_sysKernelHungtaskUserlist, O_WRONLY);
         if (g_fd < 0) {
-            XCOLLIE_LOGE("can't open hungtask file");
-            g_existFile = false;
-            return false;
+            g_fd = open(g_hmosHungtaskUserlist, O_WRONLY);
+            if (g_fd < 0) {
+                XCOLLIE_LOGE("can't open hungtask file");
+                g_existFile = false;
+                return false;
+            }
+            XCOLLIE_LOGE("change to hmos kernel");
+            isHmos = true;
+        } else {
+            XCOLLIE_LOGE("change to linux kernel");
         }
     }
 
@@ -371,12 +381,12 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 bool WatchdogInner::KickWatchdog()
 {
     if (g_fd == NOT_OPEN) {
-        if (!SendMsgToHungtask(ON_KICK_TIME)) {
+        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_HMOS : ON_KICK_TIME)) {
             XCOLLIE_LOGE("KickWatchdog SendMsgToHungtask false");
             return false;
         }
     }
-    return SendMsgToHungtask(KICK_TIME);
+    return SendMsgToHungtask(isHmos ? KICK_TIME_HMOS : KICK_TIME);
 }
 
 void WatchdogInner::IpcCheck()
