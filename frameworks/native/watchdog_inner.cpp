@@ -318,7 +318,7 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
 
 bool WatchdogInner::Start()
 {
-    if (pthread_setname_np(pthread_self(), "DfxWatchdog") != 0) {
+    if (pthread_setname_np(pthread_self(), "OS_DfxWatchdog") != 0) {
         XCOLLIE_LOGW("Failed to set threadName for watchdog, errno:%d.", errno);
     }
 
