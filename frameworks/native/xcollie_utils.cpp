@@ -17,6 +17,7 @@
 #include "time.h"
 
 #include <algorithm>
+#include <cstdlib>
 namespace OHOS {
 namespace HiviewDFX {
 uint64_t GetCurrentTickMillseconds()
@@ -69,7 +70,16 @@ std::string GetSelfProcName()
 
 std::string GetFirstLine(const std::string& path)
 {
-    std::ifstream inFile(path.c_str());
+    char checkPath[PATH_MAX] = {0};
+    if (realpath(path.c_str(), checkPath) == nullptr) {
+        XCOLLIE_LOGE("canonicalize failed. path is %{public}s", path.c_str());
+        return "";
+    }
+    if (checkPath != path.c_str()) {
+        XCOLLIE_LOGE("fail to check path");
+        return "";
+    }
+    std::ifstream inFile(checkPath);
     if (!inFile) {
         return "";
     }
