@@ -75,10 +75,7 @@ std::string GetFirstLine(const std::string& path)
         XCOLLIE_LOGE("canonicalize failed. path is %{public}s", path.c_str());
         return "";
     }
-    if (checkPath != path.c_str()) {
-        XCOLLIE_LOGE("fail to check path");
-        return "";
-    }
+
     std::ifstream inFile(checkPath);
     if (!inFile) {
         return "";
