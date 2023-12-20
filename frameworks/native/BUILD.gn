@@ -39,7 +39,6 @@ ohos_source_set("libhicollie_source") {
 
   external_deps = [
     "c_utils:utils",
-    "eventhandler:libeventhandler",
     "faultloggerd:libbacktrace_local",
     "ffrt:libffrt",
     "hilog:libhilog",
@@ -47,6 +46,13 @@ ohos_source_set("libhicollie_source") {
     "init:libbegetutil",
     "ipc:ipc_core",
   ]
+
+  defines = []
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.notification_eventhandler)) {
+    external_deps += [ "eventhandler:libeventhandler" ]
+    defines += [ "EVENTHANDLER_ENABLE" ]
+  }
 
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"

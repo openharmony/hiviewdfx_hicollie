@@ -53,12 +53,18 @@ ohos_unittest("WatchdogUnitTest") {
   deps = [ "//third_party/googletest:gtest_main" ]
   external_deps = [
     "c_utils:utils",
-    "eventhandler:libeventhandler",
     "ffrt:libffrt",
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
+
+  defines = []
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.notification_eventhandler)) {
+    external_deps += [ "eventhandler:libeventhandler" ]
+    defines += [ "EVENTHANDLER_ENABLE" ]
+  }
 }
 
 ohos_unittest("WatchdogInnerUnitTest") {
@@ -70,12 +76,18 @@ ohos_unittest("WatchdogInnerUnitTest") {
   deps = [ "//third_party/googletest:gtest_main" ]
   external_deps = [
     "c_utils:utils",
-    "eventhandler:libeventhandler",
     "ffrt:libffrt",
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
+
+  defines = []
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.notification_eventhandler)) {
+    external_deps += [ "eventhandler:libeventhandler" ]
+    defines += [ "EVENTHANDLER_ENABLE" ]
+  }
 }
 
 ohos_unittest("HandlerCheckerTest") {
@@ -87,12 +99,18 @@ ohos_unittest("HandlerCheckerTest") {
   deps = [ "//third_party/googletest:gtest_main" ]
   external_deps = [
     "c_utils:utils",
-    "eventhandler:libeventhandler",
     "ffrt:libffrt",
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
+
+  defines = []
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.notification_eventhandler)) {
+    external_deps += [ "eventhandler:libeventhandler" ]
+    defines += [ "EVENTHANDLER_ENABLE" ]
+  }
 }
 
 ohos_unittest("WatchdogTaskTest") {
@@ -104,12 +122,18 @@ ohos_unittest("WatchdogTaskTest") {
   deps = [ "//third_party/googletest:gtest_main" ]
   external_deps = [
     "c_utils:utils",
-    "eventhandler:libeventhandler",
     "ffrt:libffrt",
     "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
+
+  defines = []
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.notification_eventhandler)) {
+    external_deps += [ "eventhandler:libeventhandler" ]
+    defines += [ "EVENTHANDLER_ENABLE" ]
+  }
 }
 
 ###############################################################################
