@@ -494,6 +494,8 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 
     std::string procCmdlineContent = GetProcessNameFromProcCmdline(pid);
     if (procCmdlineContent.compare(debugBundle) == 0) {
+        XCOLLIE_LOGW("appfreeze filtration %{public}s_%{public}s don't exit.",
+            debugBundle.c_str(), procCmdlineContent.c_str());
         return;
     }
 
