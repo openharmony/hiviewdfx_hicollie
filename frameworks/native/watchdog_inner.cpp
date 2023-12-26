@@ -479,8 +479,12 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 {
-    unsigned int leftTime = 3;
     int32_t pid = getpid();
+    if (IsProcessDebug(pid)) {
+        XCOLLIE_LOGI("heap dump for %{public}d, don't exit.", pid);
+        return;
+    }
+    unsigned int leftTime = 3;
     while (leftTime > 0) {
         leftTime = sleep(leftTime);
     }

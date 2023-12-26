@@ -18,6 +18,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+
+#include "parameter.h"
+
 namespace OHOS {
 namespace HiviewDFX {
 uint64_t GetCurrentTickMillseconds()
@@ -114,6 +117,19 @@ std::string GetLimitedSizeName(std::string name)
         return name.substr(nameStartPos, MAX_NAME_SIZE);
     }
     return name;
+}
+
+bool IsProcessDebug(int32_t pid)
+{
+    const int buffSize = 128;
+    char param[buffSize] = {0};
+    std::string filter = "hiviewdfx.freeze.filter." + GetProcessNameFromProcCmdline(pid);
+    GetParameter(filter.c_str(), "", param, buffSize - 1);
+    int32_t debugPid = atoi(param);
+    if (debugPid == pid) {
+        return true;
+    }
+    return false;
 }
 } // end of HiviewDFX
 } // end of OHOS
