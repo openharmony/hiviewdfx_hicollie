@@ -51,6 +51,8 @@ std::string GetFirstLine(const std::string& path);
 std::string GetProcessNameFromProcCmdline(int32_t pid);
 
 std::string GetLimitedSizeName(std::string name);
+
+bool IsProcessDebug(int32_t pid);
 } // end of HiviewDFX
 } // end of OHOS
 #endif

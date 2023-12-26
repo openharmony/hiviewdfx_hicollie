@@ -145,6 +145,10 @@ void WatchdogTask::RunHandlerCheckerTask()
 void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
 {
     int32_t pid = getpid();
+    if (IsProcessDebug(pid)) {
+        XCOLLIE_LOGI("heap dump for %{public}d, don't report.", pid);
+        return;
+    }
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
