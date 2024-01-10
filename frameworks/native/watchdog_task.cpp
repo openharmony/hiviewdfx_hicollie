@@ -228,15 +228,12 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
-            if (name.compare(IPC_FULL) == 0) {
-                SendEvent(description, IPC_FULL);
-            } else {
+            name.compare(IPC_FULL) == 0 ? SendEvent(description, IPC_FULL) :
                 SendEvent(description, "SERVICE_BLOCK");
-                // peer binder log is collected in hiview asynchronously
-                // if blocked process exit early, binder blocked state will change
-                // thus delay exit and let hiview have time to collect log.
-                WatchdogInner::LeftTimeExitProcess(description.c_str());
-            }
+            // peer binder log is collected in hiview asynchronously
+            // if blocked process exit early, binder blocked state will change
+            // thus delay exit and let hiview have time to collect log.
+            WatchdogInner::LeftTimeExitProcess(description.c_str());
         }
     }
     return waitState;
