@@ -72,7 +72,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     checkInterval = 0;
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isTaskScheduled = false;
-    isOneshotTask =true;
+    isOneshotTask = true;
     watchdogTid = gettid();
 }
 

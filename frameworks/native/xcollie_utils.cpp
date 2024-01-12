@@ -14,7 +14,7 @@
  */
 
 #include "xcollie_utils.h"
-#include "time.h"
+#include <ctime>
 
 #include <algorithm>
 #include <cstdlib>
