@@ -18,7 +18,7 @@
 
 #include <algorithm>
 #include <cstdlib>
-
+#include <unistd.h>
 #include "parameter.h"
 
 namespace OHOS {
@@ -130,6 +130,13 @@ bool IsProcessDebug(int32_t pid)
         return true;
     }
     return false;
+}
+
+void DelayBeforeExit(unsigned int leftTime)
+{
+    while (leftTime > 0) {
+        leftTime = sleep(leftTime);
+    }
 }
 } // end of HiviewDFX
 } // end of OHOS
