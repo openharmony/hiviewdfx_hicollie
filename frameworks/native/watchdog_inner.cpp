@@ -162,8 +162,7 @@ void WatchdogInner::RemoveXCollieTask(int64_t id)
         XCOLLIE_LOGE("Remove XCollieTask %{public}lld fail, empty queue!", static_cast<long long>(id));
         return;
     }
-    while (!checkerQueue_.empty())
-    {
+    while (!checkerQueue_.empty()) {
         const WatchdogTask& task = checkerQueue_.top();
         if (task.id != id) {
             tmpQueue.push(task);

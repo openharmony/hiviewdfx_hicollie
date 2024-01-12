@@ -21,8 +21,8 @@
 #define private public
 #define protected public
 #include "watchdog_inner.h"
-#undef private 
-#undef protected 
+#undef private
+#undef protected
 
 #include "xcollie_utils.h"
 #include "directory_ex.h"
@@ -91,7 +91,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_001, TestSize.Level1
     uint64_t interval = 0;
     bool isOneshot = true;
     WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
-    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc, delay, interval, isOneshot));
+    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc,
+        delay, interval, isOneshot));
     ASSERT_GT(id, 0);
     WatchdogInner::GetInstance().isNeedStop_.store(true);
     ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 60000);
@@ -115,7 +116,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_002, TestSize.Level1
     uint64_t interval = 0;
     bool isOneshot = true;
     WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
-    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc, delay, interval, isOneshot));
+    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc,
+        delay, interval, isOneshot));
     ASSERT_GT(id, 0);
     ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 0);
 }
