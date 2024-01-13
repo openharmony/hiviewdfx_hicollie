@@ -379,13 +379,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 
 bool WatchdogInner::KickWatchdog()
 {
-    if (g_fd == NOT_OPEN) {
-        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_HMOS : ON_KICK_TIME)) {
-            XCOLLIE_LOGE("KickWatchdog SendMsgToHungtask false");
-            return false;
-        }
-    }
-    return SendMsgToHungtask(isHmos ? KICK_TIME_HMOS : KICK_TIME);
+    return true;
 }
 
 void WatchdogInner::IpcCheck()
