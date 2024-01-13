@@ -442,7 +442,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     if (isExist) {
         description += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
-        WatchdogInner::LeftTimeExitProcess(description.c_str());
+        WatchdogInner::LeftTimeExitProcess(description);
     } else {
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
     }
@@ -483,10 +483,7 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
         XCOLLIE_LOGI("heap dump for %{public}d, don't exit.", pid);
         return;
     }
-    unsigned int leftTime = 3;
-    while (leftTime > 0) {
-        leftTime = sleep(leftTime);
-    }
+    DelayBeforeExit(3); // sleep 3s for hiview dump
     XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
     WatchdogInner::WriteStringToFile(pid, "0");
 

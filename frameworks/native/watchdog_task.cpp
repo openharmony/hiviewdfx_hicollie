@@ -96,7 +96,7 @@ void WatchdogTask::DoCallback()
             static_cast<long long>(timeout));
         std::thread exitFunc([]() {
             std::string description = "timeout, exit...";
-            WatchdogInner::LeftTimeExitProcess(description.c_str());
+            WatchdogInner::LeftTimeExitProcess(description);
         });
         if (exitFunc.joinable()) {
             exitFunc.detach();
@@ -228,12 +228,16 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
-            name.compare(IPC_FULL) == 0 ? SendEvent(description, IPC_FULL) :
+            if (name.compare(IPC_FULL) == 0) {
+                SendEvent(description, IPC_FULL);
+                DelayBeforeExit(7); // sleep 7s for binder dump
+            } else {
                 SendEvent(description, "SERVICE_BLOCK");
+            }
             // peer binder log is collected in hiview asynchronously
             // if blocked process exit early, binder blocked state will change
             // thus delay exit and let hiview have time to collect log.
-            WatchdogInner::LeftTimeExitProcess(description.c_str());
+            WatchdogInner::LeftTimeExitProcess(description);
         }
     }
     return waitState;
