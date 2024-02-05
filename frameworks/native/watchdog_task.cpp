@@ -155,7 +155,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
     sendMsg += checker->GetDumpInfo();
-    HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
         "UID", uid,
@@ -163,7 +163,8 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg,
         "STACK", GetProcessStacktrace());
-    XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
+    XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
+        ret, eventName.c_str(), msg.c_str());
 }
 
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
@@ -195,7 +196,8 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
         XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
     }
     
-    HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT", HiSysEvent::EventType::FAULT,
+    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT",
+        HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
         "UID", uid,
@@ -203,7 +205,8 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
         "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg,
         "STACK", GetProcessStacktrace()+ "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
-    XCOLLIE_LOGI("send event [FRAMEWORK,SERVICE_TIMEOUT], msg=%{public}s", keyMsg.c_str());
+    XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,SERVICE_TIMEOUT], "
+        "msg=%{public}s", result, keyMsg.c_str());
 }
 
 int WatchdogTask::EvaluateCheckerState()
@@ -230,7 +233,6 @@ int WatchdogTask::EvaluateCheckerState()
         } else {
             if (name.compare(IPC_FULL) == 0) {
                 SendEvent(description, IPC_FULL);
-                DelayBeforeExit(7); // sleep 7s for binder dump
             } else {
                 SendEvent(description, "SERVICE_BLOCK");
             }
