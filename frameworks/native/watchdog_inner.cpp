@@ -457,9 +457,12 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
-    char buff[BUFF_STACK_SIZE] = {0};
-    ffrt_watchdog_dumpinfo(buff, BUFF_STACK_SIZE);
-    sendMsg += buff;
+    char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
+    buffer[FFRT_BUFFER_SIZE] = 0;
+    ffrt_watchdog_dumpinfo(buffer, FFRT_BUFFER_SIZE);
+    sendMsg += buffer;
+    sendMsg += "\n" + GetProcessStacktrace();
+    delete[] buffer;
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
