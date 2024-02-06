@@ -463,14 +463,15 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     sendMsg += buffer;
     sendMsg += "\n" + GetProcessStacktrace();
     delete[] buffer;
-    HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
         "UID", uid,
         "MODULE_NAME", taskInfo,
         "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg);
-    XCOLLIE_LOGI("send event [FRAMEWORK,%{public}s], msg=%{public}s", eventName.c_str(), msg.c_str());
+    XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
+        "msg=%{public}s", ret, eventName.c_str(), msg.c_str());
 }
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)
@@ -480,7 +481,7 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
         XCOLLIE_LOGI("heap dump for %{public}d, don't exit.", pid);
         return;
     }
-    DelayBeforeExit(3); // sleep 3s for hiview dump
+    DelayBeforeExit(10); // sleep 10s for hiview dump
     XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
     WatchdogInner::WriteStringToFile(pid, "0");
 
