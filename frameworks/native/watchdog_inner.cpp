@@ -50,7 +50,7 @@ constexpr int  SERVICE_WARNING = 1;
 const int BUF_SIZE_512 = 512;
 const char* g_sysKernelHungtaskUserlist = "/sys/kernel/hungtask/userlist";
 const char* g_hmosHungtaskUserlist = "/proc/sys/hguard/user_list";
-const std::string ON_KICK_TIME = "on,63";
+const std::string ON_KICK_TIME = "on,72";
 const std::string ON_KICK_TIME_HMOS = "on,63,foundation";
 const std::string KICK_TIME = "kick";
 const std::string KICK_TIME_HMOS = "kick,foundation";
@@ -457,9 +457,12 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
-    char buff[BUFF_STACK_SIZE] = {0};
-    ffrt_watchdog_dumpinfo(buff, BUFF_STACK_SIZE);
-    sendMsg += buff;
+    char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
+    buffer[FFRT_BUFFER_SIZE] = 0;
+    ffrt_watchdog_dumpinfo(buffer, FFRT_BUFFER_SIZE);
+    sendMsg += buffer;
+    sendMsg += "\n" + GetProcessStacktrace();
+    delete[] buffer;
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TGID", gid,
