@@ -59,6 +59,8 @@ std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
+using TimePoint = AppExecFwk::InnerEvent::TimePoint;
+static const int64_t DISTRIBUTE_TIME = 2000;
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
                 size_t len  __attribute__((unused)),
@@ -94,6 +96,23 @@ static bool IsInAppspwan()
         return true;
     }
     return false;
+}
+
+static TimePoint DistributeStart(std::string name)
+{
+    return std::chrono::steady_clock::now();
+}
+
+static void DistributeEnd(std::string name, TimePoint startTime)
+{
+    TimePoint endTime = std::chrono::steady_clock::now();
+    auto duration = endTime - startTime;
+    int64_t durationTime = std::chrono::duration_cast<std::chrono::milliseconds>
+        (duration).count();
+    if ((endTime - std::chrono::milliseconds(DISTRIBUTE_TIME)) > startTime) {
+        XCOLLIE_LOGI("BlockMonitor event name: %{public}s, Duration Time: %{public}" PRId64 " ms",
+            name.c_str(), durationTime);
+    }
 }
 
 int WatchdogInner::AddThread(const std::string &name,
@@ -261,6 +280,10 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
 {
     std::call_once(flag_, [this] {
         if (threadLoop_ == nullptr) {
+            if (mainRunner_ == nullptr) {
+                mainRunner_ = AppExecFwk::EventRunner::GetMainEventRunner();
+            }
+            mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             XCOLLIE_LOGI("Watchdog is running!");
         }
