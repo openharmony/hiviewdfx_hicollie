@@ -23,6 +23,12 @@
 
 #include "hilog/log.h"
 
+#undef LOG_DOMAIN
+#define LOG_DOMAIN 0xD002D06
+
+#undef LOG_TAG
+#define LOG_TAG "XCollie"
+
 namespace OHOS {
 namespace HiviewDFX {
 constexpr char WMS_FULL_NAME[] = "WindowManagerService";
@@ -33,12 +39,12 @@ constexpr int64_t SEC_TO_MICROSEC = 1000000;
 const int BUFF_STACK_SIZE = 20 * 1024;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;
-constexpr OHOS::HiviewDFX::HiLogLabel g_XCOLLIE_LOG_LABEL = {LOG_CORE, 0xD002D06, "XCollie"};
-#define XCOLLIE_LOGF(...) (void)OHOS::HiviewDFX::HiLog::Fatal(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
-#define XCOLLIE_LOGE(...) (void)OHOS::HiviewDFX::HiLog::Error(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
-#define XCOLLIE_LOGW(...) (void)OHOS::HiviewDFX::HiLog::Warn(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
-#define XCOLLIE_LOGI(...) (void)OHOS::HiviewDFX::HiLog::Info(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
-#define XCOLLIE_LOGD(...) (void)OHOS::HiviewDFX::HiLog::Debug(g_XCOLLIE_LOG_LABEL, ##__VA_ARGS__)
+
+#define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGW(...) HILOG_WARN(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGI(...) HILOG_INFO(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGD(...) HILOG_DEBUG(LOG_CORE, ##__VA_ARGS__)
 #define MAGIC_NUM           0x9517
 #define HTRANSIO            0xAB
 #define LOGGER_GET_STACK    _IO(HTRANSIO, 9)
