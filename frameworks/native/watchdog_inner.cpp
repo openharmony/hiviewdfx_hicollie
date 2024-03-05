@@ -98,12 +98,12 @@ static bool IsInAppspwan()
     return false;
 }
 
-static TimePoint DistributeStart(std::string name)
+static TimePoint DistributeStart(const std::string& name)
 {
     return std::chrono::steady_clock::now();
 }
 
-static void DistributeEnd(std::string name, TimePoint startTime)
+static void DistributeEnd(const std::string& name, const TimePoint& startTime)
 {
     TimePoint endTime = std::chrono::steady_clock::now();
     auto duration = endTime - startTime;
