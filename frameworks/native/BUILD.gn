@@ -19,7 +19,6 @@ config("hicollie_include") {
     ".",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
     "/foundation/communication/ipc/interfaces/innerkits/ipc_core/include",
-    "//commonlibrary/c_utils/base/include",
   ]
   if (is_ohos) {
     cflags_cc = [ "-D__XCOLLIE_OHOS__" ]
