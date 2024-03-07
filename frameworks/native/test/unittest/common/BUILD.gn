@@ -24,7 +24,6 @@ config("module_private_config") {
     "${hicollie_part_path}/frameworks/native",
     "${hicollie_part_path}/frameworks/native/test",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
-    "//commonlibrary/c_utils/base/include",
   ]
 }
 
