@@ -213,6 +213,55 @@ void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint
     InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, std::move(task), delay, interval, false));
 }
 
+int64_t WatchdogInner::SetTimerCountTask(const std::string &name, uint64_t timeLimit, int countLimit)
+{
+    if (name.empty() || timeLimit <= 0 || countLimit <= 0) {
+        XCOLLIE_LOGE("SetTimerCountTask fail, invalid args!");
+        return INVALID_ID;
+    }
+
+    if (IsInAppspwan()) {
+        return INVALID_ID;
+    }
+    std::string limitedName = GetLimitedSizeName(name);
+    XCOLLIE_LOGI("SetTimerCountTask name : %{public}s", name.c_str());
+    return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeLimit, countLimit));
+}
+
+void WatchdogInner::TriggerTimerCountTask(const std::string &name, bool bTrigger, const std::string &message)
+{
+    std::unique_lock<std::mutex> lock(lock_);
+
+    if (!checkerQueue_.size()) {
+        XCOLLIE_LOGE("TriggerTimerCountTask name : %{public}s fail, empty queue!", name.c_str());
+        return;
+    }
+
+    bool isTaskExist = false;
+    uint64_t now = GetCurrentTickMillseconds();
+    std::priority_queue<WatchdogTask> tmpQueue;
+    while (!checkerQueue_.empty()) {
+        WatchdogTask task = checkerQueue_.top();
+        if (task.name == name) {
+            isTaskExist = true;
+            if (bTrigger) {
+                task.triggerTimes.push_back(now);
+                task.message = message;
+            } else {
+                task.triggerTimes.clear();
+                task.noTriggerCount = 0;
+            }
+        }
+        tmpQueue.push(task);
+        checkerQueue_.pop();
+    }
+    tmpQueue.swap(checkerQueue_);
+
+    if (!isTaskExist) {
+        XCOLLIE_LOGE("TriggerTimerCount name : %{public}s does not exist!", name.c_str());
+    }
+}
+
 bool WatchdogInner::IsTaskExistLocked(const std::string& name)
 {
     if (taskNameSet_.find(name) != taskNameSet_.end()) {

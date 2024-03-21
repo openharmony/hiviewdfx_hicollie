@@ -183,6 +183,22 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_004, TestSize.Level1)
     ASSERT_EQ(flag, true);
 }
 
-
+/**
+ * @tc.name: XCollieTimerParamTest
+ * @tc.desc: Verify xcollie timer interface param
+ * @tc.type: FUNC
+ */
+HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_005, TestSize.Level1)
+{
+    int id = XCollie::GetInstance().SetTimerCount("HIT_EMPTY_WARNING", 2, 3);
+    ASSERT_GT(id, 0);
+    int i = 0;
+    while (i < 3) {
+        XCollie::GetInstance().TriggerTimerCount("HIT_EMPTY_WARNING", true, std::to_string(i));
+        usleep(600 * 1000);
+        i++;
+    }
+    sleep(1);
+}
 } // namespace HiviewDFX
 } // namespace OHOS

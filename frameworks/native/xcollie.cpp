@@ -22,7 +22,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr uint64_t TO_NANOSECOND_MULTPLE = 1000;
+constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
 XCollie::XCollie()
 {
 }
@@ -33,12 +33,22 @@ XCollie::~XCollie()
 int XCollie::SetTimer(const std::string &name, unsigned int timeout, std::function<void(void *)> func,
     void *arg, unsigned int flag)
 {
-    return WatchdogInner::GetInstance().RunXCollieTask(name, timeout * TO_NANOSECOND_MULTPLE, func, arg, flag);
+    return WatchdogInner::GetInstance().RunXCollieTask(name, timeout * TO_MILLISECOND_MULTPLE, func, arg, flag);
 }
 
 void XCollie::CancelTimer(int id)
 {
     WatchdogInner::GetInstance().RemoveXCollieTask(id);
+}
+
+int XCollie::SetTimerCount(const std::string &name, unsigned int timeLimit, int countLimit)
+{
+    return WatchdogInner::GetInstance().SetTimerCountTask(name, timeLimit * TO_MILLISECOND_MULTPLE, countLimit);
+}
+
+void XCollie::TriggerTimerCount(const std::string &name, bool bTrigger, const std::string &message)
+{
+    WatchdogInner::GetInstance().TriggerTimerCountTask(name, bTrigger, message);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

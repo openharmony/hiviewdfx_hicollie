@@ -42,6 +42,18 @@ public:
     // cancel timer
     // id: timer id
     void CancelTimer(int id);
+
+    // set timer and count
+    // name: timer and count name
+    // timeLimit: event occured time limt
+    // countLimit: event occured count limit
+    int SetTimerCount(const std::string &name, unsigned int timeLimit, int countLimit);
+
+    // trigger timer count
+    // name: tigger name
+    // bTrigger: trigger or cancel
+    // message: need report pid current message
+    void TriggerTimerCount(const std::string &name, bool bTrigger, const std::string &message);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
