@@ -30,11 +30,14 @@ namespace OHOS {
 namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
+    static const int timeLimitIntervalRatio = 2;
+    static const int triggerClearThreshold = 5;
 public:
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot);
     WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag);
+    WatchdogTask(std::string name, unsigned int timeLimit, int countLimit);
     WatchdogTask()
         : name(""),
           task(nullptr),
@@ -57,10 +60,12 @@ public:
     void SendEvent(const std::string &msg, const std::string &eventName) const;
     void SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const;
     void DoCallback();
+    void TimerCountTask();
 
     int EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
     std::string name;
+    std::string message;
     Task task;
     TimeOutCallback timeOutCallback;
     std::shared_ptr<HandlerChecker> checker;
@@ -74,6 +79,10 @@ public:
     bool isTaskScheduled;
     bool isOneshotTask;
     pid_t watchdogTid;
+    uint64_t timeLimit;
+    int countLimit;
+    int noTriggerCount;
+    std::vector<uint64_t> triggerTimes;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

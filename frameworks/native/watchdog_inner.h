@@ -45,6 +45,8 @@ public:
     int64_t RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func, void *arg,
         unsigned int flag);
     void RemoveXCollieTask(int64_t id);
+    int64_t SetTimerCountTask(const std::string &name, uint64_t timeLimit, int countLimit);
+    void TriggerTimerCountTask(const std::string &name, bool bTrigger, const std::string &message);
     void StopWatchdog();
     bool IsCallbackLimit(unsigned int flag);
     void IpcCheck();

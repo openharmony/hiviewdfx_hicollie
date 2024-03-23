@@ -43,7 +43,7 @@ struct HstackVal {
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr),
-      arg(nullptr), flag(0)
+      arg(nullptr), flag(0), timeLimit(0), countLimit(0), noTriggerCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler);
@@ -55,7 +55,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
-      arg(nullptr), flag(0)
+      arg(nullptr), flag(0), timeLimit(0), countLimit(0), noTriggerCount(0)
 {
     id = ++curId;
     checkInterval = interval;
@@ -66,13 +66,23 @@ WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag)
     : name(name), task(nullptr), timeOutCallback(nullptr), checker(nullptr), timeout(timeout), func(std::move(func)),
-      arg(arg), flag(flag)
+      arg(arg), flag(flag), timeLimit(0), countLimit(0), noTriggerCount(0)
 {
     id = ++curId;
     checkInterval = 0;
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isTaskScheduled = false;
     isOneshotTask = true;
+    watchdogTid = gettid();
+}
+
+WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
+    : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
+      isTaskScheduled(false), isOneshotTask(false), timeLimit(timeLimit), countLimit(countLimit), noTriggerCount(0)
+{
+    id = ++curId;
+    checkInterval = timeLimit / timeLimitIntervalRatio;
+    nextTickTime = GetCurrentTickMillseconds();
     watchdogTid = gettid();
 }
 
@@ -106,6 +116,11 @@ void WatchdogTask::DoCallback()
 
 void WatchdogTask::Run(uint64_t now)
 {
+    if (countLimit > 0) {
+        TimerCountTask();
+        return;
+    }
+
     constexpr int resetRatio = 2;
     if ((checkInterval != 0) && (now - nextTickTime > (resetRatio * checkInterval))) {
         XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."
@@ -122,6 +137,34 @@ void WatchdogTask::Run(uint64_t now)
         task();
     } else {
         RunHandlerCheckerTask();
+    }
+}
+
+void WatchdogTask::TimerCountTask()
+{
+    int size = triggerTimes.size();
+    if (size < countLimit) {
+        return;
+    }
+    XCOLLIE_LOGI("timeLimit : %{public}" PRIu64 ", countLimit : %{public}d, triggerTimes size : %{public}d",
+        timeLimit, countLimit, size);
+
+    while (size >= countLimit) {
+        uint64_t timeInterval = triggerTimes[size -1] - triggerTimes[size - countLimit];
+        if (timeInterval < timeLimit) {
+            std::string sendMsg = name + " occured " + std::to_string(countLimit) + " times in " +
+                std::to_string(timeInterval) + " ms, " + message;
+            HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "HIT_EMPTY_WARNING", HiSysEvent::EventType::FAULT,
+                "PID", getpid(), "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg);
+            triggerTimes.clear();
+            noTriggerCount = 0;
+            return;
+        }
+        size--;
+    }
+    if (++noTriggerCount >= triggerClearThreshold) {
+        triggerTimes.clear();
+        noTriggerCount = 0;
     }
 }
 
