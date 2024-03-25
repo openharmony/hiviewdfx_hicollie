@@ -508,7 +508,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     if (isExist) {
         description += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
-        WatchdogInner::LeftTimeExitProcess(description);
+        WatchdogInner::KillPeerBinderProcess(description);
     } else {
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
     }
@@ -581,6 +581,17 @@ bool WatchdogInner::Stop()
         threadLoop_ = nullptr;
     }
     return true;
+}
+
+void WatchdogInner::KillPeerBinderProcess(const std::string &description)
+{
+    bool result = false;
+    if (getuid() == WATCHED_UID) {
+        result = KillProcessByPid(getpid());
+    }
+    if (!result) {
+        WatchdogInner::LeftTimeExitProcess(description);
+    }
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

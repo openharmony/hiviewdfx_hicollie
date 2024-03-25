@@ -18,6 +18,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <csignal>
+#include <sstream>
+#include <iostream>
 #include <unistd.h>
 #include "parameter.h"
 
@@ -137,6 +140,127 @@ void DelayBeforeExit(unsigned int leftTime)
     while (leftTime > 0) {
         leftTime = sleep(leftTime);
     }
+}
+
+std::string TrimStr(const std::string& str, const char cTrim)
+{
+    std::string strTmp = str;
+    strTmp.erase(0, strTmp.find_first_not_of(cTrim));
+    strTmp.erase(strTmp.find_last_not_of(cTrim) + sizeof(char));
+    return strTmp;
+}
+
+void SplitStr(const std::string& str, const std::string& sep,
+    std::vector<std::string>& strs, bool canEmpty, bool needTrim)
+{
+    strs.clear();
+    std::string strTmp = needTrim ? TrimStr(str) : str;
+    std::string strPart;
+    while (true) {
+        std::string::size_type pos = strTmp.find(sep);
+        if (pos == std::string::npos || sep.empty()) {
+            strPart = needTrim ? TrimStr(strTmp) : strTmp;
+            if (!strPart.empty() || canEmpty) {
+                strs.push_back(strPart);
+            }
+            break;
+        } else {
+            strPart = needTrim ? TrimStr(strTmp.substr(0, pos)) : strTmp.substr(0, pos);
+            if (!strPart.empty() || canEmpty) {
+                strs.push_back(strPart);
+            }
+            strTmp = strTmp.substr(sep.size() + pos, strTmp.size() - sep.size() - pos);
+        }
+    }
+}
+
+int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
+{
+    const int decimal = 10;
+    std::string line;
+    bool isBinderMatchup = false;
+    while (getline(fin, line)) {
+        if (isBinderMatchup) {
+            break;
+        }
+
+        if (line.find("async") != std::string::npos) {
+            continue;
+        }
+
+        std::istringstream lineStream(line);
+        std::vector<std::string> strList;
+        std::string tmpstr;
+        while (lineStream >> tmpstr) {
+            strList.push_back(tmpstr);
+        }
+
+        auto SplitPhase = [](const std::string& str, uint16_t index) -> std::string {
+            std::vector<std::string> strings;
+            SplitStr(str, ":", strings);
+            if (index < strings.size()) {
+                return strings[index];
+            }
+            return "";
+        };
+
+        if (strList.size() >= 7) { // 7: valid array size
+            // 2: peer id,
+            std::string server = SplitPhase(strList[2], 0);
+            // 0: local id,
+            std::string client = SplitPhase(strList[0], 0);
+            // 5: wait time, s
+            std::string wait = SplitPhase(strList[5], 1);
+            if (server == "" || client == "" || wait == "") {
+                continue;
+            }
+            int serverNum = std::strtol(server.c_str(), nullptr, decimal);
+            int clientNum = std::strtol(client.c_str(), nullptr, decimal);
+            int waitNum = std::strtol(wait.c_str(), nullptr, decimal);
+            XCOLLIE_LOGI("server:%{public}d, client:%{public}d, wait:%{public}d",
+                serverNum, clientNum, waitNum);
+            if (clientNum != pid || waitNum < MIN_WAIT_NUM) {
+                continue;
+            }
+            return serverNum;
+        }
+        if (line.find("context") != line.npos) {
+            isBinderMatchup = true;
+        }
+    }
+    return -1;
+}
+
+bool KillProcessByPid(int32_t pid)
+{
+    std::ifstream fin;
+    std::string path = LOGGER_BINDER_PROC_PATH;
+    char resolvePath[PATH_MAX] = {0};
+    if (realpath(path.c_str(), resolvePath) == nullptr) {
+        XCOLLIE_LOGI("GetBinderPeerPids realpath error");
+        return false;
+    }
+    fin.open(resolvePath);
+    if (!fin.is_open()) {
+        XCOLLIE_LOGI("open file failed, %{public}s.", resolvePath);
+        return false;
+    }
+
+    int peerBinderPid = ParsePeerBinderPid(fin, pid);
+    fin.close();
+    if (peerBinderPid < 0) {
+        XCOLLIE_LOGI("No PeerBinder process freeze occurs "
+            "in the current process. pid=%{public}d", pid);
+        return false;
+    }
+
+    XCOLLIE_LOGI("try to Kill PeerBinder process, name=%{public}s, pid=%{public}d",
+        GetProcessNameFromProcCmdline(peerBinderPid).c_str(), peerBinderPid);
+    int32_t ret = kill(peerBinderPid, SIGKILL);
+    if (ret == -1) {
+        XCOLLIE_LOGI("Kill PeerBinder process failed");
+    }
+    return (ret < 0 ? false : true);
 }
 } // end of HiviewDFX
 } // end of OHOS
