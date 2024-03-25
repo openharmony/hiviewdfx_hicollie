@@ -189,7 +189,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 {
     int32_t pid = getpid();
     if (IsProcessDebug(pid)) {
-        XCOLLIE_LOGI("heap dump for %{public}d, don't report.", pid);
+        XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
         return;
     }
     uint32_t gid = getgid();
@@ -213,6 +213,10 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
 {
     int32_t pid = getpid();
+    if (IsProcessDebug(pid)) {
+        XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
+        return;
+    }
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
