@@ -524,6 +524,10 @@ void WatchdogInner::InitFfrtWatchdog()
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
 {
     int32_t pid = getpid();
+    if (IsProcessDebug(pid)) {
+        XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
+        return;
+    }
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
@@ -550,24 +554,12 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 {
     int32_t pid = getpid();
     if (IsProcessDebug(pid)) {
-        XCOLLIE_LOGI("heap dump for %{public}d, don't exit.", pid);
+        XCOLLIE_LOGI("heap dump or debug for %{public}d, don't exit.", pid);
         return;
     }
     DelayBeforeExit(10); // sleep 10s for hiview dump
     XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
     WatchdogInner::WriteStringToFile(pid, "0");
-
-    const int buffSize = 128;
-    char param[buffSize] = {0};
-    GetParameter("hiviewdfx.appfreeze.filter_bundle_name", "", param, buffSize - 1);
-    std::string debugBundle(param);
-
-    std::string procCmdlineContent = GetProcessNameFromProcCmdline(pid);
-    if (procCmdlineContent.compare(debugBundle) == 0) {
-        XCOLLIE_LOGW("appfreeze filtration %{public}s_%{public}s don't exit.",
-            debugBundle.c_str(), procCmdlineContent.c_str());
-        return;
-    }
 
     _exit(0);
 }
