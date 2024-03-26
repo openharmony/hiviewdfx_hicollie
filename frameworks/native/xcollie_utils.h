@@ -20,6 +20,7 @@
 #include <string>
 #include <sys/ioctl.h>
 #include <fstream>
+#include <vector>
 
 #include "hilog/log.h"
 
@@ -39,6 +40,8 @@ constexpr int64_t SEC_TO_MICROSEC = 1000000;
 const int BUFF_STACK_SIZE = 20 * 1024;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;
+const int MIN_WAIT_NUM = 3;
+const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
@@ -62,6 +65,15 @@ std::string GetLimitedSizeName(std::string name);
 bool IsProcessDebug(int32_t pid);
 
 void DelayBeforeExit(unsigned int leftTime);
+
+std::string TrimStr(const std::string& str, const char cTrim = ' ');
+
+void SplitStr(const std::string& str, const std::string& sep,
+    std::vector<std::string>& strs, bool canEmpty = false, bool needTrim = true);
+
+int ParsePeerBinderPid(std::ifstream& fin, int32_t pid);
+
+bool KillProcessByPid(int32_t pid);
 } // end of HiviewDFX
 } // end of OHOS
 #endif

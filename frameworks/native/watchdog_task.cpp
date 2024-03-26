@@ -286,7 +286,7 @@ int WatchdogTask::EvaluateCheckerState()
             // peer binder log is collected in hiview asynchronously
             // if blocked process exit early, binder blocked state will change
             // thus delay exit and let hiview have time to collect log.
-            WatchdogInner::LeftTimeExitProcess(description);
+            WatchdogInner::KillPeerBinderProcess(description);
         }
     }
     return waitState;
