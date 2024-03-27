@@ -207,7 +207,7 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
             strList.push_back(tmpstr);
         }
 
-        auto SplitPhase = [](const std::string& str, uint16_t index) -> std::string {
+        auto splitPhase = [](const std::string& str, uint16_t index) -> std::string {
             std::vector<std::string> strings;
             SplitStr(str, ":", strings);
             if (index < strings.size()) {
@@ -218,11 +218,11 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
 
         if (strList.size() >= 7) { // 7: valid array size
             // 2: peer id,
-            std::string server = SplitPhase(strList[2], 0);
+            std::string server = splitPhase(strList[2], 0);
             // 0: local id,
-            std::string client = SplitPhase(strList[0], 0);
+            std::string client = splitPhase(strList[0], 0);
             // 5: wait time, s
-            std::string wait = SplitPhase(strList[5], 1);
+            std::string wait = splitPhase(strList[5], 1);
             if (server == "" || client == "" || wait == "") {
                 continue;
             }
@@ -260,9 +260,9 @@ bool KillProcessByPid(int32_t pid)
 
     int peerBinderPid = ParsePeerBinderPid(fin, pid);
     fin.close();
-    if (peerBinderPid < 0) {
-        XCOLLIE_LOGI("No PeerBinder process freeze occurs "
-            "in the current process. pid=%{public}d", pid);
+    if (peerBinderPid < 0 || peerBinderPid == pid) {
+        XCOLLIE_LOGI("No PeerBinder process freeze occurs in the current process. "
+            "peerBinderPid=%{public}d, pid=%{public}d", peerBinderPid, pid);
         return false;
     }
 
