@@ -16,6 +16,11 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <thread>
+#include <fstream>
+#include <fcntl.h>
+#include <sys/prctl.h>
+#include <unistd.h>
+
 #include "watchdog_inner_test.h"
 
 #define private public
@@ -48,6 +53,36 @@ void WatchdogInnerTest::SetUp(void)
 
 void WatchdogInnerTest::TearDown(void)
 {
+}
+
+void InitSeLinuxEnabled()
+{
+    bool isSelinuxEnabled = false;
+    constexpr uint32_t BUF_SIZE_64 = 64;
+    char buffer[BUF_SIZE_64] = {'\0'};
+    FILE* fp = popen("getenforce", "r");
+    if (fp != nullptr) {
+        fgets(buffer, sizeof(buffer), fp);
+        std::string str = buffer;
+        printf("buffer is %s\n", str.c_str());
+        if (str.find("Enforcing") != str.npos) {
+            printf("Enforcing %s\n", str.c_str());
+            isSelinuxEnabled = true;
+        } else {
+            printf("This isn't Enforcing %s\n", str.c_str());
+        }
+        pclose(fp);
+    } else {
+        printf("fp == nullptr\n");
+    }
+    system("setenforce 0");
+
+    constexpr mode_t defaultLogDirMode = 0770;
+    std::string path = "/data/test/log";
+    if (!OHOS::FileExists(path)) {
+        OHOS::ForceCreateDirectory(path);
+        OHOS::ChangeModeDirectory(path, defaultLogDirMode);
+    }
 }
 
 /**
@@ -165,6 +200,58 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsExceedMaxTaskLocked_001, TestSiz
 {
     bool ret = WatchdogInner::GetInstance().IsExceedMaxTaskLocked();
     ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: WatchdogInner
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
+{
+    int32_t pid = 12000; // test value
+    bool ret = KillProcessByPid(pid);
+    EXPECT_EQ(ret, false);
+    ret = IsProcessDebug(pid);
+    printf("IsProcessDebug ret=%s", ret ? "true" : "false");
+    InitSeLinuxEnabled();
+    std::string path = "/data/test/log/test1.txt";
+    std::ofstream ofs(path, std::ios::trunc);
+    if (!ofs.is_open()) {
+        printf("open path failed!, path=%s\n", path.c_str());
+        FAIL();
+    }
+    ofs << "aync 1:1 to 2:2 code 9 wait:4 s test" << std::endl;
+    ofs << "12000:12000 to 12001:12001 code 9 wait:1 s test" << std::endl;
+    ofs << "22000:22000 to 12001:12001 code 9 wait:1 s test" << std::endl;
+    ofs << "12000:12000 to 12001:12001 code 9 wait:4 s test" << std::endl;
+    ofs.close();
+
+    std::ifstream fin(path);
+    if (!fin.is_open()) {
+        printf("open path failed!, path=%s\n", path.c_str());
+        FAIL();
+    }
+    int result = ParsePeerBinderPid(fin, pid);
+    fin.close();
+    EXPECT_TRUE(result > 0);
+
+    path = "/data/test/log/test2.txt";
+    ofs.open(path.c_str(), std::ios::trunc);
+    if (!ofs.is_open()) {
+        printf("open path failed!, path=%s\n", path.c_str());
+        FAIL();
+    }
+    ofs << "context" << std::endl;
+    ofs.close();
+    fin.open(path.c_str());
+    if (!fin.is_open()) {
+        printf("open path failed!, path=%s\n", path.c_str());
+        FAIL();
+    }
+    result = ParsePeerBinderPid(fin, pid);
+    fin.close();
+    EXPECT_TRUE(result < 0);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
