@@ -135,12 +135,29 @@ ohos_unittest("WatchdogTaskTest") {
   }
 }
 
+ohos_unittest("ThreadSamplerTest") {
+  module_out_path = module_output_path
+  sources = [ "thread_sampler_test.cpp" ]
+  configs = [ ":module_private_config" ]
+  deps = [ "//third_party/googletest:gtest_main" ]
+  external_deps = [
+    "c_utils:utils",
+    "faultloggerd:libasync_stack",
+    "faultloggerd:libunwinder",
+    "ffrt:libffrt",
+    "hicollie:libhicollie",
+    "hilog:libhilog",
+    "hisysevent:libhisysevent",
+  ]
+}
+
 ###############################################################################
 group("unittest") {
   testonly = true
   deps = [
     # deps file
     ":HandlerCheckerTest",
+    ":ThreadSamplerTest",
     ":WatchdogInnerUnitTest",
     ":WatchdogTaskTest",
     ":WatchdogUnitTest",

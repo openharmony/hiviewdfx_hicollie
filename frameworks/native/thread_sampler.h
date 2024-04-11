@@ -1,0 +1,118 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef RELIABILITY_THREAD_SAMPLER_H
+#define RELIABILITY_THREAD_SAMPLER_H
+
+#include <atomic>
+#include <condition_variable>
+#include <memory>
+#include <queue>
+#include <set>
+#include <string>
+
+#include <sys/mman.h>
+
+#include "singleton.h"
+
+#include "unwinder.h"
+#include "unique_stack_table.h"
+#include "dfx_accessors.h"
+#include "dfx_maps.h"
+#include "unwind_context.h"
+
+namespace OHOS {
+namespace HiviewDFX {
+constexpr int STACK_BUFFER_SIZE = 16 * 1024;
+constexpr int SIG_NO_41 = 41;
+
+struct ThreadUnwindContext {
+    uintptr_t pc {0};
+    uintptr_t sp {0};
+    uintptr_t fp {0};
+    uintptr_t lr {0};
+    uint64_t requestTime {0}; // begin sample
+    uint64_t snapshotTime {0}; // end of stack copy in signal handler
+    uint64_t processTime {0}; // end of unwind and unique stack
+    uint8_t buffer[STACK_BUFFER_SIZE] {0}; // 16K stack buffer
+};
+
+struct TimeAndFrames {
+    uint64_t requestTime {0};
+    uint64_t snapshotTime {0};
+    std::vector<DfxFrame> frameList;
+};
+
+class ThreadSampler : public Singleton<ThreadSampler> {
+    DECLARE_SINGLETON(ThreadSampler);
+public:
+    static const int32_t SAMPLER_MAX_BUFFER_SZ = 2;
+    static void ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context);
+
+    bool Init();    // Initial sampler, include uwinder, recorde buffer etc.
+    int32_t Sample();   // Interface of sample, to send sample request.
+    // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
+    bool CollectStack(std::string& stack, bool treeFormat = true);
+    void Deinit();  // Release sampler
+
+private:
+    bool InitUnwinder();
+    void DestroyUnwinder();
+    bool InitRecordBuffer();
+    bool InstallSignalHandler();
+    void ReleaseRecordBuffer();
+    void SendSampleRequest();
+    void ProcessStackBuffer(bool treeFormat);
+    int AccessElfMem(uintptr_t addr, uintptr_t *val);
+
+    static int FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void *arg);
+    static int AccessMem(uintptr_t addr, uintptr_t *val, void *arg);
+    static int GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void *arg);
+
+    ThreadUnwindContext* GetReadContext();
+    ThreadUnwindContext* GetWriteContext();
+    void WriteContext(void* context);
+#if defined(CONSUME_STATISTICS)
+    void ResetConsumeInfo();
+#endif // #if defined(CONSUME_STATISTICS)
+    bool init_ = false;
+    uintptr_t stackBegin_ = 0;
+    uintptr_t stackEnd_ = 0;
+    int32_t pid_;
+    std::atomic<int32_t> writeIndex_ {0};
+    std::atomic<int32_t> readIndex_ {0};
+    void* mmapStart_ = MAP_FAILED;
+    int32_t bufferSize_ = 0;
+    std::shared_ptr<Unwinder> unwinder_ = nullptr;
+    std::unique_ptr<UniqueStackTable> uniqueStackTable_ = nullptr;
+    std::shared_ptr<UnwindAccessors> accessors_;
+    std::shared_ptr<DfxMaps> maps_;
+#if defined(CONSUME_STATISTICS)
+    uint64_t threadCount_;
+    uint64_t threadTimeCost_;
+    uint64_t unwinderCount_;
+    uint64_t unwinderTimeCost_;
+    uint64_t overallTimeCost_;
+    uint64_t sampleCount_;
+    uint64_t requestCount_;
+    uint64_t processCount_;
+#endif // #if defined(CONSUME_STATISTICS)
+
+    std::vector<TimeAndFrames> timeAndFrameList_;
+    std::map<uint64_t, std::vector<uint64_t>> stackIdTimeMap_;
+};
+} // end of namespace HiviewDFX
+} // end of namespace OHOS
+#endif
