@@ -30,8 +30,8 @@ namespace OHOS {
 namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
+    static const int countLimitNumMaxRatio = 2;
     static const int timeLimitIntervalRatio = 2;
-    static const int triggerClearThreshold = 5;
 public:
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
@@ -46,7 +46,9 @@ public:
           checkInterval(0),
           nextTickTime(0),
           isOneshotTask(false),
-          watchdogTid(0) {};
+          watchdogTid(0),
+          timeLimit(0),
+          countLimit(0) {};
     ~WatchdogTask() {};
 
     bool operator<(const WatchdogTask &obj) const
@@ -81,7 +83,6 @@ public:
     pid_t watchdogTid;
     uint64_t timeLimit;
     int countLimit;
-    int noTriggerCount;
     std::vector<uint64_t> triggerTimes;
 };
 } // end of namespace HiviewDFX
