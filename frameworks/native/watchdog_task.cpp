@@ -163,7 +163,7 @@ void WatchdogTask::TimerCountTask()
     }
 
     if (triggerTimes.size() > countLimit * countLimitNumMaxRatio) {
-        triggerTimes.erase(triggerTimes.begin(), triggerTimes.begin() + countLimit);
+        triggerTimes.erase(triggerTimes.begin(), triggerTimes.end() - countLimit);
     }
 }
 
