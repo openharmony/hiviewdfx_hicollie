@@ -215,7 +215,7 @@ void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint
 
 int64_t WatchdogInner::SetTimerCountTask(const std::string &name, uint64_t timeLimit, int countLimit)
 {
-    if (name.empty() || timeLimit <= 0 || countLimit <= 0) {
+    if (name.empty() || timeLimit == 0 || countLimit <= 0) {
         XCOLLIE_LOGE("SetTimerCountTask fail, invalid args!");
         return INVALID_ID;
     }
@@ -249,7 +249,6 @@ void WatchdogInner::TriggerTimerCountTask(const std::string &name, bool bTrigger
                 task.message = message;
             } else {
                 task.triggerTimes.clear();
-                task.noTriggerCount = 0;
             }
         }
         tmpQueue.push(task);
