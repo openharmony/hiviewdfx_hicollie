@@ -28,6 +28,9 @@ config("hicollie_include") {
 ohos_source_set("libhicollie_source") {
   sources = [
     "handler_checker.cpp",
+    "sample_stack_printer.cpp",
+    "thread_sampler.cpp",
+    "thread_sampler_utils.cpp",
     "watchdog.cpp",
     "watchdog_inner.cpp",
     "watchdog_task.cpp",
@@ -38,7 +41,9 @@ ohos_source_set("libhicollie_source") {
 
   external_deps = [
     "c_utils:utils",
+    "faultloggerd:libasync_stack",
     "faultloggerd:libbacktrace_local",
+    "faultloggerd:libunwinder",
     "ffrt:libffrt",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
