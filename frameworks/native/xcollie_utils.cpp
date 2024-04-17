@@ -110,7 +110,8 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
             break;
         }
     }
-    return procCmdlineContent.substr(procNameStartPos, procNameEndPos - procNameStartPos);
+    size_t endPos = procNameEndPos - procNameStartPos;
+    return procCmdlineContent.substr(procNameStartPos, endPos);
 }
 
 std::string GetLimitedSizeName(std::string name)
