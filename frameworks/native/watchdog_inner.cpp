@@ -48,8 +48,8 @@ constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
 constexpr int  SERVICE_WARNING = 1;
 const int BUF_SIZE_512 = 512;
-const char* g_sysKernelHungtaskUserlist = "/sys/kernel/hungtask/userlist";
-const char* g_hmosHungtaskUserlist = "/proc/sys/hguard/user_list";
+const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
+const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const std::string ON_KICK_TIME = "on,72";
 const std::string ON_KICK_TIME_HMOS = "on,63,foundation";
 const std::string KICK_TIME = "kick";
@@ -422,9 +422,9 @@ bool WatchdogInner::Start()
 bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 {
     if (g_fd == NOT_OPEN) {
-        g_fd = open(g_sysKernelHungtaskUserlist, O_WRONLY);
+        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
         if (g_fd < 0) {
-            g_fd = open(g_hmosHungtaskUserlist, O_WRONLY);
+            g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
             if (g_fd < 0) {
                 XCOLLIE_LOGE("can't open hungtask file");
                 g_existFile = false;

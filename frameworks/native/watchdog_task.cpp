@@ -34,7 +34,7 @@
 namespace OHOS {
 namespace HiviewDFX {
 int64_t WatchdogTask::curId = 0;
-const char* g_bboxPath = "/dev/bbox";
+const char* BBOX_PATH = "/dev/bbox";
 struct HstackVal {
     uint32_t magic;
     pid_t tid;
@@ -142,7 +142,7 @@ void WatchdogTask::Run(uint64_t now)
 
 void WatchdogTask::TimerCountTask()
 {
-    int size = triggerTimes.size();
+    int size = static_cast<int>(triggerTimes.size());
     if (size < countLimit) {
         return;
     }
@@ -162,7 +162,7 @@ void WatchdogTask::TimerCountTask()
         size--;
     }
 
-    if (triggerTimes.size() > countLimit * countLimitNumMaxRatio) {
+    if (triggerTimes.size() > static_cast<unsigned long>(countLimit * countLimitNumMaxRatio)) {
         triggerTimes.erase(triggerTimes.begin(), triggerTimes.end() - countLimit);
     }
 }
@@ -229,7 +229,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     }
     val.tid = watchdogTid;
     val.magic = MAGIC_NUM;
-    int fd = open(g_bboxPath, O_WRONLY | O_CLOEXEC);
+    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
     if (fd < 0) {
         XCOLLIE_LOGE("open %s failed", name.c_str());
         return;
