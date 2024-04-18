@@ -36,7 +36,8 @@
 namespace OHOS {
 namespace HiviewDFX {
 constexpr int STACK_BUFFER_SIZE = 16 * 1024;
-constexpr int SIG_NO_41 = 41;
+constexpr uint32_t DEFAULT_UNIQUE_STACK_TABLE_SIZE = 128 * 1024;
+constexpr int SIGNAL_SAMPLE_STACK = 41;
 
 struct ThreadUnwindContext {
     uintptr_t pc {0};
@@ -61,18 +62,34 @@ public:
     static const int32_t SAMPLER_MAX_BUFFER_SZ = 2;
     static void ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context);
 
-    bool Init();    // Initial sampler, include uwinder, recorde buffer etc.
+    // Initial sampler, include uwinder, recorde buffer etc.
+    bool Init();
     int32_t Sample();   // Interface of sample, to send sample request.
     // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
     bool CollectStack(std::string& stack, bool treeFormat = true);
     void Deinit();  // Release sampler
+    // use to set the size and mmap buffer name of the uniqueStackTable
+    bool SetUniStackTableSize(uint32_t uniStkTableSz);
+
+    void SetUniStackTableMMapName(const std::string& uniTableMMapName);
+    uint32_t GetuniqueStackTableSize()
+    {
+        return uniqueStackTableSize_;
+    }
+
+    std::string GetUniTableMMapName()
+    {
+        return uniTableMMapName_;
+    }
 
 private:
+    bool InitRecordBuffer();
+    void ReleaseRecordBuffer();
     bool InitUnwinder();
     void DestroyUnwinder();
-    bool InitRecordBuffer();
+    bool InitUniqueStackTable();
+    void DeinitUniqueStackTable();
     bool InstallSignalHandler();
-    void ReleaseRecordBuffer();
     void SendSampleRequest();
     void ProcessStackBuffer(bool treeFormat);
     int AccessElfMem(uintptr_t addr, uintptr_t *val);
@@ -90,24 +107,28 @@ private:
     bool init_ = false;
     uintptr_t stackBegin_ = 0;
     uintptr_t stackEnd_ = 0;
-    int32_t pid_;
+    int32_t pid_ = 0;
     std::atomic<int32_t> writeIndex_ {0};
     std::atomic<int32_t> readIndex_ {0};
     void* mmapStart_ = MAP_FAILED;
     int32_t bufferSize_ = 0;
     std::shared_ptr<Unwinder> unwinder_ = nullptr;
     std::unique_ptr<UniqueStackTable> uniqueStackTable_ = nullptr;
-    std::shared_ptr<UnwindAccessors> accessors_;
-    std::shared_ptr<DfxMaps> maps_;
+    std::shared_ptr<UnwindAccessors> accessors_ = nullptr;
+    std::shared_ptr<DfxMaps> maps_ = nullptr;
+    // size of the uniqueStackTableSize, default 128KB
+    uint32_t uniqueStackTableSize_ = DEFAULT_UNIQUE_STACK_TABLE_SIZE;
+    // name of the mmap of uniqueStackTable
+    std::string uniTableMMapName_ = "hicollie_buf";
 #if defined(CONSUME_STATISTICS)
-    uint64_t threadCount_;
-    uint64_t threadTimeCost_;
-    uint64_t unwinderCount_;
-    uint64_t unwinderTimeCost_;
-    uint64_t overallTimeCost_;
-    uint64_t sampleCount_;
-    uint64_t requestCount_;
-    uint64_t processCount_;
+    uint64_t threadCount_ = 0;
+    uint64_t threadTimeCost_ = 0;
+    uint64_t unwinderCount_ = 0;
+    uint64_t unwinderTimeCost_ = 0;
+    uint64_t overallTimeCost_ = 0;
+    uint64_t sampleCount_ = 0;
+    uint64_t requestCount_ = 0;
+    uint64_t processCount_ = 0;
 #endif // #if defined(CONSUME_STATISTICS)
 
     std::vector<TimeAndFrames> timeAndFrameList_;

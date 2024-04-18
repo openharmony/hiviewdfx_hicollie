@@ -35,9 +35,11 @@
 #include "dfx_frame_formatter.h"
 #include "sample_stack_printer.h"
 #include "thread_sampler_utils.h"
+#include "file_ex.h"
 
 namespace OHOS {
 namespace HiviewDFX {
+
 struct UnwindInfo {
     ThreadUnwindContext* context;
     DfxMaps* maps;
@@ -94,7 +96,7 @@ int ThreadSampler::AccessMem(uintptr_t addr, uintptr_t *val, void *arg)
             XCOLLIE_LOGE("limit stack\n");
             return -1;
         }
-        *val = *(uintptr_t *)&unwindInfo->context->buffer[stackOffset];
+        *val = *(reinterpret_cast<uintptr_t *>(&unwindInfo->context->buffer[stackOffset]));
     }
     return 0;
 }
@@ -126,11 +128,16 @@ bool ThreadSampler::Init()
         return false;
     }
 
+    pid_ = getprocpid();
+    if (!InitUniqueStackTable()) {
+        XCOLLIE_LOGE("Failed to InitUniqueStackTable\n");
+        return false;
+    }
+
     if (!InstallSignalHandler()) {
         XCOLLIE_LOGE("Failed to InstallSignalHandler\n");
         return false;
     }
-    pid_ = getprocpid();
     init_ = true;
     return true;
 }
@@ -142,7 +149,7 @@ bool ThreadSampler::InitRecordBuffer()
     }
     // create buffer
     bufferSize_ = SAMPLER_MAX_BUFFER_SZ * sizeof(struct ThreadUnwindContext);
-    mmapStart_ = mmap(NULL, bufferSize_,
+    mmapStart_ = mmap(nullptr, bufferSize_,
         PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mmapStart_ == MAP_FAILED) {
         XCOLLIE_LOGE("Failed to create buffer for thread sampler!(%d)\n", errno);
@@ -176,22 +183,66 @@ bool ThreadSampler::InitUnwinder()
     unwinder_ = std::make_shared<Unwinder>(accessors_);
 
     maps_ = DfxMaps::Create();
-    if (!maps_->GetStackRange(stackBegin_, stackEnd_)) {
-        XCOLLIE_LOGE("Failed to get stack range\n");
+    if (maps_ == nullptr) {
+        XCOLLIE_LOGE("maps is nullptr\n");
         return false;
     }
-
-    uniqueStackTable_ = std::make_unique<UniqueStackTable>();
-    if (!uniqueStackTable_->Init()) {
-        XCOLLIE_LOGE("Failed to init unique_table\n");
+    if (!maps_->GetStackRange(stackBegin_, stackEnd_)) {
+        XCOLLIE_LOGE("Failed to get stack range\n");
         return false;
     }
     return true;
 }
 
-void ThreadSampler::DestroyUnwinder()
+bool ThreadSampler::InitUniqueStackTable()
+{
+    uniqueStackTable_ = std::make_unique<UniqueStackTable>(pid_, uniqueStackTableSize_);
+    if (!uniqueStackTable_->Init()) {
+        XCOLLIE_LOGE("Failed to init unique_table\n");
+        Deinit();
+        return false;
+    }
+    void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
+    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, uniqueTableBufMMap, uniqueStackTableSize_, uniTableMMapName_.c_str());
+    return true;
+}
+
+bool ThreadSampler::SetUniStackTableSize(uint32_t uniStkTableSz)
+{
+    if (!init_) {
+        XCOLLIE_LOGE("Sampler should be initialed first\n");
+        return false;
+    }
+    uniqueStackTable_ = std::make_unique<UniqueStackTable>(pid_, uniStkTableSz);
+    if (!uniqueStackTable_->Init()) {
+        XCOLLIE_LOGE("Failed to uniqueStackTable size\n");
+        Deinit();
+        return false;
+    }
+    uniqueStackTableSize_ = uniStkTableSz;
+    void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
+    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, uniqueTableBufMMap, uniStkTableSz, uniTableMMapName_.c_str());
+    return true;
+}
+
+void ThreadSampler::SetUniStackTableMMapName(const std::string& uniTableMMapName)
+{
+    if (!init_) {
+        XCOLLIE_LOGE("Sampler should be initialed first\n");
+        return;
+    }
+    void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
+    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, uniqueTableBufMMap, uniqueStackTableSize_, uniTableMMapName.c_str());
+    uniTableMMapName_ = uniTableMMapName;
+}
+
+void ThreadSampler::DeinitUniqueStackTable()
 {
     uniqueStackTable_.reset();
+}
+
+void ThreadSampler::DestroyUnwinder()
+{
     maps_.reset();
     unwinder_.reset();
     accessors_.reset();
@@ -203,8 +254,8 @@ bool ThreadSampler::InstallSignalHandler()
     sigfillset(&action.sa_mask);
     action.sa_sigaction = ThreadSampler::ThreadSamplerSignalHandler;
     action.sa_flags = SA_RESTART | SA_SIGINFO;
-    if (sigaction(SIG_NO_41, &action, nullptr) != 0) {
-        XCOLLIE_LOGE("Failed to register signal(%d:%d)", SIG_NO_41, errno);
+    if (sigaction(SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
+        XCOLLIE_LOGE("Failed to register signal(%d:%d)", SIGNAL_SAMPLE_STACK, errno);
         return false;
     }
     return true;
@@ -304,7 +355,7 @@ void ThreadSampler::SendSampleRequest()
 
     ptr->requestTime = ts;
     siginfo_t si {0};
-    si.si_signo = SIG_NO_41;
+    si.si_signo = SIGNAL_SAMPLE_STACK;
     si.si_errno = 0;
     si.si_code = -1;
     if (syscall(SYS_rt_tgsigqueueinfo, pid_, pid_, si.si_signo, &si) != 0) {
@@ -375,6 +426,10 @@ void ThreadSampler::ProcessStackBuffer(bool treeFormat)
 
 int32_t ThreadSampler::Sample()
 {
+    if (!init_) {
+        XCOLLIE_LOGE("sampler has not initialed.\n");
+        return -1;
+    }
 #if defined(CONSUME_STATISTICS)
     sampleCount_++;
 #endif
@@ -402,21 +457,19 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     ProcessStackBuffer(treeFormat);
 #endif
 
+    if (!init_) {
+        XCOLLIE_LOGE("sampler has not initialed.\n");
+    }
+
     stack.clear();
     if (timeAndFrameList_.empty() && stackIdTimeMap_.empty()) {
-        XCOLLIE_LOGE("failed to Sample\n");
-        int readFlag = ReadFileToString(stack, "/proc/self/wchan");
-        if (readFlag != READ_FILE_SUCCESS) {
-            if (readFlag == OPEN_FILE_FAILED) {
-                XCOLLIE_LOGE("open file failed.\n");
-            } else if (readFlag == GET_FILE_LENGTH_FAILED) {
-                XCOLLIE_LOGE("failed to get the file length.\n");
-            }
-            return false;
+        if (!LoadStringFromFile("/proc/self/wchan", stack)) {
+            XCOLLIE_LOGE("read file failed.\n");
         }
         if (stack.empty()) {
-            stack += "empty\n";
+            stack += "empty";
         }
+        stack += "\n";
         return false;
     }
 
@@ -425,7 +478,7 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
 #endif
     auto printer = std::make_unique<SampleStackPrinter>(unwinder_, maps_);
     if (!treeFormat) {
-        stack = printer->GetFullStack(timeAndFrameList_, unwinder_);
+        stack = printer->GetFullStack(timeAndFrameList_);
     } else {
         stack = printer->GetTreeStack(stackIdTimeMap_, uniqueStackTable_);
     }
@@ -448,6 +501,7 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
 
 void ThreadSampler::Deinit()
 {
+    DeinitUniqueStackTable();
     DestroyUnwinder();
     ReleaseRecordBuffer();
     init_ = false;

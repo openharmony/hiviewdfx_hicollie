@@ -85,8 +85,7 @@ void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
     }
 }
 
-std::string SampleStackPrinter::GetFullStack(std::vector<TimeAndFrames>& timeAndFrameList,
-    std::shared_ptr<Unwinder>& unwinder)
+std::string SampleStackPrinter::GetFullStack(std::vector<TimeAndFrames>& timeAndFrameList)
 {
     std::string stack("");
     for (auto& taf : timeAndFrameList) {
@@ -98,7 +97,7 @@ std::string SampleStackPrinter::GetFullStack(std::vector<TimeAndFrames>& timeAnd
         stack += ("RequestTime:" + requestTimeStr + "\nSnapshotTime:" + snapshotTimeStr + "\n");
         std::vector<DfxFrame> frames = taf.frameList;
         for (auto& frame : frames) {
-            unwinder->FillFrame(frame);
+            unwinder_->FillFrame(frame);
             auto frameStr = DfxFrameFormatter::GetFrameStr(frame);
             stack += frameStr;
         }
