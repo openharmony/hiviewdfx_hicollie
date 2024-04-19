@@ -47,7 +47,6 @@ constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
 constexpr int  SERVICE_WARNING = 1;
-const int BUF_SIZE_512 = 512;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const std::string ON_KICK_TIME = "on,72";
