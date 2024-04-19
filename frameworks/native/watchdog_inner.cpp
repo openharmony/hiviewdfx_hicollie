@@ -496,7 +496,6 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         std::unique_lock<std::mutex> lock(lockFfrt_);
         auto &map = WatchdogInner::GetInstance().taskIdCnt;
         auto search = map.find(taskId);
-        uint32_t pid = getpid();
         if (search != map.end()) {
             isExist = true;
         } else {
