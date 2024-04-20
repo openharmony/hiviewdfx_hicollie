@@ -29,7 +29,9 @@
                 "faultloggerd",
                 "ffrt",
                 "ipc",
-                "init"
+                "init",
+                "hiview",
+                "storage_service"
             ],
             "third_party": []
         },

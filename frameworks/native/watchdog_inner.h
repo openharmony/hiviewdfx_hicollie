@@ -58,6 +58,11 @@ public:
     static void KillPeerBinderProcess(const std::string &description);
     std::string currentScene_;
 
+    int32_t StartProfileMainThread(int32_t interval);
+    void StopProfileMainThread();
+    bool CollectStack(std::string& stack);
+    void CollectTrace();
+
 private:
     bool Start();
     bool Stop();
@@ -69,6 +74,7 @@ private:
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
+    bool ReportMainThreadEvent();
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -84,6 +90,8 @@ private:
     int cntCallback_;
     time_t timeCallback_;
     bool isHmos = false;
+
+    bool isMainThreadProfileTaskEnabled {false};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -84,6 +84,7 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
+    bool isMainThreadProfileTask {false};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
