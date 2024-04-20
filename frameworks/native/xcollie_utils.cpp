@@ -22,6 +22,13 @@
 #include <sstream>
 #include <iostream>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/prctl.h>
+#include <sys/stat.h>
+#include <set>
+#include "directory_ex.h"
+#include "file_ex.h"
+#include "storage_acl.h"
 #include "parameter.h"
 
 namespace OHOS {
@@ -274,6 +281,59 @@ bool KillProcessByPid(int32_t pid)
         XCOLLIE_LOGI("Kill PeerBinder process failed");
     }
     return (ret < 0 ? false : true);
+}
+
+bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
+{
+    constexpr mode_t defaultLogDirMode = 0770;
+    if (!OHOS::FileExists(WATCHDOG_DIR)) {
+        OHOS::ForceCreateDirectory(WATCHDOG_DIR);
+        OHOS::ChangeModeDirectory(WATCHDOG_DIR, defaultLogDirMode);
+    }
+    if (OHOS::StorageDaemon::AclSetAccess(WATCHDOG_DIR, "g:1201:rwx") != 0) {
+        XCOLLIE_LOGI("Failed to AclSetAccess");
+        return false;
+    }
+    std::string time = GetFormatDate();
+    path = WATCHDOG_DIR + "/" + "MAIN_THREAD_JANK" + "_" + time.c_str() + "_" +
+        std::to_string(pid).c_str() + ".txt";
+    constexpr mode_t defaultLogFileMode = 0644;
+    auto fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, defaultLogFileMode);
+    if (fd < 0) {
+        XCOLLIE_LOGI("Failed to create path");
+        return false;
+    } else {
+        XCOLLIE_LOGI("path=%{public}s", path.c_str());
+    }
+    OHOS::SaveStringToFd(fd, stack);
+    close(fd);
+
+    return true;
+}
+
+std::string GetFormatDate()
+{
+    time_t t = time(nullptr);
+    char tmp[TIME_INDEX_MAX] = {0};
+    strftime(tmp, sizeof(tmp), "%Y%m%d%H%M%S", localtime(&t));
+    std::string date(tmp);
+    return date;
+}
+
+std::string GetBundleName(int32_t pid)
+{
+    std::string processName = GetProcessNameFromProcCmdline(pid);
+    if (processName.find(":") != std::string::npos) {
+        return processName.substr(0, processName.find(":"));
+    }
+    return processName;
+}
+
+int64_t GetTimeStamp()
+{
+    std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+        std::chrono::system_clock::now().time_since_epoch());
+    return ms.count();
 }
 } // end of HiviewDFX
 } // end of OHOS

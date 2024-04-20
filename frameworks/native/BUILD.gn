@@ -47,8 +47,10 @@ ohos_source_set("libhicollie_source") {
     "ffrt:libffrt",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
+    "hiview:libucollection_client",
     "init:libbegetutil",
     "ipc:ipc_core",
+    "storage_service:storage_manager_acl",
   ]
 
   defines = []

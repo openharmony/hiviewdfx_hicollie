@@ -32,16 +32,24 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+enum DumpStackState {
+    DEFAULT = 0,
+    COMPLETE = 1,
+    SAMPLE_COMPLETE = 2
+};
 constexpr char WMS_FULL_NAME[] = "WindowManagerService";
 constexpr char IPC_FULL[] = "IPC_FULL";
 constexpr char IPC_CHECKER[] = "IpcChecker";
 constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
+constexpr int64_t ONE_DAY_LIMIT = 8640000;
 const int BUFF_STACK_SIZE = 20 * 1024;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;
 const int MIN_WAIT_NUM = 3;
+const int TIME_INDEX_MAX = 3;
 const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
+const std::string WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
@@ -74,6 +82,14 @@ void SplitStr(const std::string& str, const std::string& sep,
 int ParsePeerBinderPid(std::ifstream& fin, int32_t pid);
 
 bool KillProcessByPid(int32_t pid);
+
+std::string GetFormatDate();
+
+bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack);
+
+std::string GetBundleName(int32_t pid);
+
+int64_t GetTimeStamp();
 } // end of HiviewDFX
 } // end of OHOS
 #endif
