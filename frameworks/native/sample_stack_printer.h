@@ -29,7 +29,7 @@ namespace HiviewDFX {
 struct SampleStackItem {
     uintptr_t pc;
     int32_t count;
-    int32_t level;
+    uint64_t level;
     std::shared_ptr<DfxFrame> current;
     SampleStackItem* child;
     SampleStackItem* siblings;
@@ -55,7 +55,7 @@ public:
     };
 
     void Insert(std::vector<uintptr_t>& pcs, int32_t count);
-    std::string GetFullStack(std::vector<TimeAndFrames>& timeAndFrameList, std::shared_ptr<Unwinder>& unwinder);
+    std::string GetFullStack(std::vector<TimeAndFrames>& timeAndFrameList);
     std::string GetTreeStack(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap,
         std::unique_ptr<UniqueStackTable>& uniqueStackTable);
     std::string Print();

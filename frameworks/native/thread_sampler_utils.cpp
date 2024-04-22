@@ -19,8 +19,8 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr int64_t SEC_TO_NANOSEC = 1000000000;
-constexpr int64_t MICROSEC_TO_NANOSEC = 1000;
+constexpr uint64_t SEC_TO_NANOSEC = 1000000000;
+constexpr uint64_t MICROSEC_TO_NANOSEC = 1000;
 constexpr int FORMAT_TIME_LEN = 20;
 constexpr int MICROSEC_LEN = 6;
 
@@ -30,13 +30,13 @@ uint64_t GetCurrentTimeNanoseconds()
     t.tv_sec = 0;
     t.tv_nsec = 0;
     clock_gettime(CLOCK_REALTIME, &t);
-    return (int64_t)(t.tv_sec) * SEC_TO_NANOSEC + t.tv_nsec;
+    return static_cast<uint64_t>(t.tv_sec) * SEC_TO_NANOSEC + static_cast<uint64_t>(t.tv_nsec);
 }
 
 std::string TimeFormat(uint64_t time)
 {
-    long nsec = time % SEC_TO_NANOSEC;
-    time_t sec = time / SEC_TO_NANOSEC;
+    uint64_t nsec = time % SEC_TO_NANOSEC;
+    time_t sec = static_cast<time_t>(time / SEC_TO_NANOSEC);
     char timeChars[FORMAT_TIME_LEN];
     struct tm* localTime = localtime(&sec);
     if (localTime == nullptr) {
@@ -47,7 +47,7 @@ std::string TimeFormat(uint64_t time)
         return "";
     }
     std::string s = timeChars;
-    long usec = nsec / MICROSEC_TO_NANOSEC;
+    uint64_t usec = nsec / MICROSEC_TO_NANOSEC;
     std::string usecStr = std::to_string(usec);
     while (usecStr.size() < MICROSEC_LEN) {
         usecStr = "0" + usecStr;
@@ -66,28 +66,6 @@ void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uin
     } else {
         it->second.emplace_back(timestamp);
     }
-}
-
-int ReadFileToString(std::string& stack, std::string path)
-{
-    FILE* file = fopen(path.c_str(), "r");
-    if (file == NULL) {
-        return OPEN_FILE_FAILED;
-    } else {
-        fseek(file, 0, SEEK_END);
-        long length = ftell(file);
-        if (length == -1L) {
-            fclose(file);
-            return GET_FILE_LENGTH_FAILED;
-        }
-        fseek(file, 0, SEEK_SET);
-        char content[length + 1];
-        fread(content, sizeof(char), length, file);
-        content[length] = '\0';
-        fclose(file);
-        stack = content;
-    }
-    return READ_FILE_SUCCESS;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -22,14 +22,9 @@
 namespace OHOS {
 namespace HiviewDFX {
 
-constexpr int OPEN_FILE_FAILED = -1;
-constexpr int GET_FILE_LENGTH_FAILED = -2;
-constexpr int READ_FILE_SUCCESS = 0;
-
 uint64_t GetCurrentTimeNanoseconds();
 std::string TimeFormat(uint64_t time);
 void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uint64_t stackId, uint64_t timestamp);
-int ReadFileToString(std::string& stack, std::string path);
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif

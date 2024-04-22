@@ -15,6 +15,8 @@
 
 #include "thread_sampler_test.h"
 
+#include <csignal>
+
 #include "thread_sampler.h"
 #include "watchdog.h"
 
@@ -132,7 +134,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     sigset_t sigset;
     sigemptyset(&sigset);
-    sigaddset(&sigset, SIG_NO_41);
+    sigaddset(&sigset, SIGNAL_SAMPLE_STACK);
     sigprocmask(SIG_BLOCK, &sigset, NULL);
 
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
@@ -146,7 +148,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     }
     sleep(4);
     printf("stack:\n%s", stack.c_str());
-    sigdelset(&sigset, SIG_NO_41);
+    sigdelset(&sigset, SIGNAL_SAMPLE_STACK);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
