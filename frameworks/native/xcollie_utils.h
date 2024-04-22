@@ -47,7 +47,7 @@ const int BUFF_STACK_SIZE = 20 * 1024;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;
 const int MIN_WAIT_NUM = 3;
-const int TIME_INDEX_MAX = 3;
+const int TIME_INDEX_MAX = 32;
 const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
 const std::string WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 

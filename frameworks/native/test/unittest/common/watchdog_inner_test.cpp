@@ -253,5 +253,61 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
     fin.close();
     EXPECT_TRUE(result < 0);
 }
+
+/**
+ * @tc.name: WatchdogInner;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
+{
+    int testValue = 150; // test value
+    int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(testValue);
+    int32_t left = 4;
+    int32_t end = time(nullptr) + left;
+    while (left > 0) {
+        left = end - time(nullptr);
+    }
+    EXPECT_EQ(ret, 0);
+    std::string stack = "";
+    WatchdogInner::GetInstance().CollectStack(stack);
+    printf("stack:\n%s", stack.c_str());
+    WatchdogInner::GetInstance().CollectTrace();
+    WatchdogInner::GetInstance().StopProfileMainThread();
+}
+
+/**
+ * @tc.name: WatchdogInner;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
+{
+    std::string result = GetFormatDate();
+    printf("GetFormatDate:%s\n", result.c_str());
+    EXPECT_TRUE(!result.empty());
+    int32_t pid = getpid();
+    std::string name = GetBundleName(pid);
+    printf("GetBundleName:%s\n", name.c_str());
+    EXPECT_TRUE(!name.empty());
+    int64_t ret = GetTimeStamp();
+    EXPECT_TRUE(ret > 0);
+}
+
+/**
+ * @tc.name: WatchdogInner;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
+{
+    auto timeOutCallback = [](const std::string &name, int waitState) {
+        printf("timeOutCallback name is %s, waitState is %d\n", name.c_str(), waitState);
+    };
+    int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr, timeOutCallback, 10);
+    EXPECT_TRUE(result <= 0);
+    int32_t pid = getpid();
+    WatchdogInner::WriteStringToFile(pid, "0");
+}
 } // namespace HiviewDFX
 } // namespace OHOS

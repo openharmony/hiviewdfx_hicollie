@@ -109,7 +109,6 @@ static bool IsInAppspwan()
 
 static TimePoint DistributeStart(const std::string& name)
 {
-    g_beginTime = GetTimeStamp();
     return std::chrono::steady_clock::now();
 }
 
@@ -184,9 +183,10 @@ void WatchdogInner::CollectTrace()
     auto traceCollector = UCollectClient::TraceCollector::Create();
     UCollectClient::AppCaller appCaller;
     int32_t pid = getpid();
+    int32_t uid = getuid();
     appCaller.bundleName = GetBundleName(pid);
     appCaller.bundleVersion = "1.0.0";
-    appCaller.uid = getuid();
+    appCaller.uid = uid;
     appCaller.pid = pid;
     appCaller.happenTime = GetTimeStamp();
     appCaller.beginTime = g_beginTime;
@@ -198,6 +198,7 @@ void WatchdogInner::CollectTrace()
 static void DistributeEnd(const std::string& name, const TimePoint& startTime)
 {
     TimePoint endTime = std::chrono::steady_clock::now();
+    g_endTime = GetTimeStamp();
     auto duration = endTime - startTime;
     int64_t durationTime = std::chrono::duration_cast<std::chrono::milliseconds>
         (duration).count();
@@ -216,11 +217,12 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if ((endTime - std::chrono::milliseconds(DUMPSTACK_TIME) > startTime) &&
         g_stackState == DumpStackState::DEFAULT) {
-        g_endTime = GetTimeStamp();
+        g_beginTime = g_endTime - durationTime;
         g_lastTimePoint = endTime;
         g_stackState = DumpStackState::COMPLETE;
         int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(DUMPSTACK_TIME);
-        XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d", ret);
+        XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
+            "Duration Time: %{public}" PRId64 " ms", ret, durationTime);
     }
     if ((endTime - std::chrono::milliseconds(DUMPTRACE_TIME) > startTime) &&
         g_traceState == DumpStackState::DEFAULT) {
