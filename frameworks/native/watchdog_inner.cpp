@@ -198,7 +198,6 @@ void WatchdogInner::CollectTrace()
 static void DistributeEnd(const std::string& name, const TimePoint& startTime)
 {
     TimePoint endTime = std::chrono::steady_clock::now();
-    g_endTime = GetTimeStamp();
     auto duration = endTime - startTime;
     int64_t durationTime = std::chrono::duration_cast<std::chrono::milliseconds>
         (duration).count();
@@ -217,6 +216,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if ((endTime - std::chrono::milliseconds(DUMPSTACK_TIME) > startTime) &&
         g_stackState == DumpStackState::DEFAULT) {
+        g_endTime = GetTimeStamp();
         g_beginTime = g_endTime - durationTime;
         g_lastTimePoint = endTime;
         g_stackState = DumpStackState::COMPLETE;
