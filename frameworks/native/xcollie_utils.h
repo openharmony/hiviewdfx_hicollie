@@ -40,6 +40,8 @@ enum DumpStackState {
 constexpr char WMS_FULL_NAME[] = "WindowManagerService";
 constexpr char IPC_FULL[] = "IPC_FULL";
 constexpr char IPC_CHECKER[] = "IpcChecker";
+constexpr char STACK_CHECKER[] = "ThreadSampler";
+constexpr char TRACE_CHECKER[] = "TraceCollector";
 constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr int64_t ONE_DAY_LIMIT = 8640000;
@@ -48,6 +50,12 @@ const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;
 const int MIN_WAIT_NUM = 3;
 const int TIME_INDEX_MAX = 32;
+const int DETECT_STACK_COUNT = 2;
+const int COLLECT_STACK_COUNT = 2;
+const int COLLECT_TRACE_MIN = 1;
+const int COLLECT_TRACE_MAX = 20;
+const int TASK_INTERVAL = 155;
+const int DURATION_TIME = 150;
 const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
 const std::string WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 
@@ -87,9 +95,9 @@ std::string GetFormatDate();
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack);
 
-std::string GetBundleName(int32_t pid);
-
 int64_t GetTimeStamp();
+
+bool IsCommercialVersion();
 } // end of HiviewDFX
 } // end of OHOS
 #endif

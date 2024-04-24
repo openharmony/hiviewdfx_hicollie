@@ -57,5 +57,15 @@ void Watchdog::InitFfrtWatchdog()
 {
     return WatchdogInner::GetInstance().InitFfrtWatchdog();
 }
+
+void Watchdog::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion)
+{
+    return WatchdogInner::GetInstance().SetBundleInfo(bundleName, bundleVersion);
+}
+
+void Watchdog::SetForeground(const bool& isForeground)
+{
+    return WatchdogInner::GetInstance().SetForeground(isForeground);
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

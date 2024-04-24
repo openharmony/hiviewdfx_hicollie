@@ -85,6 +85,20 @@ public:
      *
      */
     void InitFfrtWatchdog();
+
+    /**
+     *
+     * @brief Set bundle info.
+     *
+     */
+    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
+
+    /**
+     *
+     * @brief Set foreground.
+     *
+     */
+    void SetForeground(const bool& isForeground);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

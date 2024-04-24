@@ -30,6 +30,7 @@
 #include "file_ex.h"
 #include "storage_acl.h"
 #include "parameter.h"
+#include "parameters.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -320,20 +321,18 @@ std::string GetFormatDate()
     return date;
 }
 
-std::string GetBundleName(int32_t pid)
-{
-    std::string processName = GetProcessNameFromProcCmdline(pid);
-    if (processName.find(":") != std::string::npos) {
-        return processName.substr(0, processName.find(":"));
-    }
-    return processName;
-}
-
 int64_t GetTimeStamp()
 {
     std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
         std::chrono::system_clock::now().time_since_epoch());
     return ms.count();
+}
+
+bool IsCommercialVersion()
+{
+    const std::string KEY_HIVIEW_USER_TYPE = "const.logsystem.versiontype";
+    std::string userType = system::GetParameter(KEY_HIVIEW_USER_TYPE, "");
+    return userType == "commercial";
 }
 } // end of HiviewDFX
 } // end of OHOS

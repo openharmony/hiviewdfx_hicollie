@@ -31,6 +31,12 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+struct TimeContent {
+    int64_t reportBegin;
+    int64_t reportEnd;
+    int64_t curBegin;
+    int64_t curEnd;
+};
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
@@ -62,6 +68,9 @@ public:
     void StopProfileMainThread();
     bool CollectStack(std::string& stack);
     void CollectTrace();
+    void Deinit();
+    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
+    void SetForeground(const bool& isForeground);
 
 private:
     bool Start();
@@ -75,6 +84,8 @@ private:
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
     bool ReportMainThreadEvent();
+    bool CheckEventTimer(const int64_t& currentTime);
+    void StartTraceProfile(int32_t interval);
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -92,6 +103,10 @@ private:
     bool isHmos = false;
 
     bool isMainThreadProfileTaskEnabled {false};
+    bool isMainThreadTraceEnabled {false};
+    std::string bundleName_;
+    std::string bundleVersion_;
+    bool isForeground_ {false};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
