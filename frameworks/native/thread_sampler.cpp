@@ -40,11 +40,6 @@
 namespace OHOS {
 namespace HiviewDFX {
 
-struct UnwindInfo {
-    ThreadUnwindContext* context;
-    DfxMaps* maps;
-};
-
 void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context)
 {
 #if defined(__aarch64__)
@@ -120,22 +115,26 @@ bool ThreadSampler::Init()
 
     if (!InitRecordBuffer()) {
         XCOLLIE_LOGE("Failed to InitRecordBuffer\n");
+        Deinit();
         return false;
     }
 
     if (!InitUnwinder()) {
         XCOLLIE_LOGE("Failed to InitUnwinder\n");
+        Deinit();
         return false;
     }
 
     pid_ = getprocpid();
     if (!InitUniqueStackTable()) {
         XCOLLIE_LOGE("Failed to InitUniqueStackTable\n");
+        Deinit();
         return false;
     }
 
     if (!InstallSignalHandler()) {
         XCOLLIE_LOGE("Failed to InstallSignalHandler\n");
+        Deinit();
         return false;
     }
     init_ = true;
@@ -199,7 +198,6 @@ bool ThreadSampler::InitUniqueStackTable()
     uniqueStackTable_ = std::make_unique<UniqueStackTable>(pid_, uniqueStackTableSize_);
     if (!uniqueStackTable_->Init()) {
         XCOLLIE_LOGE("Failed to init unique_table\n");
-        Deinit();
         return false;
     }
     void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
@@ -301,7 +299,11 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
 }
 
 #if defined(__aarch64__)
+#if defined(__has_feature) && __has_feature(address_sanitizer)
+__attribute__((no_sanitize("address"))) void ThreadSampler::WriteContext(void* context)
+#else
 void ThreadSampler::WriteContext(void* context)
+#endif
 {
     uint64_t begin = GetCurrentTimeNanoseconds();
 
@@ -370,6 +372,10 @@ void ThreadSampler::SendSampleRequest()
 #if defined(__aarch64__)
 void ThreadSampler::ProcessStackBuffer(bool treeFormat)
 {
+    if (!init_) {
+        XCOLLIE_LOGE("sampler has not initialized.\n");
+        return;
+    }
     int i = 0;
     while (i < SAMPLER_MAX_BUFFER_SZ) {
         i++;
@@ -390,14 +396,7 @@ void ThreadSampler::ProcessStackBuffer(bool treeFormat)
             .maps = maps_.get(),
         };
 
-        static std::shared_ptr<DfxRegs> regs = std::make_shared<DfxRegsArm64>();
-        regs->SetSp(context->sp);
-        regs->SetPc(context->pc);
-        regs->SetFp(context->fp);
-        regs->SetReg(REG_LR, &(context->lr));
-        unwinder_->SetRegs(regs);
-        unwinder_->EnableFillFrames(false);
-        unwinder_->Unwind(&unwindInfo);
+        DoUnwind(context, unwinder_, unwindInfo);
         uint64_t ts = GetCurrentTimeNanoseconds();
         context->processTime = ts;
 

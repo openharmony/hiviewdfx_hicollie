@@ -19,12 +19,20 @@
 #include <map>
 #include <vector>
 
+#include "thread_sampler.h"
+
 namespace OHOS {
 namespace HiviewDFX {
+
+struct UnwindInfo {
+    ThreadUnwindContext* context;
+    DfxMaps* maps;
+};
 
 uint64_t GetCurrentTimeNanoseconds();
 std::string TimeFormat(uint64_t time);
 void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uint64_t stackId, uint64_t timestamp);
+void DoUnwind(ThreadUnwindContext* context, std::shared_ptr<Unwinder> unwinder, UnwindInfo& unwindInfo);
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif
