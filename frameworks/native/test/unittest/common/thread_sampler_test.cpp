@@ -66,7 +66,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
 
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 300);
-    Watchdog::GetInstance().RunOneShotTask("CollectHandler", collectHandler, 450);
+    Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, 450);
 
     int32_t left = 4;
     int32_t end = time(nullptr) + left;
@@ -100,7 +100,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
 
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 300);
-    Watchdog::GetInstance().RunOneShotTask("CollectHandler", collectHandler, 450);
+    Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, 450);
 
     int32_t left = 4;
     int32_t end = time(nullptr) + left;
@@ -114,7 +114,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
 
 /**
  * @tc.name: ThreadSamplerTest_003
- * @tc.desc: sample thread 2 times but signal is masked
+ * @tc.desc: sample thread 2 times but signal is blocked
  * @tc.type: FUNC
  * @tc.require
  */
@@ -135,11 +135,11 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     sigset_t sigset;
     sigemptyset(&sigset);
     sigaddset(&sigset, SIGNAL_SAMPLE_STACK);
-    sigprocmask(SIG_BLOCK, &sigset, NULL);
+    sigprocmask(SIG_BLOCK, &sigset, nullptr);
 
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 300);
-    Watchdog::GetInstance().RunOneShotTask("CollectHandler", collectHandler, 450);
+    Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, 450);
 
     int32_t left = 4;
     int32_t end = time(nullptr) + left;
@@ -148,7 +148,70 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     }
     sleep(4);
     printf("stack:\n%s", stack.c_str());
+    sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
     sigdelset(&sigset, SIGNAL_SAMPLE_STACK);
+}
+
+/**
+ * @tc.name: ThreadSamplerTest_004
+ * @tc.desc: sample thread 2 times and deinit sampler send 2 sample requestion and restart sampler.
+ * @tc.type: FUNC
+ * @tc.require
+ */
+HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
+{
+    printf("ThreadSamplerTest_004\n");
+    printf("Total:450MS Sample:150MS \n");
+    ThreadSampler::GetInstance().Init();
+    auto sampleHandler = []() {
+        ThreadSampler::GetInstance().Sample();
+    };
+
+    std::string stack;
+    auto collectHandler = [&stack]() {
+        ThreadSampler::GetInstance().CollectStack(stack, true);
+    };
+
+    Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
+    Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 300);
+    Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, 450);
+
+    int32_t left = 4;
+    int32_t end = time(nullptr) + left;
+    while (left > 0) {
+        left = end - time(nullptr);
+    }
+    sleep(4);
+    ASSERT_NE(stack, "");
+    printf("stack:\n%s", stack.c_str());
+
+    ThreadSampler::GetInstance().Deinit();
+    Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
+    Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 300);
+    Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, 450);
+    
+    left = 4;
+    end = time(nullptr) + left;
+    while (left > 0) {
+        left = end - time(nullptr);
+    }
+    sleep(4);
+    stack.clear();
+    printf("stack:\n%s", stack.c_str());
+
+    ThreadSampler::GetInstance().Init();
+    Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
+    Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 300);
+    Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, 450);
+
+    left = 4;
+    end = time(nullptr) + left;
+    while (left > 0) {
+        left = end - time(nullptr);
+    }
+    sleep(4);
+    ASSERT_NE(stack, "");
+    printf("stack:\n%s", stack.c_str());
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
