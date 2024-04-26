@@ -183,7 +183,7 @@ void WatchdogInner::CollectTrace()
     auto traceCollector = UCollectClient::TraceCollector::Create();
     UCollectClient::AppCaller appCaller;
     int32_t pid = getpid();
-    int32_t uid = getuid();
+    int32_t uid = static_cast<int64_t>(getuid());
     appCaller.bundleName = GetBundleName(pid);
     appCaller.bundleVersion = "1.0.0";
     appCaller.uid = uid;
