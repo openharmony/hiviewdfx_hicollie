@@ -67,5 +67,19 @@ void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uin
         it->second.emplace_back(timestamp);
     }
 }
+
+#if defined(__aarch64__)
+void DoUnwind(ThreadUnwindContext* context, std::shared_ptr<Unwinder> unwinder, UnwindInfo& unwindInfo)
+{
+    static std::shared_ptr<DfxRegs> regs = std::make_shared<DfxRegsArm64>();
+    regs->SetSp(context->sp);
+    regs->SetPc(context->pc);
+    regs->SetFp(context->fp);
+    regs->SetReg(REG_LR, &(context->lr));
+    unwinder->SetRegs(regs);
+    unwinder->EnableFillFrames(false);
+    unwinder->Unwind(&unwindInfo);
+}
+#endif  // #if defined(__aarch64__)
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
