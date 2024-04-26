@@ -286,7 +286,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     std::string result = GetFormatDate();
     printf("GetFormatDate:%s\n", result.c_str());
     EXPECT_TRUE(!result.empty());
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     std::string name = GetBundleName(pid);
     printf("GetBundleName:%s\n", name.c_str());
     EXPECT_TRUE(!name.empty());
