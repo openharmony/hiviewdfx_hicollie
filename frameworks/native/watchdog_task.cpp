@@ -155,7 +155,7 @@ void WatchdogTask::TimerCountTask()
             std::string sendMsg = name + " occured " + std::to_string(countLimit) + " times in " +
                 std::to_string(timeInterval) + " ms, " + message;
             HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "HIT_EMPTY_WARNING", HiSysEvent::EventType::FAULT,
-                "PID", getpid(), "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg);
+                "PID", getprocpid(), "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg);
             triggerTimes.clear();
             return;
         }
@@ -186,7 +186,7 @@ void WatchdogTask::RunHandlerCheckerTask()
 
 void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
 {
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
         return;
@@ -211,7 +211,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
 {
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
         return;

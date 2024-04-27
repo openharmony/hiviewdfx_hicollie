@@ -114,11 +114,11 @@ static TimePoint DistributeStart(const std::string& name)
 
 bool WatchdogInner::ReportMainThreadEvent()
 {
-    std::string bundleName = GetBundleName(getpid());
+    std::string bundleName = GetBundleName(getprocpid());
     std::string stack = "";
     CollectStack(stack);
     std::string path = "";
-    if (!WriteStackToFd(getpid(), path, stack)) {
+    if (!WriteStackToFd(getprocpid(), path, stack)) {
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
@@ -182,7 +182,7 @@ void WatchdogInner::CollectTrace()
 {
     auto traceCollector = UCollectClient::TraceCollector::Create();
     UCollectClient::AppCaller appCaller;
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     int32_t uid = static_cast<int64_t>(getuid());
     appCaller.bundleName = GetBundleName(pid);
     appCaller.bundleVersion = "1.0.0";
@@ -643,7 +643,7 @@ void WatchdogInner::InitFfrtWatchdog()
 
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
 {
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
         return;
@@ -672,7 +672,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 {
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't exit.", pid);
         return;
@@ -699,7 +699,7 @@ void WatchdogInner::KillPeerBinderProcess(const std::string &description)
 {
     bool result = false;
     if (getuid() == WATCHED_UID) {
-        result = KillProcessByPid(getpid());
+        result = KillProcessByPid(getprocpid());
     }
     if (!result) {
         WatchdogInner::LeftTimeExitProcess(description);
