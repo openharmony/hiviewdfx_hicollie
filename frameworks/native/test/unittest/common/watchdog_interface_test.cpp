@@ -305,6 +305,9 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogStopTest_001, TestSize.Level1)
     Watchdog::GetInstance().StopWatchdog();
     Sleep(TOTAL_WAIT_TIME);
     ASSERT_EQ(taskResult, 0);
+
+    Watchdog::GetInstance().SetForeground(true);
+    Watchdog::GetInstance().SetBundleInfo("test", "1.1.0");
 }
 } // namespace HiviewDFX
 } // namespace OHOS

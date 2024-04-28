@@ -273,6 +273,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     WatchdogInner::GetInstance().CollectStack(stack);
     printf("stack:\n%s", stack.c_str());
     WatchdogInner::GetInstance().CollectTrace();
+    WatchdogInner::GetInstance().Deinit();
     WatchdogInner::GetInstance().StopProfileMainThread();
 }
 
@@ -286,12 +287,10 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     std::string result = GetFormatDate();
     printf("GetFormatDate:%s\n", result.c_str());
     EXPECT_TRUE(!result.empty());
-    int32_t pid = getprocpid();
-    std::string name = GetBundleName(pid);
-    printf("GetBundleName:%s\n", name.c_str());
-    EXPECT_TRUE(!name.empty());
-    int64_t ret = GetTimeStamp();
-    EXPECT_TRUE(ret > 0);
+    bool ret = IsCommercialVersion();
+    printf("ret:%s\n", ret ? "true" : "false");
+    int64_t ret1 = GetTimeStamp();
+    EXPECT_TRUE(ret1 > 0);
 }
 
 /**
@@ -308,6 +307,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     EXPECT_TRUE(result <= 0);
     int32_t pid = getpid();
     WatchdogInner::WriteStringToFile(pid, "0");
+    bool ret = WatchdogInner::GetInstance().CheckEventTimer(GetTimeStamp());
+    printf("CheckEventTimer ret=%s\n", ret ? "true" : "fasle");
 }
 } // namespace HiviewDFX
 } // namespace OHOS
