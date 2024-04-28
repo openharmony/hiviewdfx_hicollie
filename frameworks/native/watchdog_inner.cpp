@@ -61,15 +61,13 @@ static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
-static const int64_t DISTRIBUTE_TIME = 2000;
-static const int64_t DUMPSTACK_TIME = 150;
-static const int64_t DUMPTRACE_TIME = 450;
 static int g_sampleTaskState;
 static int g_stackState;
 static int g_traceState;
 static int g_detectorCount;
 static int g_collectCount;
 static int g_traceCount;
+static int g_dumpCount;
 static TimeContent g_timeContent;
 static TimePoint g_lastTimePoint;
 static std::shared_ptr<UCollectClient::TraceCollector> traceCollector;
@@ -163,6 +161,9 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
         return -1;
     }
 
+    g_sampleTaskState = 0;
+    g_detectorCount = 0;
+    g_collectCount = 0;
     auto sampleTask = [this]() {
         if (g_sampleTaskState == DumpStackState::DEFAULT) {
             g_sampleTaskState++;
@@ -196,14 +197,8 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
 
 void WatchdogInner::StopProfileMainThread()
 {
-    g_sampleTaskState = 0;
-    g_detectorCount = 0;
-    g_collectCount = 0;
-    g_traceCount = 0;
     g_stackState = DumpStackState::DEFAULT;
     g_traceState = DumpStackState::DEFAULT;
-    isMainThreadProfileTaskEnabled = false;
-    isMainThreadTraceEnabled = false;
 }
 
 bool WatchdogInner::CollectStack(std::string& stack)
@@ -222,16 +217,21 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
         XCOLLIE_LOGI("MainThread TraceCollector Failed.");
         return;
     }
+    g_dumpCount = 0;
+    g_traceCount = 0;
     auto traceTask = [this]() {
+        g_traceCount++;
         int64_t currentTime = GetTimeStamp();
         if (CheckEventTimer(currentTime)) {
-            appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-            traceCollector->CaptureDurationTrace(appCaller);
+            g_dumpCount++;
         }
-        g_traceCount++;
         if (g_traceCount >= COLLECT_TRACE_MAX) {
+            if (g_dumpCount >= COLLECT_TRACE_MIN) {
+                appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
+                auto result = traceCollector->CaptureDurationTrace(appCaller);
+                XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
+            }
             isMainThreadTraceEnabled = true;
-            XCOLLIE_LOGI("MainThread TraceCollector Over.");
         }
     };
     WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
@@ -270,7 +270,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     auto duration = endTime - startTime;
     int64_t durationTime = std::chrono::duration_cast<std::chrono::milliseconds>
         (duration).count();
-    if ((endTime - std::chrono::milliseconds(DISTRIBUTE_TIME)) > startTime) {
+    if (duration > std::chrono::milliseconds(DISTRIBUTE_TIME)) {
         XCOLLIE_LOGI("BlockMonitor event name: %{public}s, Duration Time: %{public}" PRId64 " ms",
             name.c_str(), durationTime);
     }
@@ -286,8 +286,9 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
             XCOLLIE_LOGI("MainThread StartProfileMainThread Over Oneday");
             WatchdogInner::GetInstance().StopProfileMainThread();
         }
-    } else if ((endTime - std::chrono::milliseconds(DUMPSTACK_TIME) > startTime) &&
-        g_stackState == DumpStackState::DEFAULT) {
+    }
+    if (duration > std::chrono::milliseconds(DURATION_TIME) &&
+        duration < std::chrono::milliseconds(DUMPTRACE_TIME) && g_stackState == DumpStackState::DEFAULT) {
         g_timeContent.reportBegin = g_timeContent.curBegin;
         g_timeContent.reportEnd = g_timeContent.curEnd;
         g_lastTimePoint = endTime;
@@ -295,9 +296,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(TASK_INTERVAL);
         XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
             "Duration Time: %{public}" PRId64 " ms", ret, durationTime);
-    }
-    if ((endTime - std::chrono::milliseconds(DUMPTRACE_TIME) > startTime) &&
-        g_traceState == DumpStackState::DEFAULT) {
+    } else if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) && g_traceState == DumpStackState::DEFAULT) {
         WatchdogInner::GetInstance().CollectTrace();
         g_traceState = DumpStackState::COMPLETE;
     }
@@ -558,7 +557,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
 
     if (queuedTask.name == TRACE_CHECKER && isMainThreadTraceEnabled) {
         checkerQueue_.pop();
-        taskNameSet_.erase("TRACE_CHECKER");
+        taskNameSet_.erase("TraceCollector");
         isMainThreadTraceEnabled = false;
         XCOLLIE_LOGI("TRACE_CHECKER Task pop");
         return DEFAULT_TIMEOUT;

@@ -330,7 +330,6 @@ int64_t GetTimeStamp()
 
 bool IsCommercialVersion()
 {
-    const std::string KEY_HIVIEW_USER_TYPE = "const.logsystem.versiontype";
     std::string userType = system::GetParameter(KEY_HIVIEW_USER_TYPE, "");
     return userType == "commercial";
 }
