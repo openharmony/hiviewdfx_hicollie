@@ -128,7 +128,7 @@ bool WatchdogInner::ReportMainThreadEvent()
     CollectStack(stack);
     Deinit();
     std::string path = "";
-    if (!WriteStackToFd(getpid(), path, stack)) {
+    if (!WriteStackToFd(getprocpid(), path, stack)) {
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
@@ -225,14 +225,13 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
     auto traceTask = [this]() {
         int64_t currentTime = GetTimeStamp();
         if (CheckEventTimer(currentTime)) {
-            g_traceCount++;
-            if (g_traceCount >= COLLECT_TRACE_MIN && g_traceCount <= COLLECT_TRACE_MAX) {
-                appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-                traceCollector->CaptureDurationTrace(appCaller);
-            } else if (g_traceCount > COLLECT_TRACE_MAX) {
-                isMainThreadTraceEnabled = true;
-                XCOLLIE_LOGI("MainThread TraceCollector Over.");
-            }
+            appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
+            traceCollector->CaptureDurationTrace(appCaller);
+        }
+        g_traceCount++;
+        if (g_traceCount >= COLLECT_TRACE_MAX) {
+            isMainThreadTraceEnabled = true;
+            XCOLLIE_LOGI("MainThread TraceCollector Over.");
         }
     };
     WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
@@ -242,7 +241,7 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
 void WatchdogInner::CollectTrace()
 {
     traceCollector = UCollectClient::TraceCollector::Create();
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     int32_t uid = static_cast<int64_t>(getuid());
     appCaller.actionId = UCollectClient::ACTION_ID_START_TRACE;
     appCaller.bundleName = bundleName_;
@@ -726,7 +725,7 @@ void WatchdogInner::InitFfrtWatchdog()
 
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
 {
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
         return;
@@ -755,7 +754,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 {
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't exit.", pid);
         return;
@@ -782,7 +781,7 @@ void WatchdogInner::KillPeerBinderProcess(const std::string &description)
 {
     bool result = false;
     if (getuid() == WATCHED_UID) {
-        result = KillProcessByPid(getpid());
+        result = KillProcessByPid(getprocpid());
     }
     if (!result) {
         WatchdogInner::LeftTimeExitProcess(description);
