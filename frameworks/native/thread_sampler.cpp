@@ -179,7 +179,7 @@ bool ThreadSampler::InitUnwinder()
     accessors_->AccessMem = &ThreadSampler::AccessMem;
     accessors_->GetMapByPc = &ThreadSampler::GetMapByPc;
     accessors_->FindUnwindTable = &ThreadSampler::FindUnwindTable;
-    unwinder_ = std::make_shared<Unwinder>(accessors_);
+    unwinder_ = std::make_shared<Unwinder>(accessors_, true);
 
     maps_ = DfxMaps::Create();
     if (maps_ == nullptr) {
@@ -324,7 +324,7 @@ void ThreadSampler::WriteContext(void* context)
     contextArray[index].sp = static_cast<ucontext_t*>(context)->uc_mcontext.sp;
     contextArray[index].pc = static_cast<ucontext_t*>(context)->uc_mcontext.pc;
     if (contextArray[index].sp < stackBegin_ ||
-        contextArray[index].sp  >= stackEnd_) {
+        contextArray[index].sp >= stackEnd_) {
         return;
     }
 
