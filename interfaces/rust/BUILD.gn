@@ -15,6 +15,7 @@ import("//build/ohos.gni")
 
 ohos_rust_shared_library("hicollie_rust") {
   sources = [ "src/lib.rs" ]
+  rustflags = [ "-Zstack-protector=all" ]
 
   deps = [ "../native/innerkits:libhicollie" ]
 
