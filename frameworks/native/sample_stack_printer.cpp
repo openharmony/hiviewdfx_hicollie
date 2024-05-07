@@ -23,7 +23,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t pc, int32_t count)
+SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t pc, int32_t count, uint64_t level)
 {
     if (curNode == nullptr) {
         return nullptr;
@@ -44,23 +44,27 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t 
         return curNode;
     }
 
-    if (curNode->child == nullptr) {
-        curNode->child = new SampleStackItem;
-        curNode->child->level = curNode->level + 1;
-        allNodes_.push_back(curNode->child);
-        return Insert(curNode->child, pc, count);
-    }
+    if (level > curNode->level) {
+        if (curNode->child == nullptr) {
+            curNode->child = new SampleStackItem;
+            curNode->child->level = curNode->level + 1;
+            allNodes_.push_back(curNode->child);
+            return Insert(curNode->child, pc, count, level);
+        }
 
-    if (curNode->child->pc == pc) {
-        curNode->child->count += count;
-        return curNode->child;
+        if (curNode->child->pc == pc) {
+            curNode->child->count += count;
+            return curNode->child;
+        }
+
+        curNode = curNode->child;
     }
 
     if (curNode->siblings == nullptr) {
         curNode->siblings = new SampleStackItem;
         curNode->siblings->level = curNode->level;
         allNodes_.push_back(curNode->siblings);
-        return Insert(curNode->siblings, pc, count);
+        return Insert(curNode->siblings, pc, count, level);
     }
 
     if (curNode->siblings->pc == pc) {
@@ -68,7 +72,7 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t 
         return curNode->siblings;
     }
 
-    return Insert(curNode->siblings, pc, count);
+    return Insert(curNode->siblings, pc, count, level);
 }
 
 void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
@@ -80,8 +84,10 @@ void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
     }
 
     SampleStackItem* curNode = root_;
+    uint64_t level = 0;
     for (auto iter = pcs.rbegin(); iter != pcs.rend(); ++iter) {
-        curNode = Insert(curNode, *iter, count);
+        curNode = Insert(curNode, *iter, count, level);
+        level++;
     }
 }
 

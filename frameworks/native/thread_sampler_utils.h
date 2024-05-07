@@ -24,11 +24,6 @@
 namespace OHOS {
 namespace HiviewDFX {
 
-struct UnwindInfo {
-    ThreadUnwindContext* context;
-    DfxMaps* maps;
-};
-
 uint64_t GetCurrentTimeNanoseconds();
 std::string TimeFormat(uint64_t time);
 void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uint64_t stackId, uint64_t timestamp);

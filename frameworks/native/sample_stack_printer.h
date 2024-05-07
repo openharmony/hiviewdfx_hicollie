@@ -62,7 +62,7 @@ public:
 
 private:
     void FreeNodes();
-    SampleStackItem* Insert(SampleStackItem* curNode, uintptr_t pc, int32_t count);
+    SampleStackItem* Insert(SampleStackItem* curNode, uintptr_t pc, int32_t count, uint64_t level);
     SampleStackItem* root_;
     std::shared_ptr<Unwinder> unwinder_;
     std::shared_ptr<DfxMaps> maps_;
