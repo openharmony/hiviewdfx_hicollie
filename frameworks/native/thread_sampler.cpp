@@ -65,7 +65,11 @@ int ThreadSampler::FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, 
 
     std::shared_ptr<DfxMap> map;
     if (unwindInfo->maps->FindMapByAddr(pc, map)) {
-        auto elf = map->GetElf();
+        if (map == nullptr) {
+            XCOLLIE_LOGE("FindUnwindTable: map is nullptr\n");
+            return -1;
+        }
+        auto elf = map->GetElf(getpid());
         if (elf != nullptr) {
             return elf->FindUnwindTableInfo(pc, map, outTableInfo);
         }
@@ -211,27 +215,48 @@ bool ThreadSampler::SetUniStackTableSize(uint32_t uniStkTableSz)
         XCOLLIE_LOGE("Sampler should be initialed first\n");
         return false;
     }
-    uniqueStackTable_ = std::make_unique<UniqueStackTable>(pid_, uniStkTableSz);
-    if (!uniqueStackTable_->Init()) {
-        XCOLLIE_LOGE("Failed to uniqueStackTable size\n");
+    if (uniStkTableSz == 0 || uniStkTableSz > DEFAULT_UNIQUE_STACK_TABLE_SIZE) {
+        XCOLLIE_LOGW("The size of uniqueStackTable should between 0(greater) and %u\n",
+            DEFAULT_UNIQUE_STACK_TABLE_SIZE);
+        uniStkTableSz = uniqueStackTableSize_;
+    }
+    if (uniStkTableSz == uniqueStackTableSize_) {
+        return true;
+    }
+    uint32_t oldUniStkTableSz = uniqueStackTableSize_;
+    uniqueStackTableSize_ = uniStkTableSz;
+    if (!InitUniqueStackTable()) {
+        uniqueStackTableSize_ = oldUniStkTableSz;
+        XCOLLIE_LOGE("Failed to set uniqueStackTable size.\n");
         Deinit();
         return false;
     }
-    uniqueStackTableSize_ = uniStkTableSz;
-    void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
-    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, uniqueTableBufMMap, uniStkTableSz, uniTableMMapName_.c_str());
     return true;
 }
 
-void ThreadSampler::SetUniStackTableMMapName(const std::string& uniTableMMapName)
+bool ThreadSampler::SetUniStackTableMMapName(const std::string& uniTableMMapName)
 {
     if (!init_) {
         XCOLLIE_LOGE("Sampler should be initialed first\n");
-        return;
+        return false;
     }
-    void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
-    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, uniqueTableBufMMap, uniqueStackTableSize_, uniTableMMapName.c_str());
-    uniTableMMapName_ = uniTableMMapName;
+    std::string newUniTableMMapName = uniTableMMapName;
+    if (newUniTableMMapName.empty() || newUniTableMMapName == "") {
+        XCOLLIE_LOGW("The name of uniqueStackTable buffer should not be empty.\n");
+        newUniTableMMapName = uniTableMMapName_;
+    }
+    if (newUniTableMMapName == uniTableMMapName_) {
+        return true;
+    }
+    std::string oldUniTableMMapName = uniTableMMapName_;
+    uniTableMMapName_ = newUniTableMMapName;
+    if (!InitUniqueStackTable()) {
+        uniTableMMapName_ = oldUniTableMMapName;
+        XCOLLIE_LOGE("Failed to set uniqueStackTable buffer name.\n");
+        Deinit();
+        return false;
+    }
+    return true;
 }
 
 void ThreadSampler::DeinitUniqueStackTable()
@@ -259,11 +284,22 @@ bool ThreadSampler::InstallSignalHandler()
     return true;
 }
 
+void ThreadSampler::UninstallSignalHandler()
+{
+    if (signal(SIGNAL_SAMPLE_STACK, SIG_IGN) == SIG_ERR) {
+        XCOLLIE_LOGE("Failed to unregister signal(%d)", SIGNAL_SAMPLE_STACK);
+    }
+}
+
 int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
 {
     std::shared_ptr<DfxMap> map;
     if (maps_->FindMapByAddr(addr, map)) {
-        auto elf = map->GetElf();
+        if (map == nullptr) {
+            XCOLLIE_LOGE("AccessElfMem: map is nullptr\n");
+            return -1;
+        }
+        auto elf = map->GetElf(getpid());
         if (elf != nullptr) {
             uint64_t foff = addr - map->begin + map->offset - elf->GetBaseOffset();
             if (elf->Read(foff, val, sizeof(uintptr_t))) {
@@ -298,13 +334,13 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
     return &contextArray[index];
 }
 
-#if defined(__aarch64__)
 #if defined(__has_feature) && __has_feature(address_sanitizer)
 __attribute__((no_sanitize("address"))) void ThreadSampler::WriteContext(void* context)
 #else
 void ThreadSampler::WriteContext(void* context)
 #endif
 {
+#if defined(__aarch64__)
     uint64_t begin = GetCurrentTimeNanoseconds();
 
     if (!init_) {
@@ -330,8 +366,8 @@ void ThreadSampler::WriteContext(void* context)
 
     uintptr_t curStackSz = stackEnd_ - contextArray[index].sp;
     uintptr_t cpySz = curStackSz  > STACK_BUFFER_SIZE ? STACK_BUFFER_SIZE : curStackSz;
-    if (memcpy_s((void*)(contextArray[index].buffer), STACK_BUFFER_SIZE,
-        (void*)(contextArray[index].sp), cpySz) != EOK) {
+    if (memcpy_s(reinterpret_cast<void*>(contextArray[index].buffer), STACK_BUFFER_SIZE,
+        reinterpret_cast<void*>(contextArray[index].sp), cpySz) != EOK) {
         return;
     }
 
@@ -343,8 +379,8 @@ void ThreadSampler::WriteContext(void* context)
     threadCount_++;
     threadTimeCost_ += end - begin;
 #endif
-}
 #endif  // #if defined(__aarch64__)
+}
 
 void ThreadSampler::SendSampleRequest()
 {
@@ -369,9 +405,9 @@ void ThreadSampler::SendSampleRequest()
 #endif
 }
 
-#if defined(__aarch64__)
 void ThreadSampler::ProcessStackBuffer(bool treeFormat)
 {
+#if defined(__aarch64__)
     if (!init_) {
         XCOLLIE_LOGE("sampler has not initialized.\n");
         return;
@@ -420,8 +456,8 @@ void ThreadSampler::ProcessStackBuffer(bool treeFormat)
         context->requestTime = 0;
         context->snapshotTime = 0;
     }
-}
 #endif  // #if defined(__aarch64__)
+}
 
 int32_t ThreadSampler::Sample()
 {
@@ -503,6 +539,9 @@ void ThreadSampler::Deinit()
     DeinitUniqueStackTable();
     DestroyUnwinder();
     ReleaseRecordBuffer();
+    UninstallSignalHandler();
+    uniqueStackTableSize_ = DEFAULT_UNIQUE_STACK_TABLE_SIZE;
+    uniTableMMapName_ = "hicollie_buf";
     init_ = false;
 }
 } // end of namespace HiviewDFX

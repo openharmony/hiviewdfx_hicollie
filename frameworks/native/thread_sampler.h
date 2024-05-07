@@ -50,6 +50,11 @@ struct ThreadUnwindContext {
     uint8_t buffer[STACK_BUFFER_SIZE] {0}; // 16K stack buffer
 };
 
+struct UnwindInfo {
+    ThreadUnwindContext* context;
+    DfxMaps* maps;
+};
+
 struct TimeAndFrames {
     uint64_t requestTime {0};
     uint64_t snapshotTime {0};
@@ -71,7 +76,7 @@ public:
     // use to set the size and mmap buffer name of the uniqueStackTable
     bool SetUniStackTableSize(uint32_t uniStkTableSz);
 
-    void SetUniStackTableMMapName(const std::string& uniTableMMapName);
+    bool SetUniStackTableMMapName(const std::string& uniTableMMapName);
     uint32_t GetuniqueStackTableSize()
     {
         return uniqueStackTableSize_;
@@ -90,6 +95,7 @@ private:
     bool InitUniqueStackTable();
     void DeinitUniqueStackTable();
     bool InstallSignalHandler();
+    void UninstallSignalHandler();
     void SendSampleRequest();
     void ProcessStackBuffer(bool treeFormat);
     int AccessElfMem(uintptr_t addr, uintptr_t *val);
