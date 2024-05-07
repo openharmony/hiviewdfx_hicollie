@@ -28,15 +28,32 @@
 #include "watchdog_task.h"
 #include "c/ffrt_watchdog.h"
 #include "singleton.h"
+#include "client/trace_collector.h"
 
 namespace OHOS {
 namespace HiviewDFX {
+using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 struct TimeContent {
     int64_t reportBegin;
     int64_t reportEnd;
     int64_t curBegin;
     int64_t curEnd;
 };
+
+struct StackContent {
+    TimePoint lastStackTime;
+    int stackState;
+    int detectorCount;
+    int collectCount;
+};
+
+struct TraceContent {
+    TimePoint lastTraceTime;
+    int traceState;
+    int traceCount;
+    int dumpCount;
+};
+
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
@@ -65,13 +82,17 @@ public:
     std::string currentScene_;
 
     int32_t StartProfileMainThread(int32_t interval);
-    void StopProfileMainThread();
     bool CollectStack(std::string& stack);
     void CollectTrace();
     void Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
-
+    void ChangeState(int& state);
+    void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime);
+public:
+    TimeContent timeContent_;
+    StackContent stackContent_;
+    TraceContent traceContent_;
 private:
     bool Start();
     bool Stop();
@@ -107,6 +128,9 @@ private:
     std::string bundleName_;
     std::string bundleVersion_;
     bool isForeground_ {false};
+    int sampleTaskState_;
+    std::shared_ptr<UCollectClient::TraceCollector> traceCollector;
+    UCollectClient::AppCaller appCaller;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

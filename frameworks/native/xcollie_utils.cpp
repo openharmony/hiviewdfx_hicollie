@@ -284,7 +284,7 @@ bool KillProcessByPid(int32_t pid)
     return (ret < 0 ? false : true);
 }
 
-bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
+bool CreateWatchdogDir()
 {
     constexpr mode_t defaultLogDirMode = 0770;
     if (!OHOS::FileExists(WATCHDOG_DIR)) {
@@ -293,6 +293,14 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
     }
     if (OHOS::StorageDaemon::AclSetAccess(WATCHDOG_DIR, "g:1201:rwx") != 0) {
         XCOLLIE_LOGI("Failed to AclSetAccess");
+        return false;
+    }
+    return true;
+}
+
+bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
+{
+    if (!CreateWatchdogDir()) {
         return false;
     }
     std::string time = GetFormatDate();
@@ -323,7 +331,7 @@ std::string GetFormatDate()
 
 int64_t GetTimeStamp()
 {
-    std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+    std::chrono::nanoseconds ms = std::chrono::duration_cast< std::chrono::nanoseconds >(
         std::chrono::system_clock::now().time_since_epoch());
     return ms.count();
 }

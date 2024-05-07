@@ -87,6 +87,11 @@ ohos_unittest("WatchdogInnerUnitTest") {
     external_deps += [ "eventhandler:libeventhandler" ]
     defines += [ "EVENTHANDLER_ENABLE" ]
   }
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.hiviewdfx_hiview)) {
+    external_deps += [ "hiview:libucollection_client" ]
+    defines += [ "HIVIEW_ENABLE" ]
+  }
 }
 
 ohos_unittest("HandlerCheckerTest") {

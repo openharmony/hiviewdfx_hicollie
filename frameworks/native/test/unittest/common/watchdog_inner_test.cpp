@@ -274,7 +274,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     printf("stack:\n%s", stack.c_str());
     WatchdogInner::GetInstance().CollectTrace();
     WatchdogInner::GetInstance().Deinit();
-    WatchdogInner::GetInstance().StopProfileMainThread();
 }
 
 /**

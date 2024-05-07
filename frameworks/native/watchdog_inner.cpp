@@ -36,7 +36,6 @@
 #include "dfx_define.h"
 #include "parameter.h"
 #include "thread_sampler.h"
-#include "client/trace_collector.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -60,18 +59,6 @@ std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
-using TimePoint = AppExecFwk::InnerEvent::TimePoint;
-static int g_sampleTaskState;
-static int g_stackState;
-static int g_traceState;
-static int g_detectorCount;
-static int g_collectCount;
-static int g_traceCount;
-static int g_dumpCount;
-static TimeContent g_timeContent;
-static TimePoint g_lastTimePoint;
-static std::shared_ptr<UCollectClient::TraceCollector> traceCollector;
-static UCollectClient::AppCaller appCaller;
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
                 size_t len  __attribute__((unused)),
@@ -134,23 +121,27 @@ bool WatchdogInner::ReportMainThreadEvent()
         HiSysEvent::EventType::FAULT,
         "BUNDLE_VERSION", bundleVersion_,
         "BUNDLE_NAME", bundleName_,
-        "BEGIN_TIME", g_timeContent.reportBegin,
-        "END_TIME", g_timeContent.reportEnd,
+        "BEGIN_TIME", timeContent_.reportBegin / MILLISEC_TO_NANOSEC,
+        "END_TIME", timeContent_.reportEnd / MILLISEC_TO_NANOSEC,
         "EXTERNAL_LOG", path,
         "STACK", stack,
-        "JANK_LEVEL", g_traceState,
+        "JANK_LEVEL", 0,
         "THREAD_NAME", GetSelfProcName(),
         "FOREGROUND", isForeground_,
-        "LOG_TIME", GetTimeStamp());
+        "LOG_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC);
     XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d", result);
     return result >= 0;
 }
 
 bool WatchdogInner::CheckEventTimer(const int64_t& currentTime)
 {
-    return (g_timeContent.curEnd <= g_timeContent.curBegin &&
-        (currentTime - g_timeContent.curBegin >= DURATION_TIME)) ||
-        (g_timeContent.curEnd - g_timeContent.curBegin > DURATION_TIME);
+    if (timeContent_.reportBegin == timeContent_.curBegin &&
+        timeContent_.reportEnd == timeContent_.curEnd) {
+        return false;
+    }
+    return (timeContent_.curEnd <= timeContent_.curBegin &&
+        (currentTime - timeContent_.curBegin >= DURATION_TIME * MILLISEC_TO_NANOSEC)) ||
+        (timeContent_.curEnd - timeContent_.curBegin > DURATION_TIME * MILLISEC_TO_NANOSEC);
 }
 
 int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
@@ -161,31 +152,32 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
         return -1;
     }
 
-    g_sampleTaskState = 0;
-    g_detectorCount = 0;
-    g_collectCount = 0;
+    sampleTaskState_ = 0;
+    stackContent_.detectorCount = 0;
+    stackContent_.collectCount = 0;
     auto sampleTask = [this]() {
-        if (g_sampleTaskState == DumpStackState::DEFAULT) {
-            g_sampleTaskState++;
+        if (sampleTaskState_ == DumpStackState::DEFAULT) {
+            sampleTaskState_++;
             return;
         }
         int64_t currentTime = GetTimeStamp();
-        if (g_collectCount > DumpStackState::DEFAULT && g_collectCount < COLLECT_STACK_COUNT) {
+        if (stackContent_.collectCount > DumpStackState::DEFAULT &&
+            stackContent_.collectCount < COLLECT_STACK_COUNT) {
             ThreadSampler::GetInstance().Sample();
-            g_collectCount++;
-        } else if (g_collectCount == COLLECT_STACK_COUNT) {
+            stackContent_.collectCount++;
+        } else if (stackContent_.collectCount == COLLECT_STACK_COUNT) {
             ReportMainThreadEvent();
             isMainThreadProfileTaskEnabled = true;
             return;
         } else {
             if (CheckEventTimer(currentTime)) {
                 ThreadSampler::GetInstance().Sample();
-                g_collectCount++;
+                stackContent_.collectCount++;
             } else {
-                g_detectorCount++;
+                stackContent_.detectorCount++;
             }
         }
-        if (g_detectorCount == DETECT_STACK_COUNT) {
+        if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
             isMainThreadProfileTaskEnabled = true;
         }
     };
@@ -193,12 +185,6 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     WatchdogTask task("ThreadSampler", sampleTask, 0, interval, true);
     InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
     return 0;
-}
-
-void WatchdogInner::StopProfileMainThread()
-{
-    g_stackState = DumpStackState::DEFAULT;
-    g_traceState = DumpStackState::DEFAULT;
 }
 
 bool WatchdogInner::CollectStack(std::string& stack)
@@ -211,22 +197,41 @@ void WatchdogInner::Deinit()
     return ThreadSampler::GetInstance().Deinit();
 }
 
+void WatchdogInner::ChangeState(int& state)
+{
+    timeContent_.reportBegin = timeContent_.curBegin;
+    timeContent_.reportEnd = timeContent_.curEnd;
+    state = DumpStackState::COMPLETE;
+}
+
+void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime)
+{
+    auto diff = currenTime - lastEndTime;
+    int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>
+        (diff).count();
+    if (intervalTime >= ONE_DAY_LIMIT) {
+        XCOLLIE_LOGI("MainThread StartProfileMainThread Over Oneday");
+        state = DumpStackState::DEFAULT;
+    }
+}
+
 void WatchdogInner::StartTraceProfile(int32_t interval)
 {
     if (traceCollector == nullptr) {
         XCOLLIE_LOGI("MainThread TraceCollector Failed.");
         return;
     }
-    g_dumpCount = 0;
-    g_traceCount = 0;
+    traceContent_.dumpCount = 0;
+    traceContent_.traceCount = 0;
     auto traceTask = [this]() {
-        g_traceCount++;
+        traceContent_.traceCount++;
         int64_t currentTime = GetTimeStamp();
         if (CheckEventTimer(currentTime)) {
-            g_dumpCount++;
+            traceContent_.dumpCount++;
         }
-        if (g_traceCount >= COLLECT_TRACE_MAX) {
-            if (g_dumpCount >= COLLECT_TRACE_MIN) {
+        if (traceContent_.traceCount >= COLLECT_TRACE_MAX) {
+            if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
+                CreateWatchdogDir();
                 appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
                 auto result = traceCollector->CaptureDurationTrace(appCaller);
                 XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
@@ -250,17 +255,20 @@ void WatchdogInner::CollectTrace()
     appCaller.pid = pid;
     appCaller.threadName = GetSelfProcName();
     appCaller.foreground = isForeground_;
-    appCaller.happenTime = GetTimeStamp();
-    appCaller.beginTime = g_timeContent.reportBegin;
-    appCaller.endTime = g_timeContent.reportEnd;
+    appCaller.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
+    appCaller.beginTime = timeContent_.reportBegin / MILLISEC_TO_NANOSEC;
+    appCaller.endTime = timeContent_.reportEnd / MILLISEC_TO_NANOSEC;
     auto result = traceCollector->CaptureDurationTrace(appCaller);
     XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d", result.retCode);
+    if (result.retCode != 0) {
+        return;
+    }
     StartTraceProfile(DURATION_TIME);
 }
 
 static TimePoint DistributeStart(const std::string& name)
 {
-    g_timeContent.curBegin = GetTimeStamp();
+    WatchdogInner::GetInstance().timeContent_.curBegin = GetTimeStamp();
     return std::chrono::steady_clock::now();
 }
 
@@ -277,28 +285,29 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     if (!IsCommercialVersion()) {
         return;
     }
-    g_timeContent.curEnd = GetTimeStamp();
-    if (g_stackState == DumpStackState::COMPLETE) {
-        auto diff = endTime - g_lastTimePoint;
-        int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>
-            (diff).count();
-        if (intervalTime >= ONE_DAY_LIMIT) {
-            XCOLLIE_LOGI("MainThread StartProfileMainThread Over Oneday");
-            WatchdogInner::GetInstance().StopProfileMainThread();
-        }
+    WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
+    if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
+        WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
+            endTime, WatchdogInner::GetInstance().stackContent_.lastStackTime);
     }
-    if (duration > std::chrono::milliseconds(DURATION_TIME) &&
-        duration < std::chrono::milliseconds(DUMPTRACE_TIME) && g_stackState == DumpStackState::DEFAULT) {
-        g_timeContent.reportBegin = g_timeContent.curBegin;
-        g_timeContent.reportEnd = g_timeContent.curEnd;
-        g_lastTimePoint = endTime;
-        g_stackState = DumpStackState::COMPLETE;
+    if (WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::COMPLETE) {
+        WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().traceContent_.traceState,
+            endTime, WatchdogInner::GetInstance().traceContent_.lastTraceTime);
+    }
+    if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
+        WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
+        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState);
+        WatchdogInner::GetInstance().stackContent_.lastStackTime = endTime;
+
         int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(TASK_INTERVAL);
         XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
             "Duration Time: %{public}" PRId64 " ms", ret, durationTime);
-    } else if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) && g_traceState == DumpStackState::DEFAULT) {
+    } else if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
+        WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
+        XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
+        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().traceContent_.traceState);
+        WatchdogInner::GetInstance().traceContent_.lastTraceTime = endTime;
         WatchdogInner::GetInstance().CollectTrace();
-        g_traceState = DumpStackState::COMPLETE;
     }
 }
 

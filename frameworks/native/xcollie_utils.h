@@ -44,7 +44,8 @@ constexpr char STACK_CHECKER[] = "ThreadSampler";
 constexpr char TRACE_CHECKER[] = "TraceCollector";
 constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
-constexpr int64_t ONE_DAY_LIMIT = 8640000;
+constexpr int64_t ONE_DAY_LIMIT = 86400000;
+constexpr int64_t MILLISEC_TO_NANOSEC = 1000000;
 const int BUFF_STACK_SIZE = 20 * 1024;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;
@@ -95,6 +96,8 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid);
 bool KillProcessByPid(int32_t pid);
 
 std::string GetFormatDate();
+
+bool CreateWatchdogDir();
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack);
 
