@@ -101,6 +101,10 @@ void WatchdogTask::DoCallback()
         std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
         SendXCollieEvent(name, msg);
     }
+    if (getuid() > uidTypeThreshold) {
+        XCOLLIE_LOGI("check uid is app, do not exit");
+        return;
+    }
     if (flag & XCOLLIE_FLAG_RECOVERY) {
         XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(),
             static_cast<long long>(timeout));
@@ -241,18 +245,23 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     } else {
         XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
     }
-    
-    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SERVICE_TIMEOUT",
-        HiSysEvent::EventType::FAULT,
-        "PID", pid,
-        "TGID", gid,
-        "UID", uid,
-        "MODULE_NAME", timerName,
-        "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg,
-        "STACK", GetProcessStacktrace()+ "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
-    XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,SERVICE_TIMEOUT], "
-        "msg=%{public}s", result, keyMsg.c_str());
+
+    std::string eventName = "SERVICE_TIMEOUT";
+    std::string stack = "";
+    if (uid > uidTypeThreshold) {
+        eventName = "APP_HICOLLIE";
+        if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
+            XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);
+        }
+    } else {
+        stack = GetProcessStacktrace();
+    }
+
+    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
+        "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg,
+        "STACK", stack + "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
+    XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
+        "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
 }
 
 int WatchdogTask::EvaluateCheckerState()
