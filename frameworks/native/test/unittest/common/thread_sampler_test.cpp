@@ -138,7 +138,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     sigset_t sigset;
     sigemptyset(&sigset);
-    sigaddset(&sigset, SIGNAL_SAMPLE_STACK);
+    sigaddset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
     sigprocmask(SIG_BLOCK, &sigset, nullptr);
 
     Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, 150);
@@ -153,7 +153,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     sleep(4);
     printf("stack:\n%s", stack.c_str());
     sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
-    sigdelset(&sigset, SIGNAL_SAMPLE_STACK);
+    sigdelset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
     ThreadSampler::GetInstance().Deinit();
 }
 
