@@ -604,7 +604,7 @@ bool WatchdogInner::Start()
         XCOLLIE_LOGW("Failed to set threadName for watchdog, errno:%d.", errno);
     }
 
-    XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", gettid());
+    XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", getproctid());
     if (SetThreadInfoCallback != nullptr) {
         SetThreadInfoCallback(ThreadInfo);
         XCOLLIE_LOGI("Watchdog Set Thread Info Callback");

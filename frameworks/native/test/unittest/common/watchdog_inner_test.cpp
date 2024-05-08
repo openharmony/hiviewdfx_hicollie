@@ -304,7 +304,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     };
     int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr, timeOutCallback, 10);
     EXPECT_TRUE(result <= 0);
-    int32_t pid = getpid();
+    int32_t pid = getprocpid();
     WatchdogInner::WriteStringToFile(pid, "0");
     bool ret = WatchdogInner::GetInstance().CheckEventTimer(GetTimeStamp());
     printf("CheckEventTimer ret=%s\n", ret ? "true" : "fasle");
