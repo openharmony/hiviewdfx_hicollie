@@ -37,7 +37,6 @@ namespace OHOS {
 namespace HiviewDFX {
 constexpr int STACK_BUFFER_SIZE = 16 * 1024;
 constexpr uint32_t DEFAULT_UNIQUE_STACK_TABLE_SIZE = 128 * 1024;
-constexpr int SIGNAL_SAMPLE_STACK = 41;
 
 struct ThreadUnwindContext {
     uintptr_t pc {0};

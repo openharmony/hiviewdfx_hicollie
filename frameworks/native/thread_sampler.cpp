@@ -277,8 +277,8 @@ bool ThreadSampler::InstallSignalHandler()
     sigfillset(&action.sa_mask);
     action.sa_sigaction = ThreadSampler::ThreadSamplerSignalHandler;
     action.sa_flags = SA_RESTART | SA_SIGINFO;
-    if (sigaction(SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
-        XCOLLIE_LOGE("Failed to register signal(%d:%d)", SIGNAL_SAMPLE_STACK, errno);
+    if (sigaction(MUSL_SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
+        XCOLLIE_LOGE("Failed to register signal(%d:%d)", MUSL_SIGNAL_SAMPLE_STACK, errno);
         return false;
     }
     return true;
@@ -286,8 +286,8 @@ bool ThreadSampler::InstallSignalHandler()
 
 void ThreadSampler::UninstallSignalHandler()
 {
-    if (signal(SIGNAL_SAMPLE_STACK, SIG_IGN) == SIG_ERR) {
-        XCOLLIE_LOGE("Failed to unregister signal(%d)", SIGNAL_SAMPLE_STACK);
+    if (signal(MUSL_SIGNAL_SAMPLE_STACK, SIG_IGN) == SIG_ERR) {
+        XCOLLIE_LOGE("Failed to unregister signal(%d)", MUSL_SIGNAL_SAMPLE_STACK);
     }
 }
 
@@ -393,7 +393,7 @@ void ThreadSampler::SendSampleRequest()
 
     ptr->requestTime = ts;
     siginfo_t si {0};
-    si.si_signo = SIGNAL_SAMPLE_STACK;
+    si.si_signo = MUSL_SIGNAL_SAMPLE_STACK;
     si.si_errno = 0;
     si.si_code = -1;
     if (syscall(SYS_rt_tgsigqueueinfo, pid_, pid_, si.si_signo, &si) != 0) {
