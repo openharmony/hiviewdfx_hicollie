@@ -46,6 +46,7 @@ constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr int64_t ONE_DAY_LIMIT = 86400000;
 constexpr int64_t MILLISEC_TO_NANOSEC = 1000000;
+constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
 const int BUFF_STACK_SIZE = 20 * 1024;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int MAX_NAME_SIZE = 128;

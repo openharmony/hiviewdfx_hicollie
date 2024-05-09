@@ -15,7 +15,7 @@
 
 #include "xcollie_utils.h"
 #include <ctime>
-
+#include <cinttypes>
 #include <algorithm>
 #include <cstdlib>
 #include <csignal>
@@ -306,6 +306,14 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
     std::string time = GetFormatDate();
     path = WATCHDOG_DIR + "/" + "MAIN_THREAD_JANK" + "_" + time.c_str() + "_" +
         std::to_string(pid).c_str() + ".txt";
+    uint64_t stackSize = stack.size();
+    uint64_t fileSize = OHOS::GetFolderSize(WATCHDOG_DIR) + stackSize;
+    if (fileSize > MAX_FILE_SIZE) {
+        XCOLLIE_LOGI("CurrentDir already over limit. Will not write to stack file."
+            "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
+            fileSize, MAX_FILE_SIZE);
+        return true;
+    }
     constexpr mode_t defaultLogFileMode = 0644;
     auto fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, defaultLogFileMode);
     if (fd < 0) {
