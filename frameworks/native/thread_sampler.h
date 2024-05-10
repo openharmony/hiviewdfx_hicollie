@@ -63,7 +63,7 @@ struct TimeAndFrames {
 class ThreadSampler : public Singleton<ThreadSampler> {
     DECLARE_SINGLETON(ThreadSampler);
 public:
-    static const int32_t SAMPLER_MAX_BUFFER_SZ = 2;
+    static const int32_t SAMPLER_MAX_BUFFER_SZ = 11;
     static void ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context);
 
     // Initial sampler, include uwinder, recorde buffer etc.
