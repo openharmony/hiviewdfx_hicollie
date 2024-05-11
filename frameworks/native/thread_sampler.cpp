@@ -129,7 +129,7 @@ bool ThreadSampler::Init()
         return false;
     }
 
-    pid_ = getpid();
+    pid_ = getprocpid();
     if (!InitUniqueStackTable()) {
         XCOLLIE_LOGE("Failed to InitUniqueStackTable\n");
         Deinit();
@@ -299,7 +299,7 @@ int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
             XCOLLIE_LOGE("AccessElfMem: map is nullptr\n");
             return -1;
         }
-        auto elf = map->GetElf(getprocpid());
+        auto elf = map->GetElf(getpid());
         if (elf != nullptr) {
             uint64_t foff = addr - map->begin + map->offset - elf->GetBaseOffset();
             if (elf->Read(foff, val, sizeof(uintptr_t))) {

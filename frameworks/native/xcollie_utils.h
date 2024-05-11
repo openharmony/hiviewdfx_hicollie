@@ -74,6 +74,8 @@ const std::string KEY_HIVIEW_USER_TYPE = "const.logsystem.versiontype";
 
 uint64_t GetCurrentTickMillseconds();
 
+bool IsFileNameFormat(char c);
+
 std::string GetSelfProcName();
 
 std::string GetFirstLine(const std::string& path);

@@ -308,6 +308,26 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     WatchdogInner::WriteStringToFile(pid, "0");
     bool ret = WatchdogInner::GetInstance().CheckEventTimer(GetTimeStamp());
     printf("CheckEventTimer ret=%s\n", ret ? "true" : "fasle");
+    ret = WatchdogInner::GetInstance().ReportMainThreadEvent();
+    printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
+    int state = 1; // test value
+    WatchdogInner::GetInstance().ChangeState(state);
+    int32_t interval = 150; // test value
+    WatchdogInner::GetInstance().StartTraceProfile(interval);
+    ret = IsFileNameFormat('1');
+    EXPECT_TRUE(!ret);
+    ret = IsFileNameFormat('b');
+    EXPECT_TRUE(!ret);
+    ret = IsFileNameFormat('B');
+    EXPECT_TRUE(!ret);
+    ret = IsFileNameFormat('_');
+    EXPECT_TRUE(!ret);
+    ret = IsFileNameFormat('*');
+    EXPECT_TRUE(ret);
+    std::string path = "";
+    std::string stack = "STACK";
+    ret = WriteStackToFd(getprocpid(), path, stack);
+    EXPECT_TRUE(ret);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
