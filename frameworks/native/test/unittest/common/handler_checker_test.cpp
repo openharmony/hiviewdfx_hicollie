@@ -63,9 +63,9 @@ HWTEST_F(HandlerCheckerTest, HandlerCheckerTest_001, TestSize.Level3)
 {
     std::atomic<bool> flage = false;
     auto blockFunc = [&flage]() {
-        printf("before block 30s in %d\n", gettid());
+        printf("before block 30s in %d\n", getproctid());
         sleep(3); // sleep 3s
-        printf("after block 30s in %d\n", gettid());
+        printf("after block 30s in %d\n", getproctid());
         flage = true;
     };
     auto runner = EventRunner::Create(true);

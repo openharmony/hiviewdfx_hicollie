@@ -90,9 +90,9 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_001, TestSize.Level1)
      */
     constexpr int blockTime = 70;
     auto blockFunc = []() {
-        printf("before block 70s in %d\n", gettid());
+        printf("before block 70s in %d\n", getproctid());
         Sleep(blockTime);
-        printf("after block 70s in %d\n", gettid());
+        printf("after block 70s in %d\n", getproctid());
     };
     auto runner = EventRunner::Create(true);
     auto handler = std::make_shared<TestEventHandler>(runner);
@@ -104,7 +104,7 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_001, TestSize.Level1)
      * @tc.expected: step2. add handler to watchdog successfully
      */
     auto timeOutCallback = [](const std::string &name, int waitState) {
-        printf("TestBlock70s time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
+        printf("TestBlock70s time out in %d, name is %s, waitState is %d\n", getproctid(), name.c_str(), waitState);
     };
     int result = Watchdog::GetInstance().AddThread("TestBlock70s", handler, timeOutCallback);
     ASSERT_EQ(result, 0);
@@ -130,9 +130,9 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
     constexpr int blockTime = 30;
     constexpr int checkPeriod = 3000;
     auto blockFunc = []() {
-        printf("before block 30s in %d\n", gettid());
+        printf("before block 30s in %d\n", getproctid());
         Sleep(blockTime);
-        printf("after block 30s in %d\n", gettid());
+        printf("after block 30s in %d\n", getproctid());
     };
     auto runner = EventRunner::Create(true);
     auto handler = std::make_shared<TestEventHandler>(runner);
@@ -144,12 +144,12 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_002, TestSize.Level1)
      * @tc.expected: step2. add handler to watchdog successfully
      */
     auto timeOutCallback = [](const std::string &name, int waitState) {
-        printf("TestBlock20 time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
+        printf("TestBlock20 time out in %d, name is %s, waitState is %d\n", getproctid(), name.c_str(), waitState);
     };
     int result = Watchdog::GetInstance().AddThread("TestBlock20", handler, timeOutCallback, checkPeriod);
 
     auto timeOutCallback1 = [](const std::string &name, int waitState) {
-        printf("TestBlock20_1 time out in %d, name is %s, waitState is %d\n", gettid(), name.c_str(), waitState);
+        printf("TestBlock20_1 time out in %d, name is %s, waitState is %d\n", getproctid(), name.c_str(), waitState);
     };
     int result2 = Watchdog::GetInstance().AddThread("TestBlock20_1", handler, timeOutCallback1, checkPeriod);
     ASSERT_EQ(result, 0);
@@ -202,9 +202,9 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_005, TestSize.Level1)
     constexpr int blockTime = 5;
     constexpr int checkPeriod = 3000;
     auto blockFunc = []() {
-        printf("before block 5s in %d\n", gettid());
+        printf("before block 5s in %d\n", getproctid());
         Sleep(blockTime);
-        printf("after block 5s in %d\n", gettid());
+        printf("after block 5s in %d\n", getproctid());
     };
     auto runner = EventRunner::Create(true);
     auto handler = std::make_shared<TestEventHandler>(runner);

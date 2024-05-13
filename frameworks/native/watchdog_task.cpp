@@ -73,7 +73,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isTaskScheduled = false;
     isOneshotTask = true;
-    watchdogTid = gettid();
+    watchdogTid = getproctid();
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
@@ -83,7 +83,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLi
     id = ++curId;
     checkInterval = timeLimit / timeLimitIntervalRatio;
     nextTickTime = GetCurrentTickMillseconds();
-    watchdogTid = gettid();
+    watchdogTid = getproctid();
 }
 
 void WatchdogTask::DoCallback()
