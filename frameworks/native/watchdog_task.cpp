@@ -150,7 +150,7 @@ void WatchdogTask::TimerCountTask()
     if (size < countLimit) {
         return;
     }
-    XCOLLIE_LOGI("timeLimit : %{public}" PRIu64 ", countLimit : %{public}d, triggerTimes size : %{public}d",
+    XCOLLIE_LOGD("timeLimit : %{public}" PRIu64 ", countLimit : %{public}d, triggerTimes size : %{public}d",
         timeLimit, countLimit, size);
 
     while (size >= countLimit) {

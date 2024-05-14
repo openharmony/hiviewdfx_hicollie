@@ -404,7 +404,7 @@ void WatchdogInner::RunPeriodicalTask(const std::string& name, Task&& task, uint
     }
 
     std::string limitedName = GetLimitedSizeName(name);
-    XCOLLIE_LOGI("Add periodical task %{public}s to watchdog.", name.c_str());
+    XCOLLIE_LOGD("Add periodical task %{public}s to watchdog.", name.c_str());
     std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, std::move(task), delay, interval, false));
 }
@@ -420,7 +420,7 @@ int64_t WatchdogInner::SetTimerCountTask(const std::string &name, uint64_t timeL
         return INVALID_ID;
     }
     std::string limitedName = GetLimitedSizeName(name);
-    XCOLLIE_LOGI("SetTimerCountTask name : %{public}s", name.c_str());
+    XCOLLIE_LOGD("SetTimerCountTask name : %{public}s", name.c_str());
     return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeLimit, countLimit));
 }
 
@@ -529,7 +529,7 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             }
             mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
-            XCOLLIE_LOGI("Watchdog is running!");
+            XCOLLIE_LOGD("Watchdog is running!");
         }
     });
 }
@@ -604,10 +604,10 @@ bool WatchdogInner::Start()
         XCOLLIE_LOGW("Failed to set threadName for watchdog, errno:%d.", errno);
     }
 
-    XCOLLIE_LOGI("Watchdog is running in thread(%{public}d)!", getproctid());
+    XCOLLIE_LOGD("Watchdog is running in thread(%{public}d)!", getproctid());
     if (SetThreadInfoCallback != nullptr) {
         SetThreadInfoCallback(ThreadInfo);
-        XCOLLIE_LOGI("Watchdog Set Thread Info Callback");
+        XCOLLIE_LOGD("Watchdog Set Thread Info Callback");
     }
     while (!isNeedStop_) {
         uint64_t now = GetCurrentTickMillseconds();
