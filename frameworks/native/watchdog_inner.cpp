@@ -31,6 +31,7 @@
 
 #include "backtrace_local.h"
 #include "hisysevent.h"
+#include "ipc_skeleton.h"
 #include "xcollie_utils.h"
 #include "xcollie_define.h"
 #include "dfx_define.h"
@@ -520,6 +521,15 @@ bool WatchdogInner::IsCallbackLimit(unsigned int flag)
     return ret;
 }
 
+void IPCProxyLimitCallback(uint64_t num)
+{
+    XCOLLIE_LOGE("ipc proxy num %{public}llu exceed limit", num);
+    if (getuid() >= MIN_APP_UID && IsBetaVersion()) {
+        XCOLLIE_LOGI("Process is going to exit, reason: ipc proxy num exceed limit");
+        _exit(0);
+    }
+}
+
 void WatchdogInner::CreateWatchdogThreadIfNeed()
 {
     std::call_once(flag_, [this] {
@@ -528,6 +538,8 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
                 mainRunner_ = AppExecFwk::EventRunner::GetMainEventRunner();
             }
             mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
+            const uint64_t limitNum = 20000;
+            IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             XCOLLIE_LOGI("Watchdog is running!");
         }

@@ -281,7 +281,13 @@ bool KillProcessByPid(int32_t pid)
     if (ret == -1) {
         XCOLLIE_LOGI("Kill PeerBinder process failed");
     }
-    return (ret < 0 ? false : true);
+    return (ret >= 0);
+}
+
+bool IsBetaVersion()
+{
+    auto versionType = OHOS::system::GetParameter(KEY_HIVIEW_USER_TYPE, "unknown");
+    return (versionType.find("beta") != std::string::npos);
 }
 
 bool CreateWatchdogDir()
