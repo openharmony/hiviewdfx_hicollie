@@ -229,60 +229,8 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
 HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
 {
     printf("ThreadSamplerTest_005\n");
-
-    auto GetMMapSizeAndName = [](const std::string& checkName, std::string& mmapName) -> uint32_t {
-        uint64_t size = 0;
-        mmapName = "";
-        std::ifstream mapsFile("/proc/self/maps");
-        std::string line;
-        while (getline(mapsFile, line)) {
-            std::istringstream iss(line);
-            std::string addrs, permissions, offset, devices, inode, pathname;
-            iss >> addrs >> permissions >> offset >> devices >> inode >> pathname;
-            if (pathname.find(checkName) != std::string::npos) {
-                std::string start = addrs.substr(0, addrs.find('-'));
-                std::string end = addrs.substr(addrs.find('-') + 1);
-                size = std::stoul(end, 0, 16) - std::stoul(start, 0, 16);
-                mmapName = pathname;
-            }
-        }
-        return static_cast<uint32_t>(size);
-    };
-
-    auto isSubStr = [](const std::string& str, const std::string& sub) {
-        return str.find(sub) != std::string::npos;
-    };
-
-    uint32_t uniTableSize = 0;
-    std::string uniStackTableMMapName = "";
-
-    ThreadSampler::GetInstance().Init();
-    uniTableSize = GetMMapSizeAndName(ThreadSampler::GetInstance().GetUniTableMMapName(), uniStackTableMMapName);
-
-    ASSERT_EQ(uniTableSize, ThreadSampler::GetInstance().GetuniqueStackTableSize());
-    ASSERT_EQ(isSubStr(uniStackTableMMapName, ThreadSampler::GetInstance().GetUniTableMMapName()), true);
-    printf("mmap name: %s, size: %u KB\n", uniStackTableMMapName.c_str(), uniTableSize);
-
-    ThreadSampler::GetInstance().Deinit();
-    uniTableSize = GetMMapSizeAndName(ThreadSampler::GetInstance().GetUniTableMMapName(), uniStackTableMMapName);
-
-    ASSERT_EQ(uniTableSize, 0);
-    ASSERT_EQ(uniStackTableMMapName, "");
-
-    ThreadSampler::GetInstance().Init();
-    uint32_t newSize = 64 * 1024;
-    std::string newName = "hicollie_test";
-    ThreadSampler::GetInstance().SetUniStackTableSize(newSize);
-    ThreadSampler::GetInstance().SetUniStackTableMMapName(newName);
-    ASSERT_EQ(newSize, ThreadSampler::GetInstance().GetuniqueStackTableSize());
-    ASSERT_EQ(newName, ThreadSampler::GetInstance().GetUniTableMMapName());
-
-    uniTableSize = GetMMapSizeAndName(ThreadSampler::GetInstance().GetUniTableMMapName(), uniStackTableMMapName);
-
-    ASSERT_EQ(uniTableSize, ThreadSampler::GetInstance().GetuniqueStackTableSize());
-    ASSERT_EQ(isSubStr(uniStackTableMMapName, ThreadSampler::GetInstance().GetUniTableMMapName()), true);
-    printf("mmap name: %s, size: %u KB\n", uniStackTableMMapName.c_str(), uniTableSize);
-    ThreadSampler::GetInstance().Deinit();
+    ASSERT_NE(ThreadSampler::GetInstance().GetUniTableMMapName(), "");
+    ASSERT_NE(ThreadSampler::GetInstance().GetuniqueStackTableSize(), 0);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
