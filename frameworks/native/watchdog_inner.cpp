@@ -78,7 +78,7 @@ void ThreadInfo(char *buf  __attribute__((unused)),
 }
 
 WatchdogInner::WatchdogInner()
-    : cntCallback_(0), timeCallback_(0)
+    : cntCallback_(0), timeCallback_(0), sampleTaskState_(0)
 {
     currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
 }
@@ -288,16 +288,16 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
-            endTime, WatchdogInner::GetInstance().stackContent_.lastStackTime);
+            endTime, WatchdogInner::GetInstance().lastStackTime_);
     }
     if (WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::COMPLETE) {
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().traceContent_.traceState,
-            endTime, WatchdogInner::GetInstance().traceContent_.lastTraceTime);
+            endTime, WatchdogInner::GetInstance().lastTraceTime_);
     }
     if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState);
-        WatchdogInner::GetInstance().stackContent_.lastStackTime = endTime;
+        WatchdogInner::GetInstance().lastStackTime_ = endTime;
 
         int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(TASK_INTERVAL);
         XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
@@ -306,7 +306,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().traceContent_.traceState);
-        WatchdogInner::GetInstance().traceContent_.lastTraceTime = endTime;
+        WatchdogInner::GetInstance().lastTraceTime_ = endTime;
         WatchdogInner::GetInstance().CollectTrace();
     }
 }

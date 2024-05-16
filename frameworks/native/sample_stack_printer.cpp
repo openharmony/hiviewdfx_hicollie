@@ -91,10 +91,10 @@ void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
     }
 }
 
-std::string SampleStackPrinter::GetFullStack(std::vector<TimeAndFrames>& timeAndFrameList)
+std::string SampleStackPrinter::GetFullStack(const std::vector<TimeAndFrames>& timeAndFrameList)
 {
     std::string stack("");
-    for (auto& taf : timeAndFrameList) {
+    for (const auto& taf : timeAndFrameList) {
         std::string requestTimeStr = TimeFormat(taf.requestTime);
         std::string snapshotTimeStr = TimeFormat(taf.snapshotTime);
         if (requestTimeStr == "" || snapshotTimeStr == "") {
@@ -119,7 +119,7 @@ std::string SampleStackPrinter::GetTreeStack(std::map<uint64_t, std::vector<uint
     for (auto it = stackIdTimeMap.begin(); it != stackIdTimeMap.end(); it++) {
         uint64_t stackId = it->first;
         sortedStackId.emplace_back(std::make_pair<uint64_t, uint64_t>(std::move(stackId), it->second.size()));
-        std::sort(sortedStackId.begin(), sortedStackId.end(), [](auto& a, auto& b) {
+        std::sort(sortedStackId.begin(), sortedStackId.end(), [](const auto& a, const auto& b) {
             return a.second > b.second;
         });
     }

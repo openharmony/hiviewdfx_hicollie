@@ -41,14 +41,12 @@ struct TimeContent {
 };
 
 struct StackContent {
-    TimePoint lastStackTime;
     int stackState;
     int detectorCount;
     int collectCount;
 };
 
 struct TraceContent {
-    TimePoint lastTraceTime;
     int traceState;
     int traceCount;
     int dumpCount;
@@ -79,8 +77,6 @@ public:
     static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
-    std::string currentScene_;
-
     int32_t StartProfileMainThread(int32_t interval);
     bool CollectStack(std::string& stack);
     void CollectTrace();
@@ -89,10 +85,13 @@ public:
     void SetForeground(const bool& isForeground);
     void ChangeState(int& state);
     void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime);
-public:
-    TimeContent timeContent_;
-    StackContent stackContent_;
-    TraceContent traceContent_;
+    std::string currentScene_;
+    TimePoint lastTraceTime_;
+    TimePoint lastStackTime_;
+    TimeContent timeContent_ {0};
+    StackContent stackContent_ {0};
+    TraceContent traceContent_ {0};
+
 private:
     bool Start();
     bool Stop();
