@@ -523,7 +523,7 @@ bool WatchdogInner::IsCallbackLimit(unsigned int flag)
 
 void IPCProxyLimitCallback(uint64_t num)
 {
-    XCOLLIE_LOGE("ipc proxy num %{public}llu exceed limit", num);
+    XCOLLIE_LOGE("ipc proxy num %{public}" PRIu64 " exceed limit", num);
     if (getuid() >= MIN_APP_UID && IsBetaVersion()) {
         XCOLLIE_LOGI("Process is going to exit, reason: ipc proxy num exceed limit");
         _exit(0);
