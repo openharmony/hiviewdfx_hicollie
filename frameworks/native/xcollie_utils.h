@@ -44,6 +44,7 @@ constexpr char STACK_CHECKER[] = "ThreadSampler";
 constexpr char TRACE_CHECKER[] = "TraceCollector";
 constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
+constexpr uint64_t MIN_APP_UID = 20000;
 constexpr int64_t ONE_DAY_LIMIT = 86400000;
 constexpr int64_t MILLISEC_TO_NANOSEC = 1000000;
 constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
@@ -97,6 +98,8 @@ void SplitStr(const std::string& str, const std::string& sep,
 int ParsePeerBinderPid(std::ifstream& fin, int32_t pid);
 
 bool KillProcessByPid(int32_t pid);
+
+bool IsBetaVersion();
 
 std::string GetFormatDate();
 
