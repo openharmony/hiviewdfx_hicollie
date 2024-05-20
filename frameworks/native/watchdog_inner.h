@@ -129,7 +129,15 @@ private:
     bool isForeground_ {false};
     int sampleTaskState_;
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector;
-    UCollectClient::AppCaller appCaller;
+    UCollectClient::AppCaller appCaller {
+        .actionId = 0,
+        .foreground = 0,
+        .uid = 0,
+        .pid = 0,
+        .happenTime = 0,
+        .beginTime = 0,
+        .endTime = 0,
+    };
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
