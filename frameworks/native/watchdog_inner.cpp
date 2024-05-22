@@ -168,7 +168,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
             stackContent_.collectCount++;
         } else if (stackContent_.collectCount == COLLECT_STACK_COUNT) {
             ReportMainThreadEvent();
-            isMainThreadProfileTaskEnabled = true;
+            isMainThreadProfileTaskEnabled_ = true;
             return;
         } else {
             if (CheckEventTimer(currentTime)) {
@@ -179,7 +179,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
             }
         }
         if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
-            isMainThreadProfileTaskEnabled = true;
+            isMainThreadProfileTaskEnabled_ = true;
         }
     };
 
@@ -218,7 +218,7 @@ void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastE
 
 void WatchdogInner::StartTraceProfile(int32_t interval)
 {
-    if (traceCollector == nullptr) {
+    if (traceCollector_ == nullptr) {
         XCOLLIE_LOGI("MainThread TraceCollector Failed.");
         return;
     }
@@ -234,10 +234,10 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
             if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
                 CreateWatchdogDir();
                 appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-                auto result = traceCollector->CaptureDurationTrace(appCaller);
+                auto result = traceCollector_->CaptureDurationTrace(appCaller);
                 XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
             }
-            isMainThreadTraceEnabled = true;
+            isMainThreadTraceEnabled_ = true;
         }
     };
     WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
@@ -246,7 +246,7 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
 
 void WatchdogInner::CollectTrace()
 {
-    traceCollector = UCollectClient::TraceCollector::Create();
+    traceCollector_ = UCollectClient::TraceCollector::Create();
     int32_t pid = getprocpid();
     int32_t uid = static_cast<int64_t>(getuid());
     appCaller.actionId = UCollectClient::ACTION_ID_START_TRACE;
@@ -259,7 +259,7 @@ void WatchdogInner::CollectTrace()
     appCaller.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
     appCaller.beginTime = timeContent_.reportBegin / MILLISEC_TO_NANOSEC;
     appCaller.endTime = timeContent_.reportEnd / MILLISEC_TO_NANOSEC;
-    auto result = traceCollector->CaptureDurationTrace(appCaller);
+    auto result = traceCollector_->CaptureDurationTrace(appCaller);
     XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d", result.retCode);
     if (result.retCode != 0) {
         return;
@@ -560,30 +560,29 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         return DEFAULT_TIMEOUT;
     }
 
-    const WatchdogTask& queuedTask = checkerQueue_.top();
-
-    if (&(queuedTask.name) == nullptr) {
+    const WatchdogTask& queuedTaskCheck = checkerQueue_.top();
+    bool popCheck = true;
+    if (queuedTaskCheck.name.empty()) {
         checkerQueue_.pop();
-        XCOLLIE_LOGW("queuedTask, failed.");
-        return DEFAULT_TIMEOUT;
-    }
-
-    if (queuedTask.name == STACK_CHECKER && isMainThreadProfileTaskEnabled) {
+        XCOLLIE_LOGW("queuedTask name is empty.");
+    } else if (queuedTaskCheck.name == STACK_CHECKER && isMainThreadProfileTaskEnabled_) {
         checkerQueue_.pop();
         taskNameSet_.erase("ThreadSampler");
-        isMainThreadProfileTaskEnabled = false;
+        isMainThreadProfileTaskEnabled_ = false;
         XCOLLIE_LOGI("STACK_CHECKER Task pop");
-        return DEFAULT_TIMEOUT;
-    }
-
-    if (queuedTask.name == TRACE_CHECKER && isMainThreadTraceEnabled) {
+    } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
         checkerQueue_.pop();
         taskNameSet_.erase("TraceCollector");
-        isMainThreadTraceEnabled = false;
+        isMainThreadTraceEnabled_ = false;
         XCOLLIE_LOGI("TRACE_CHECKER Task pop");
+    } else {
+        popCheck = false;
+    }
+    if (popCheck && checkerQueue_.empty()) {
         return DEFAULT_TIMEOUT;
     }
 
+    const WatchdogTask& queuedTask = checkerQueue_.top();
     if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
             g_nextKickTime = now;
