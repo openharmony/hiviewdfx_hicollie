@@ -122,13 +122,13 @@ private:
     time_t timeCallback_;
     bool isHmos = false;
 
-    bool isMainThreadProfileTaskEnabled {false};
-    bool isMainThreadTraceEnabled {false};
+    bool isMainThreadProfileTaskEnabled_ {false};
+    bool isMainThreadTraceEnabled_ {false};
     std::string bundleName_;
     std::string bundleVersion_;
     bool isForeground_ {false};
     int sampleTaskState_;
-    std::shared_ptr<UCollectClient::TraceCollector> traceCollector;
+    std::shared_ptr<UCollectClient::TraceCollector> traceCollector_;
     UCollectClient::AppCaller appCaller {
         .actionId = 0,
         .foreground = 0,
