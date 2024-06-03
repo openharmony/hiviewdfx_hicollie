@@ -26,7 +26,7 @@
 #include <thread>
 
 #include "watchdog_task.h"
-#include "c/ffrt_watchdog.h"
+#include "c/ffrt_dump.h"
 #include "singleton.h"
 #include "client/trace_collector.h"
 
