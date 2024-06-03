@@ -739,7 +739,8 @@ void WatchdogInner::InitFfrtWatchdog()
 {
     CreateWatchdogThreadIfNeed();
     IpcCheck();
-    ffrt_watchdog_register(FfrtCallback, FFRT_CALLBACK_TIME, FFRT_CALLBACK_TIME);
+    ffrt_task_timeout_set_cb(FfrtCallback);
+    ffrt_task_timeout_set_threshold(FFRT_CALLBACK_TIME);
 }
 
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
@@ -756,7 +757,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
         "\n" + msg + "\n";
     char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
     buffer[FFRT_BUFFER_SIZE] = 0;
-    ffrt_watchdog_dumpinfo(buffer, FFRT_BUFFER_SIZE);
+    ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
     sendMsg += buffer;
     sendMsg += "\n" + GetProcessStacktrace();
     delete[] buffer;
