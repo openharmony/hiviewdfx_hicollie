@@ -235,7 +235,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     val.magic = MAGIC_NUM;
     int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
     if (fd < 0) {
-        XCOLLIE_LOGE("open %s failed", name.c_str());
+        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
         return;
     }
     int ret = ioctl(fd, LOGGER_GET_STACK, &val);
