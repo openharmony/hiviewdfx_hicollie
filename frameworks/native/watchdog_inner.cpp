@@ -241,6 +241,7 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
         }
     };
     WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
+    std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked("TraceCollector", std::move(task));
 }
 
@@ -422,6 +423,7 @@ int64_t WatchdogInner::SetTimerCountTask(const std::string &name, uint64_t timeL
     }
     std::string limitedName = GetLimitedSizeName(name);
     XCOLLIE_LOGD("SetTimerCountTask name : %{public}s", name.c_str());
+    std::unique_lock<std::mutex> lock(lock_);
     return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeLimit, countLimit));
 }
 
@@ -738,9 +740,10 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
 void WatchdogInner::InitFfrtWatchdog()
 {
     CreateWatchdogThreadIfNeed();
-    IpcCheck();
     ffrt_task_timeout_set_cb(FfrtCallback);
     ffrt_task_timeout_set_threshold(FFRT_CALLBACK_TIME);
+    std::unique_lock<std::mutex> lock(lock_);
+    IpcCheck();
 }
 
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
