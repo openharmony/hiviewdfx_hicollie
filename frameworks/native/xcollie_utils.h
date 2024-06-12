@@ -59,6 +59,7 @@ const int COLLECT_TRACE_MIN = 1;
 const int COLLECT_TRACE_MAX = 20;
 const int TASK_INTERVAL = 155;
 const int DURATION_TIME = 150;
+const int INIT_PID = 1;
 const int64_t DISTRIBUTE_TIME = 2000;
 const int64_t DUMPTRACE_TIME = 450;
 const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";

@@ -269,7 +269,7 @@ bool KillProcessByPid(int32_t pid)
 
     int peerBinderPid = ParsePeerBinderPid(fin, pid);
     fin.close();
-    if (peerBinderPid < 0 || peerBinderPid == pid) {
+    if (peerBinderPid <= INIT_PID || peerBinderPid == pid) {
         XCOLLIE_LOGI("No PeerBinder process freeze occurs in the current process. "
             "peerBinderPid=%{public}d, pid=%{public}d", peerBinderPid, pid);
         return false;
