@@ -284,9 +284,6 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         XCOLLIE_LOGI("BlockMonitor event name: %{public}s, Duration Time: %{public}" PRId64 " ms",
             name.c_str(), durationTime);
     }
-    if (!IsCommercialVersion()) {
-        return;
-    }
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -304,7 +301,11 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(TASK_INTERVAL);
         XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
             "Duration Time: %{public}" PRId64 " ms", ret, durationTime);
-    } else if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
+    }
+    if (!IsCommercialVersion()) {
+        return;
+    }
+    if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().traceContent_.traceState);
