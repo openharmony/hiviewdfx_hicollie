@@ -207,8 +207,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "UID", uid,
         "MODULE_NAME", name,
         "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg,
-        "STACK", GetProcessStacktrace());
+        "MSG", sendMsg);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
         ret, eventName.c_str(), msg.c_str());
 }
