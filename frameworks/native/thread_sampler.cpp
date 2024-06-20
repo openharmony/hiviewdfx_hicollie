@@ -366,9 +366,10 @@ void ThreadSampler::WriteContext(void* context)
 
     uintptr_t curStackSz = stackEnd_ - contextArray[index].sp;
     uintptr_t cpySz = curStackSz  > STACK_BUFFER_SIZE ? STACK_BUFFER_SIZE : curStackSz;
-    if (memcpy_s(reinterpret_cast<void*>(contextArray[index].buffer), STACK_BUFFER_SIZE,
-        reinterpret_cast<void*>(contextArray[index].sp), cpySz) != EOK) {
-        return;
+
+    for (uintptr_t pos = 0; pos < cpySz; pos++) {
+        reinterpret_cast<char*>(contextArray[index].buffer)[pos] =
+            reinterpret_cast<const char*>(contextArray[index].sp)[pos];
     }
 
     uint64_t end = GetCurrentTimeNanoseconds();
