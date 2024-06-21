@@ -28,6 +28,7 @@
 #include <string>
 
 #include <securec.h>
+#include <dlfcn.h>
 
 #include "backtrace_local.h"
 #include "hisysevent.h"
@@ -36,7 +37,6 @@
 #include "xcollie_define.h"
 #include "dfx_define.h"
 #include "parameter.h"
-#include "thread_sampler.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -60,6 +60,14 @@ std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
+
+const char* LIB_THREAD_SAMPLER_PATH = "/system/lib64/chipset-pub-sdk/libthread_sampler.z.so";
+constexpr size_t STACK_LENGTH = 32 * 1024;
+typedef int (*ThreadSamplerInitFunc)();
+typedef int32_t (*ThreadSamplerSampleFunc)();
+typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
+typedef void (*ThreadSamplerDeinitFunc)();
+
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
                 size_t len  __attribute__((unused)),
@@ -166,14 +174,25 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
 {
     std::unique_lock<std::mutex> lock(lock_);
 
-    if (!ThreadSampler::GetInstance().Init()) {
+    funcHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
+
+    auto threadSamplerInitFunc =
+        reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler_, "ThreadSamplerInit"));
+    auto threadSamplerSampleFunc =
+        reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler_, "ThreadSamplerSample"));
+    if (threadSamplerInitFunc == nullptr || threadSamplerSampleFunc == nullptr) {
+        return -1;
+    }
+
+    int initThreadSamplerRet = threadSamplerInitFunc();
+    if (initThreadSamplerRet != 0) {
         return -1;
     }
 
     sampleTaskState_ = 0;
     stackContent_.detectorCount = 0;
     stackContent_.collectCount = 0;
-    auto sampleTask = [this]() {
+    auto sampleTask = [this, threadSamplerSampleFunc]() {
         if (sampleTaskState_ == DumpStackState::DEFAULT) {
             sampleTaskState_++;
             return;
@@ -181,7 +200,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
         int64_t currentTime = GetTimeStamp();
         if (stackContent_.collectCount > DumpStackState::DEFAULT &&
             stackContent_.collectCount < COLLECT_STACK_COUNT) {
-            ThreadSampler::GetInstance().Sample();
+            threadSamplerSampleFunc();
             stackContent_.collectCount++;
         } else if (stackContent_.collectCount == COLLECT_STACK_COUNT) {
             ReportMainThreadEvent();
@@ -189,7 +208,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
             return;
         } else {
             if (CheckEventTimer(currentTime)) {
-                ThreadSampler::GetInstance().Sample();
+                threadSamplerSampleFunc();
                 stackContent_.collectCount++;
             } else {
                 stackContent_.detectorCount++;
@@ -207,12 +226,37 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
 
 bool WatchdogInner::CollectStack(std::string& stack)
 {
-    return ThreadSampler::GetInstance().CollectStack(stack, true);
+    if (funcHandler_ == nullptr) {
+        printf("open library failed.");
+        return false;
+    }
+
+    auto threadSamplerCollectFunc =
+        reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler_, "ThreadSamplerCollect"));
+    if (threadSamplerCollectFunc == nullptr) {
+        return false;
+    }
+    int treeFormat = 1;
+    char* stk = new char[STACK_LENGTH];
+    int collectRet = threadSamplerCollectFunc(stk, STACK_LENGTH, treeFormat);
+    stack = stk;
+    delete[] stk;
+    return collectRet == 0;
 }
 
 void WatchdogInner::Deinit()
 {
-    return ThreadSampler::GetInstance().Deinit();
+    if (funcHandler_ == nullptr) {
+        printf("open library failed.");
+        return;
+    }
+
+    auto threadSamplerDeinitFunc =
+        reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler_, "ThreadSamplerDeinit"));
+    if (threadSamplerDeinitFunc == nullptr) {
+        return;
+    }
+    threadSamplerDeinitFunc();
 }
 
 void WatchdogInner::ChangeState(int& state)
@@ -592,6 +636,8 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         checkerQueue_.pop();
         taskNameSet_.erase("ThreadSampler");
         isMainThreadProfileTaskEnabled_ = false;
+        dlclose(funcHandler_);
+        funcHandler_ = nullptr;
         XCOLLIE_LOGI("STACK_CHECKER Task pop");
     } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
         checkerQueue_.pop();

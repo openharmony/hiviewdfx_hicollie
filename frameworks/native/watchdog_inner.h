@@ -121,6 +121,7 @@ private:
     int cntCallback_;
     time_t timeCallback_;
     bool isHmos = false;
+    void* funcHandler_ = nullptr;
 
     bool isMainThreadProfileTaskEnabled_ {false};
     bool isMainThreadTraceEnabled_ {false};

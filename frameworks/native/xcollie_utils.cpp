@@ -31,6 +31,7 @@
 #include "storage_acl.h"
 #include "parameter.h"
 #include "parameters.h"
+#include <dlfcn.h>
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -354,6 +355,24 @@ bool IsCommercialVersion()
 {
     std::string userType = system::GetParameter(KEY_HIVIEW_USER_TYPE, "");
     return userType == "commercial";
+}
+
+void* FunctionOpen(void* funcHandler, const char* funcName)
+{
+    if (funcHandler == nullptr) {
+        XCOLLIE_LOGE("funcHandler is nullptr.\n");
+        return nullptr;
+    }
+    dlerror();
+    char* err = nullptr;
+    void* func = dlsym(funcHandler, funcName);
+    if ((err = dlerror()) != nullptr) {
+        XCOLLIE_LOGE("dlopen %{public}s failed. %{public}s\n", funcName, err);
+        dlclose(funcHandler);
+        funcHandler = nullptr;
+        return nullptr;
+    }
+    return func;
 }
 } // end of HiviewDFX
 } // end of OHOS

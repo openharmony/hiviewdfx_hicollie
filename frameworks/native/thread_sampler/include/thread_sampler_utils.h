@@ -20,14 +20,27 @@
 #include <vector>
 
 #include "thread_sampler.h"
+#include "hilog/log.h"
+
+#undef LOG_DOMAIN
+#define LOG_DOMAIN 0xD002D06
+
+#undef LOG_TAG
+#define LOG_TAG "XCollie"
 
 namespace OHOS {
 namespace HiviewDFX {
 
+#define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGW(...) HILOG_WARN(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGI(...) HILOG_INFO(LOG_CORE, ##__VA_ARGS__)
+#define XCOLLIE_LOGD(...) HILOG_DEBUG(LOG_CORE, ##__VA_ARGS__)
+    
 uint64_t GetCurrentTimeNanoseconds();
 std::string TimeFormat(uint64_t time);
 void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uint64_t stackId, uint64_t timestamp);
-void DoUnwind(ThreadUnwindContext* context, std::shared_ptr<Unwinder> unwinder, UnwindInfo& unwindInfo);
+void DoUnwind(ThreadUnwindContext* context, const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo);
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif
