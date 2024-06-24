@@ -203,6 +203,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     sendMsg += checker->GetDumpInfo();
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
+        "TID", watchdogTid,
         "TGID", gid,
         "UID", uid,
         "MODULE_NAME", name,
@@ -257,8 +258,8 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     }
 
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
-        "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg,
-        "STACK", stack + "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
+        "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg, "STACK", stack + "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
 }
