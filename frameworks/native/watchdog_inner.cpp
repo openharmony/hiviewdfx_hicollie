@@ -732,6 +732,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     if (isExist) {
         description += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
+        WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
         WatchdogInner::KillPeerBinderProcess(description);
     } else {
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
