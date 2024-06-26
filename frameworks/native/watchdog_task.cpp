@@ -83,7 +83,6 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLi
     id = ++curId;
     checkInterval = timeLimit / timeLimitIntervalRatio;
     nextTickTime = GetCurrentTickMillseconds();
-    watchdogTid = getproctid();
 }
 
 void WatchdogTask::DoCallback()
@@ -158,7 +157,7 @@ void WatchdogTask::TimerCountTask()
         if (timeInterval < timeLimit) {
             std::string sendMsg = name + " occured " + std::to_string(countLimit) + " times in " +
                 std::to_string(timeInterval) + " ms, " + message;
-            HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "HIT_EMPTY_WARNING", HiSysEvent::EventType::FAULT,
+            HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, name, HiSysEvent::EventType::FAULT,
                 "PID", getprocpid(), "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg);
             triggerTimes.clear();
             return;
