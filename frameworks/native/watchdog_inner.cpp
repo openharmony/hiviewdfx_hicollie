@@ -76,6 +76,23 @@ void ThreadInfo(char *buf  __attribute__((unused)),
         XCOLLIE_LOGE("memcpy_s ret = %d!", ret);
     }
 }
+
+void SetThreadSignalMask(int signo, bool isAddSignal, bool isBlock)
+{
+    sigset_t set;
+    sigemptyset(&set);
+    pthread_sigmask(SIG_SETMASK, nullptr, &set);
+    if (isAddSignal) {
+        sigaddset(&set, signo);
+    } else {
+        sigdelset(&set, signo);
+    }
+    if (isBlock) {
+        pthread_sigmask(SIG_BLOCK, &set, nullptr);
+    } else {
+        pthread_sigmask(SIG_UNBLOCK, &set, nullptr);
+    }
+}
 }
 
 WatchdogInner::WatchdogInner()
@@ -544,6 +561,9 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             const uint64_t limitNum = 20000;
             IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
+            if (getpid() == gettid()) {
+                SetThreadSignalMask(SIGDUMP, true, true);
+            }
             XCOLLIE_LOGD("Watchdog is running!");
         }
     });
@@ -617,6 +637,7 @@ bool WatchdogInner::Start()
     if (pthread_setname_np(pthread_self(), "OS_DfxWatchdog") != 0) {
         XCOLLIE_LOGW("Failed to set threadName for watchdog, errno:%d.", errno);
     }
+    SetThreadSignalMask(SIGDUMP, false, false);
 
     XCOLLIE_LOGD("Watchdog is running in thread(%{public}d)!", getproctid());
     if (SetThreadInfoCallback != nullptr) {
