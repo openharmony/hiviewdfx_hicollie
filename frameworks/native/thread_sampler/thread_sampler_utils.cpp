@@ -68,7 +68,7 @@ void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uin
     }
 }
 
-void DoUnwind(ThreadUnwindContext* context, std::shared_ptr<Unwinder> unwinder, UnwindInfo& unwindInfo)
+void DoUnwind(ThreadUnwindContext* context, const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)
 {
 #if defined(__aarch64__)
     static std::shared_ptr<DfxRegs> regs = std::make_shared<DfxRegsArm64>();

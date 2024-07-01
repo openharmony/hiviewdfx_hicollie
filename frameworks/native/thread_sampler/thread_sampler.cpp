@@ -29,8 +29,6 @@
 
 #include "unwinder.h"
 #include "dfx_regs.h"
-#include "xcollie_utils.h"
-#include "xcollie_define.h"
 #include "dfx_elf.h"
 #include "dfx_frame_formatter.h"
 #include "sample_stack_printer.h"
@@ -155,7 +153,7 @@ bool ThreadSampler::InitRecordBuffer()
     mmapStart_ = mmap(nullptr, bufferSize_,
         PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mmapStart_ == MAP_FAILED) {
-        XCOLLIE_LOGE("Failed to create buffer for thread sampler!(%d)\n", errno);
+        XCOLLIE_LOGE("Failed to create buffer for thread sampler!(%{public}d)\n", errno);
         return false;
     }
 
@@ -170,7 +168,7 @@ void ThreadSampler::ReleaseRecordBuffer()
     }
     // release buffer
     if (munmap(mmapStart_, bufferSize_) != 0) {
-        XCOLLIE_LOGE("Failed to release buffer!(%d)\n", errno);
+        XCOLLIE_LOGE("Failed to release buffer!(%{public}d)\n", errno);
         return;
     }
     mmapStart_ = MAP_FAILED;
@@ -209,56 +207,6 @@ bool ThreadSampler::InitUniqueStackTable()
     return true;
 }
 
-bool ThreadSampler::SetUniStackTableSize(uint32_t uniStkTableSz)
-{
-    if (!init_) {
-        XCOLLIE_LOGE("Sampler should be initialed first\n");
-        return false;
-    }
-    if (uniStkTableSz == 0 || uniStkTableSz > DEFAULT_UNIQUE_STACK_TABLE_SIZE) {
-        XCOLLIE_LOGW("The size of uniqueStackTable should between 0(greater) and %u\n",
-            DEFAULT_UNIQUE_STACK_TABLE_SIZE);
-        uniStkTableSz = uniqueStackTableSize_;
-    }
-    if (uniStkTableSz == uniqueStackTableSize_) {
-        return true;
-    }
-    uint32_t oldUniStkTableSz = uniqueStackTableSize_;
-    uniqueStackTableSize_ = uniStkTableSz;
-    if (!InitUniqueStackTable()) {
-        uniqueStackTableSize_ = oldUniStkTableSz;
-        XCOLLIE_LOGE("Failed to set uniqueStackTable size.\n");
-        Deinit();
-        return false;
-    }
-    return true;
-}
-
-bool ThreadSampler::SetUniStackTableMMapName(const std::string& uniTableMMapName)
-{
-    if (!init_) {
-        XCOLLIE_LOGE("Sampler should be initialed first\n");
-        return false;
-    }
-    std::string newUniTableMMapName = uniTableMMapName;
-    if (newUniTableMMapName.empty() || newUniTableMMapName == "") {
-        XCOLLIE_LOGW("The name of uniqueStackTable buffer should not be empty.\n");
-        newUniTableMMapName = uniTableMMapName_;
-    }
-    if (newUniTableMMapName == uniTableMMapName_) {
-        return true;
-    }
-    std::string oldUniTableMMapName = uniTableMMapName_;
-    uniTableMMapName_ = newUniTableMMapName;
-    if (!InitUniqueStackTable()) {
-        uniTableMMapName_ = oldUniTableMMapName;
-        XCOLLIE_LOGE("Failed to set uniqueStackTable buffer name.\n");
-        Deinit();
-        return false;
-    }
-    return true;
-}
-
 void ThreadSampler::DeinitUniqueStackTable()
 {
     uniqueStackTable_.reset();
@@ -278,7 +226,7 @@ bool ThreadSampler::InstallSignalHandler()
     action.sa_sigaction = ThreadSampler::ThreadSamplerSignalHandler;
     action.sa_flags = SA_RESTART | SA_SIGINFO;
     if (sigaction(MUSL_SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
-        XCOLLIE_LOGE("Failed to register signal(%d:%d)", MUSL_SIGNAL_SAMPLE_STACK, errno);
+        XCOLLIE_LOGE("Failed to register signal(%{public}d:%{public}d)", MUSL_SIGNAL_SAMPLE_STACK, errno);
         return false;
     }
     return true;
@@ -287,7 +235,7 @@ bool ThreadSampler::InstallSignalHandler()
 void ThreadSampler::UninstallSignalHandler()
 {
     if (signal(MUSL_SIGNAL_SAMPLE_STACK, SIG_IGN) == SIG_ERR) {
-        XCOLLIE_LOGE("Failed to unregister signal(%d)", MUSL_SIGNAL_SAMPLE_STACK);
+        XCOLLIE_LOGE("Failed to unregister signal(%{public}d)", MUSL_SIGNAL_SAMPLE_STACK);
     }
 }
 
@@ -334,21 +282,20 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
     return &contextArray[index];
 }
 
-#if defined(__has_feature) && __has_feature(address_sanitizer)
-__attribute__((no_sanitize("address"))) void ThreadSampler::WriteContext(void* context)
-#else
-void ThreadSampler::WriteContext(void* context)
-#endif
+__attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSampler::WriteContext(void* context)
 {
 #if defined(__aarch64__)
-    uint64_t begin = GetCurrentTimeNanoseconds();
-
     if (!init_) {
         return;
     }
-
+#if defined(CONSUME_STATISTICS)
+    uint64_t begin = GetCurrentTimeNanoseconds();
+#endif
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = writeIndex_;
+#if defined(CONSUME_STATISTICS)
+    signalTimeCost_ += begin - contextArray[index].requestTime;
+#endif
 
     // current buffer has not been processed, stop copy
     if (contextArray[index].snapshotTime > 0 && contextArray[index].processTime == 0) {
@@ -377,8 +324,8 @@ void ThreadSampler::WriteContext(void* context)
     writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
 
 #if defined(CONSUME_STATISTICS)
-    threadCount_++;
-    threadTimeCost_ += end - begin;
+    copyStackCount_++;
+    copyStackTimeCost_ += end - begin;
 #endif
 #endif  // #if defined(__aarch64__)
 }
@@ -398,7 +345,8 @@ void ThreadSampler::SendSampleRequest()
     si.si_errno = 0;
     si.si_code = -1;
     if (syscall(SYS_rt_tgsigqueueinfo, pid_, pid_, si.si_signo, &si) != 0) {
-        XCOLLIE_LOGE("Failed to queue signal(%d) to %d, errno(%d).\n", si.si_signo, pid_, errno);
+        XCOLLIE_LOGE("Failed to queue signal(%{public}d) to %{public}d, errno(%{public}d).\n",
+            si.si_signo, pid_, errno);
         return;
     }
 #if defined (CONSUME_STATISTICS)
@@ -406,16 +354,14 @@ void ThreadSampler::SendSampleRequest()
 #endif
 }
 
-void ThreadSampler::ProcessStackBuffer(bool treeFormat)
+void ThreadSampler::ProcessStackBuffer()
 {
 #if defined(__aarch64__)
     if (!init_) {
         XCOLLIE_LOGE("sampler has not initialized.\n");
         return;
     }
-    int i = 0;
-    while (i < SAMPLER_MAX_BUFFER_SZ) {
-        i++;
+    while (true) {
         ThreadUnwindContext* context = GetReadContext();
         if (context == nullptr) {
             break;
@@ -434,25 +380,28 @@ void ThreadSampler::ProcessStackBuffer(bool treeFormat)
         };
 
         DoUnwind(context, unwinder_, unwindInfo);
+#if defined(CONSUME_STATISTICS)
+        uint64_t unwindEnd = GetCurrentTimeNanoseconds();
+#endif
+        /* for print full stack */
+        auto frames = unwinder_->GetFrames();
+        taf.frameList = frames;
+        timeAndFrameList_.emplace_back(taf);
+        /* for print tree format stack */
+        auto pcs = unwinder_->GetPcs();
+        uint64_t stackId = 0;
+        auto stackIdPtr = reinterpret_cast<OHOS::HiviewDFX::StackId*>(&stackId);
+        uniqueStackTable_->PutPcsInTable(stackIdPtr, pcs.data(), pcs.size());
+        PutTimeInMap(stackIdTimeMap_, stackId, context->snapshotTime);
+        
         uint64_t ts = GetCurrentTimeNanoseconds();
         context->processTime = ts;
 
-        if (!treeFormat) {
-            auto frames = unwinder_->GetFrames();
-            taf.frameList = frames;
-            timeAndFrameList_.emplace_back(taf);
-        } else {
-            auto pcs = unwinder_->GetPcs();
-            uint64_t stackId = 0;
-            auto stackIdPtr = reinterpret_cast<OHOS::HiviewDFX::StackId*>(&stackId);
-            uniqueStackTable_->PutPcsInTable(stackIdPtr, pcs.data(), pcs.size());
-            PutTimeInMap(stackIdTimeMap_, stackId, context->snapshotTime);
-        }
 #if defined(CONSUME_STATISTICS)
-        overallTimeCost_ += context->snapshotTime - context->requestTime;
+        processTimeCost_ += ts - unwindStart;
         processCount_++;
-        unwinderCount_++;
-        unwinderTimeCost_ += context->processTime - unwindStart;
+        unwindCount_++;
+        unwindTimeCost_ += unwindEnd - unwindStart;
 #endif  //#if defined(CONSUME_STATISTICS)
         context->requestTime = 0;
         context->snapshotTime = 0;
@@ -463,38 +412,38 @@ void ThreadSampler::ProcessStackBuffer(bool treeFormat)
 int32_t ThreadSampler::Sample()
 {
     if (!init_) {
-        XCOLLIE_LOGE("sampler has not initialed.\n");
+        XCOLLIE_LOGE("sampler has not initialized.\n");
         return -1;
     }
 #if defined(CONSUME_STATISTICS)
     sampleCount_++;
 #endif
     SendSampleRequest();
+    ProcessStackBuffer();
     return 0;
 }
 
-#if defined(CONSUME_STATISTICS)
 void ThreadSampler::ResetConsumeInfo()
 {
+#if defined(CONSUME_STATISTICS)
     sampleCount_ = 0;
     requestCount_ = 0;
-    threadCount_ = 0;
-    threadTimeCost_ = 0;
-    overallTimeCost_ = 0;
+    copyStackCount_ = 0;
+    copyStackTimeCost_ = 0;
+    processTimeCost_ = 0;
     processCount_ = 0;
-    unwinderCount_ = 0;
-    unwinderTimeCost_ = 0;
-}
+    unwindCount_ = 0;
+    unwindTimeCost_ = 0;
+    signalTimeCost_ = 0;
 #endif // #if defined(CONSUME_STATISTICS)
+}
 
 bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
 {
-#if defined(__aarch64__)
-    ProcessStackBuffer(treeFormat);
-#endif
+    ProcessStackBuffer();
 
     if (!init_) {
-        XCOLLIE_LOGE("sampler has not initialed.\n");
+        XCOLLIE_LOGE("sampler has not initialized.\n");
     }
 
     stack.clear();
@@ -506,6 +455,9 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
             stack += "empty";
         }
         stack += "\n";
+#if defined(CONSUME_STATISTICS)
+        ResetConsumeInfo();
+#endif
         return false;
     }
 
@@ -524,12 +476,13 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
 #if defined(CONSUME_STATISTICS)
     uint64_t collectEnd = GetCurrentTimeNanoseconds();
     uint64_t elapse = collectEnd - collectStart;
-    XCOLLIE_LOGI("Sample count:%llu\nRequest count:%llu\nSnapshot count:%llu\nAverage mainThread block time:%llu ns\n",
+    XCOLLIE_LOGI("Sample count:%{public}llu\nRequest count:%{public}llu\n\
+        Snapshot count:%{public}llu\nAverage copy stack time:%{public}llu ns\n",
         (unsigned long long)sampleCount_, (unsigned long long)requestCount_,
-        (unsigned long long)threadCount_, (unsigned long long)threadTimeCost_/threadCount_);
-    XCOLLIE_LOGI("Average process time:%llu ns\n", (unsigned long long)overallTimeCost_/processCount_);
-    XCOLLIE_LOGI("Average unwinder time:%llu ns\n", (unsigned long long)unwinderTimeCost_/unwinderCount_);
-    XCOLLIE_LOGI("FormatStack time:%llu ns\n", (unsigned long long)elapse);
+        (unsigned long long)copyStackCount_, (unsigned long long)copyStackTimeCost_ / copyStackCount_);
+    XCOLLIE_LOGI("Average process time:%{public}llu ns\n", (unsigned long long)processTimeCost_/processCount_);
+    XCOLLIE_LOGI("Average unwind time:%{public}llu ns\n", (unsigned long long)unwindTimeCost_/unwindCount_);
+    XCOLLIE_LOGI("FormatStack time:%{public}llu ns\n", (unsigned long long)elapse);
     ResetConsumeInfo();
 #endif
     return true;

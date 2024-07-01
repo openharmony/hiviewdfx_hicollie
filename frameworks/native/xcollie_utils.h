@@ -111,6 +111,8 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack);
 int64_t GetTimeStamp();
 
 bool IsCommercialVersion();
+
+void* FunctionOpen(void* funcHandler, const char* funcName);
 } // end of HiviewDFX
 } // end of OHOS
 #endif
