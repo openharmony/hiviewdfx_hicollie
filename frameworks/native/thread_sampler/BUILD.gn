@@ -32,6 +32,11 @@ ohos_shared_library("libthread_sampler") {
 
   defines = []
 
+  innerapi_tags = [
+    "chipsetsdk_indirect",
+    "platformsdk_indirect",
+  ]
+
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"
 }

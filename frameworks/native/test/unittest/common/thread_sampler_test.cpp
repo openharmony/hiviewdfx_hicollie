@@ -25,7 +25,7 @@
 using namespace testing::ext;
 namespace OHOS {
 namespace HiviewDFX {
-const char* LIB_THREAD_SAMPLER_PATH = "/system/lib64/chipset-pub-sdk/libthread_sampler.z.so";
+const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 typedef int (*ThreadSamplerInitFunc)();
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
@@ -114,7 +114,7 @@ void* FunctionOpen(void* funcHandler, const char* funcName)
 
 /**
  * @tc.name: ThreadSamplerTest_001
- * @tc.desc: sample thread 2 times and check the stacktrace
+ * @tc.desc: sample thread SAMPLE_CNT times and check the stacktrace
  * @tc.type: FUNC
  * @tc.require
  */
@@ -161,7 +161,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
 
 /**
  * @tc.name: ThreadSamplerTest_002
- * @tc.desc: sample thread 2 times and check the stacktrace in tree format
+ * @tc.desc: sample thread SAMPLE_CNT times and check the stacktrace in tree format
  * @tc.type: FUNC
  * @tc.require
  */
@@ -206,7 +206,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
 
 /**
  * @tc.name: ThreadSamplerTest_003
- * @tc.desc: sample thread 2 times and deinit sampler send 2 sample requestion and restart sampler.
+ * @tc.desc: sample thread SAMPLE_CNT times and deinit sampler send SAMPLE_CNT sample requestion and restart sampler.
  * @tc.type: FUNC
  * @tc.require
  */

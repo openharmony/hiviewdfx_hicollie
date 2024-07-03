@@ -23,7 +23,8 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t pc, int32_t count, uint64_t level)
+SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode,
+    uintptr_t pc, int32_t count, uint64_t level, SampleStackItem* acientNode)
 {
     if (curNode == nullptr) {
         return nullptr;
@@ -45,11 +46,12 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t 
     }
 
     if (level > curNode->level) {
+        acientNode = curNode;
+
         if (curNode->child == nullptr) {
             curNode->child = new SampleStackItem;
             curNode->child->level = curNode->level + 1;
-            allNodes_.push_back(curNode->child);
-            return Insert(curNode->child, pc, count, level);
+            return Insert(curNode->child, pc, count, level, acientNode);
         }
 
         if (curNode->child->pc == pc) {
@@ -63,16 +65,18 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode, uintptr_t 
     if (curNode->siblings == nullptr) {
         curNode->siblings = new SampleStackItem;
         curNode->siblings->level = curNode->level;
-        allNodes_.push_back(curNode->siblings);
-        return Insert(curNode->siblings, pc, count, level);
+        SampleStackItem* node = Insert(curNode->siblings, pc, count, level, acientNode);
+        curNode = AdjustSiblings(acientNode, curNode, node);
+        return curNode;
     }
 
     if (curNode->siblings->pc == pc) {
         curNode->siblings->count += count;
-        return curNode->siblings;
+        curNode = AdjustSiblings(acientNode, curNode, curNode->siblings);
+        return curNode;
     }
 
-    return Insert(curNode->siblings, pc, count, level);
+    return Insert(curNode->siblings, pc, count, level, acientNode);
 }
 
 void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
@@ -80,15 +84,39 @@ void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
     if (root_ == nullptr) {
         root_ = new SampleStackItem;
         root_->level = 0;
-        allNodes_.push_back(root_);
     }
 
+    SampleStackItem* dummyNode = new SampleStackItem;
+    SampleStackItem* acientNode = dummyNode;
+    acientNode->child = root_;
     SampleStackItem* curNode = root_;
     uint64_t level = 0;
     for (auto iter = pcs.rbegin(); iter != pcs.rend(); ++iter) {
-        curNode = Insert(curNode, *iter, count, level);
+        curNode = Insert(curNode, *iter, count, level, acientNode);
         level++;
     }
+    delete dummyNode;
+}
+
+SampleStackItem* SampleStackPrinter::AdjustSiblings(SampleStackItem* acient,
+    SampleStackItem* cur, SampleStackItem* node)
+{
+    SampleStackItem* dummy = new SampleStackItem;
+    dummy->siblings = acient->child;
+    SampleStackItem* p = dummy;
+    while (p->siblings != node && p->siblings->count >= node->count) {
+        p = p->siblings;
+    }
+    if (p->siblings != node) {
+        cur->siblings = node->siblings;
+        node->siblings = p->siblings;
+        if (p == dummy) {
+            acient->child = node;
+        }
+        p->siblings = node;
+    }
+    delete dummy;
+    return node;
 }
 
 std::string SampleStackPrinter::GetFullStack(const std::vector<TimeAndFrames>& timeAndFrameList)
@@ -166,13 +194,32 @@ std::string SampleStackPrinter::Print()
 
 void SampleStackPrinter::FreeNodes()
 {
-    for (auto node : allNodes_) {
-        if (node != nullptr) {
-            delete node;
+    if (root_ == nullptr) {
+        return;
+    }
+    std::vector<SampleStackItem*> stk;
+    stk.emplace_back(root_);
+
+    while (!stk.empty()) {
+        SampleStackItem* cur = stk.back();
+        stk.pop_back();
+        
+        if (cur != nullptr) {
+            // push siblings in stk and set siblings null
+            if (cur->siblings != nullptr) {
+                stk.emplace_back(cur->siblings);
+                cur->siblings = nullptr;
+            }
+            // push child in stk and set child null
+            if (cur->child != nullptr) {
+                stk.emplace_back(cur->child);
+                cur->child = nullptr;
+            }
+            // free cur and set null
+            delete cur;
+            cur = nullptr;
         }
     }
-    allNodes_.clear();
-    allNodes_.shrink_to_fit();
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

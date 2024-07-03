@@ -62,11 +62,12 @@ public:
 
 private:
     void FreeNodes();
-    SampleStackItem* Insert(SampleStackItem* curNode, uintptr_t pc, int32_t count, uint64_t level);
+    SampleStackItem* Insert(SampleStackItem* curNode,
+        uintptr_t pc, int32_t count, uint64_t level, SampleStackItem* acientNode);
+    SampleStackItem* AdjustSiblings(SampleStackItem* acient, SampleStackItem* cur, SampleStackItem* node);
     SampleStackItem* root_;
     std::shared_ptr<Unwinder> unwinder_;
     std::shared_ptr<DfxMaps> maps_;
-    std::vector<SampleStackItem*> allNodes_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
