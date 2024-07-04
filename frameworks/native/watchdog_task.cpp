@@ -78,7 +78,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      isTaskScheduled(false), isOneshotTask(false), timeLimit(timeLimit), countLimit(countLimit)
+      isTaskScheduled(false), isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit)
 {
     id = ++curId;
     checkInterval = timeLimit / timeLimitIntervalRatio;
