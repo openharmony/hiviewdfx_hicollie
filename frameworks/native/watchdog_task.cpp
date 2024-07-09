@@ -51,6 +51,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     nextTickTime = GetCurrentTickMillseconds();
     isTaskScheduled = false;
     isOneshotTask = false;
+    watchdogTid = getproctid();
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
@@ -202,7 +203,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     sendMsg += checker->GetDumpInfo();
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
-        "TID", watchdogTid,
+        "TID", watchdogTid < pid ? pid : watchdogTid,
         "TGID", gid,
         "UID", uid,
         "MODULE_NAME", name,
