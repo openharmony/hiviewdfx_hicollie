@@ -763,15 +763,16 @@ void WatchdogInner::IpcCheck()
 void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
 {
     char file[PATH_LEN] = {0};
-    if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", pid) == -1) {
-        XCOLLIE_LOGI("failed to build path for %d.", pid);
+    int32_t newPid = static_cast<int32_t>(pid);
+    if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", newPid) == -1) {
+        XCOLLIE_LOGI("failed to build path for %{public}d.", newPid);
     }
     int fd = open(file, O_RDWR);
     if (fd == -1) {
         return;
     }
     if (write(fd, str, strlen(str)) < 0) {
-        XCOLLIE_LOGI("failed to write 0 for %s", file);
+        XCOLLIE_LOGI("failed to write 0 for %{public}s", file);
         close(fd);
         return;
     }

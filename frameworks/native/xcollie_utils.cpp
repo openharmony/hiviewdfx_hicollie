@@ -311,12 +311,17 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
         return false;
     }
     std::string time = GetFormatDate();
-    path = WATCHDOG_DIR + "/" + "MAIN_THREAD_JANK" + "_" + time.c_str() + "_" +
+    std::string realPath;
+    if (!OHOS::PathToRealPath(WATCHDOG_DIR, realPath)) {
+        XCOLLIE_LOGE("Path to realPath failed.");
+        return false;
+    }
+    path = realPath + "/" + "MAIN_THREAD_JANK" + "_" + time.c_str() + "_" +
         std::to_string(pid).c_str() + ".txt";
     uint64_t stackSize = stack.size();
-    uint64_t fileSize = OHOS::GetFolderSize(WATCHDOG_DIR) + stackSize;
+    uint64_t fileSize = OHOS::GetFolderSize(realPath) + stackSize;
     if (fileSize > MAX_FILE_SIZE) {
-        XCOLLIE_LOGI("CurrentDir already over limit. Will not write to stack file."
+        XCOLLIE_LOGE("CurrentDir already over limit. Will not write to stack file."
             "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
             fileSize, MAX_FILE_SIZE);
         return true;
@@ -324,10 +329,10 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
     constexpr mode_t defaultLogFileMode = 0644;
     auto fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, defaultLogFileMode);
     if (fd < 0) {
-        XCOLLIE_LOGI("Failed to create path");
+        XCOLLIE_LOGE("Failed to create path");
         return false;
     } else {
-        XCOLLIE_LOGI("path=%{public}s", path.c_str());
+        XCOLLIE_LOGE("path=%{public}s", path.c_str());
     }
     OHOS::SaveStringToFd(fd, stack);
     close(fd);
