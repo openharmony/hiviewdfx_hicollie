@@ -61,7 +61,7 @@ static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
 
-const char* LIB_THREAD_SAMPLER_PATH = "/system/lib64/chipset-pub-sdk/libthread_sampler.z.so";
+const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
 typedef int (*ThreadSamplerInitFunc)();
 typedef int32_t (*ThreadSamplerSampleFunc)();
