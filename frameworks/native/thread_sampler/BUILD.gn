@@ -39,4 +39,5 @@ ohos_shared_library("libthread_sampler") {
 
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"
+  version_script = "libthread_sampler.map"
 }
