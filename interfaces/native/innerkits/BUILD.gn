@@ -29,4 +29,5 @@ ohos_shared_library("libhicollie") {
   external_deps = [ "hilog:libhilog" ]
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"
+  version_script = "libhicollie.map"
 }

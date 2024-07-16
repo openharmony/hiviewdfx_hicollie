@@ -34,10 +34,12 @@ ohos_unittest("XCollieUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [ "//third_party/googletest:gtest_main" ]
+  deps = [
+    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
+    "//third_party/googletest:gtest_main",
+  ]
   external_deps = [
     "c_utils:utils",
-    "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
@@ -49,11 +51,13 @@ ohos_unittest("WatchdogUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [ "//third_party/googletest:gtest_main" ]
+  deps = [
+    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
+    "//third_party/googletest:gtest_main",
+  ]
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
-    "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
@@ -62,7 +66,6 @@ ohos_unittest("WatchdogUnitTest") {
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
-    defines += [ "EVENTHANDLER_ENABLE" ]
   }
 }
 
@@ -72,11 +75,13 @@ ohos_unittest("WatchdogInnerUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [ "//third_party/googletest:gtest_main" ]
+  deps = [
+    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
+    "//third_party/googletest:gtest_main",
+  ]
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
-    "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
@@ -85,7 +90,6 @@ ohos_unittest("WatchdogInnerUnitTest") {
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
-    defines += [ "EVENTHANDLER_ENABLE" ]
   }
   if (defined(global_parts_info) &&
       defined(global_parts_info.hiviewdfx_hiview)) {
@@ -100,11 +104,13 @@ ohos_unittest("HandlerCheckerTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [ "//third_party/googletest:gtest_main" ]
+  deps = [
+    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
+    "//third_party/googletest:gtest_main",
+  ]
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
-    "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
@@ -113,7 +119,6 @@ ohos_unittest("HandlerCheckerTest") {
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
-    defines += [ "EVENTHANDLER_ENABLE" ]
   }
 }
 
@@ -123,11 +128,13 @@ ohos_unittest("WatchdogTaskTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [ "//third_party/googletest:gtest_main" ]
+  deps = [
+    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
+    "//third_party/googletest:gtest_main",
+  ]
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
-    "hicollie:libhicollie",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
   ]
@@ -136,7 +143,6 @@ ohos_unittest("WatchdogTaskTest") {
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
-    defines += [ "EVENTHANDLER_ENABLE" ]
   }
 }
 
