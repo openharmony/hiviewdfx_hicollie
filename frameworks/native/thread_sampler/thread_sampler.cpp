@@ -47,10 +47,12 @@ void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* con
 
 ThreadSampler::ThreadSampler()
 {
+    XCOLLIE_LOGI("Create ThreadSampler.\n");
 }
 
 ThreadSampler::~ThreadSampler()
 {
+    XCOLLIE_LOGI("Destroy ThreadSampler.\n");
 }
 
 int ThreadSampler::FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void *arg)
@@ -109,7 +111,7 @@ int ThreadSampler::GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void *
     return unwindInfo->maps->FindMapByAddr(pc, map) ? 0 : -1;
 }
 
-bool ThreadSampler::Init()
+bool ThreadSampler::Init(int collectStackCount)
 {
     if (init_) {
         return true;
@@ -139,6 +141,14 @@ bool ThreadSampler::Init()
         Deinit();
         return false;
     }
+
+    if (collectStackCount <= 0) {
+        XCOLLIE_LOGE("Invalid collectStackCount\n");
+        Deinit();
+        return false;
+    }
+    stackIdCount_.reserve(collectStackCount);
+
     init_ = true;
     return true;
 }
@@ -392,8 +402,8 @@ void ThreadSampler::ProcessStackBuffer()
         uint64_t stackId = 0;
         auto stackIdPtr = reinterpret_cast<OHOS::HiviewDFX::StackId*>(&stackId);
         uniqueStackTable_->PutPcsInTable(stackIdPtr, pcs.data(), pcs.size());
-        PutTimeInMap(stackIdTimeMap_, stackId, context->snapshotTime);
-        
+        PutStackId(stackIdCount_, stackId);
+
         uint64_t ts = GetCurrentTimeNanoseconds();
         context->processTime = ts;
 
@@ -447,7 +457,7 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     }
 
     stack.clear();
-    if (timeAndFrameList_.empty() && stackIdTimeMap_.empty()) {
+    if (timeAndFrameList_.empty() && stackIdCount_.empty()) {
         if (!LoadStringFromFile("/proc/self/wchan", stack)) {
             XCOLLIE_LOGE("read file failed.\n");
         }
@@ -468,10 +478,10 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     if (!treeFormat) {
         stack = printer->GetFullStack(timeAndFrameList_);
     } else {
-        stack = printer->GetTreeStack(stackIdTimeMap_, uniqueStackTable_);
+        stack = printer->GetTreeStack(stackIdCount_, uniqueStackTable_);
     }
     timeAndFrameList_.clear();
-    stackIdTimeMap_.clear();
+    stackIdCount_.clear();
     
 #if defined(CONSUME_STATISTICS)
     uint64_t collectEnd = GetCurrentTimeNanoseconds();

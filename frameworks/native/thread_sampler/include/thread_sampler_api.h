@@ -28,7 +28,7 @@ extern "C" {
 #endif
 
 /* To initialize thread sampler, load resources needed, return 0 for success. */
-int ThreadSamplerInit();
+int ThreadSamplerInit(int collectStackCount);
 
 /* To start sample stack with thread sampler. */
 int32_t ThreadSamplerSample();

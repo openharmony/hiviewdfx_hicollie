@@ -19,8 +19,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
-#include <queue>
-#include <set>
 #include <string>
 
 #include <sys/mman.h>
@@ -60,6 +58,11 @@ struct TimeAndFrames {
     std::vector<DfxFrame> frameList;
 };
 
+struct StackIdAndCount {
+    uint64_t stackId {0};
+    uint32_t count {0};
+};
+
 class ThreadSampler : public Singleton<ThreadSampler> {
     DECLARE_SINGLETON(ThreadSampler);
 public:
@@ -67,7 +70,7 @@ public:
     static void ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context);
 
     // Initial sampler, include uwinder, recorde buffer etc.
-    bool Init();
+    bool Init(int collectStackCount);
     int32_t Sample();   // Interface of sample, to send sample request.
     // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
     bool CollectStack(std::string& stack, bool treeFormat = true);
@@ -123,7 +126,7 @@ private:
     MAYBE_UNUSED uint64_t processCount_ {0};
 
     std::vector<TimeAndFrames> timeAndFrameList_;
-    std::map<uint64_t, std::vector<uint64_t>> stackIdTimeMap_;
+    std::vector<StackIdAndCount> stackIdCount_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
