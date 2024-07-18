@@ -861,6 +861,7 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 
 bool WatchdogInner::Stop()
 {
+    IPCDfx::SetIPCProxyLimit(0, nullptr);
     isNeedStop_.store(true);
     condition_.notify_all();
     if (threadLoop_ != nullptr && threadLoop_->joinable()) {
