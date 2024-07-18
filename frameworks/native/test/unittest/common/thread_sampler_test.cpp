@@ -26,7 +26,7 @@ using namespace testing::ext;
 namespace OHOS {
 namespace HiviewDFX {
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
-typedef int (*ThreadSamplerInitFunc)();
+typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
 typedef void (*ThreadSamplerDeinitFunc)();
@@ -133,7 +133,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
     auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
     auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
 
-    initFunc();
+    initFunc(SAMPLE_CNT);
     auto sampleHandler = [sampleFunc]() {
         sampleFunc();
     };
@@ -179,7 +179,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
     auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
 
-    initFunc();
+    initFunc(SAMPLE_CNT);
     auto sampleHandler = [sampleFunc]() {
         sampleFunc();
     };
@@ -224,7 +224,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
     auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
 
-    initFunc();
+    initFunc(SAMPLE_CNT);
     auto sampleHandler = [sampleFunc]() {
         sampleFunc();
     };
@@ -254,7 +254,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     ASSERT_NE(stack, "");
     printf("stack:\n%s", stack);
 
-    initFunc();
+    initFunc(SAMPLE_CNT);
     for (int i = 0; i < SAMPLE_CNT; i++) {
         Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, INTERVAL * i + INTERVAL);
     }
@@ -287,7 +287,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     auto sampleFunc = reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler, "ThreadSamplerSample"));
     auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
     auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
-    initFunc();
+    initFunc(SAMPLE_CNT);
     auto sampleHandler = [sampleFunc]() {
         sampleFunc();
     };
@@ -343,7 +343,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
     auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
     auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
 
-    initFunc();
+    initFunc(SAMPLE_CNT);
     uniTableSize = GetMMapSizeAndName("hicollie_buf", uniStackTableMMapName);
     
     uint32_t bufSize = 128 * 1024;

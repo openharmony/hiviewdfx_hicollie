@@ -56,16 +56,19 @@ std::string TimeFormat(uint64_t time)
     return s;
 }
 
-void PutTimeInMap(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap, uint64_t stackId, uint64_t timestamp)
+void PutStackId(std::vector<StackIdAndCount>& stackIdCount, uint64_t stackId)
 {
-    auto it = stackIdTimeMap.find(stackId);
-    if (it == stackIdTimeMap.end()) {
-        std::vector<uint64_t> timestamps;
-        timestamps.emplace_back(timestamp);
-        stackIdTimeMap[stackId] = timestamps;
-    } else {
-        it->second.emplace_back(timestamp);
+    for (auto& stackIdCnt : stackIdCount) {
+        if (stackIdCnt.stackId == stackId) {
+            stackIdCnt.count++;
+            return;
+        }
     }
+    StackIdAndCount sac = {
+        .stackId = stackId,
+        .count = 1,
+    };
+    stackIdCount.emplace_back(sac);
 }
 
 void DoUnwind(ThreadUnwindContext* context, const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)

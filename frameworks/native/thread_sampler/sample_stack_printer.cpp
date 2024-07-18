@@ -140,23 +140,18 @@ std::string SampleStackPrinter::GetFullStack(const std::vector<TimeAndFrames>& t
     return stack;
 }
 
-std::string SampleStackPrinter::GetTreeStack(std::map<uint64_t, std::vector<uint64_t>>& stackIdTimeMap,
+std::string SampleStackPrinter::GetTreeStack(std::vector<StackIdAndCount>& stackIdCount,
     std::unique_ptr<UniqueStackTable>& uniqueStackTable)
 {
-    std::vector<std::pair<uint64_t, uint64_t>> sortedStackId;
-    for (auto it = stackIdTimeMap.begin(); it != stackIdTimeMap.end(); it++) {
-        uint64_t stackId = it->first;
-        sortedStackId.emplace_back(std::make_pair<uint64_t, uint64_t>(std::move(stackId), it->second.size()));
-        std::sort(sortedStackId.begin(), sortedStackId.end(), [](const auto& a, const auto& b) {
-            return a.second > b.second;
-        });
-    }
-    for (auto it = sortedStackId.begin(); it != sortedStackId.end(); it++) {
+    std::sort(stackIdCount.begin(), stackIdCount.end(), [](const auto& a, const auto& b) {
+        return a.count > b.count;
+    });
+    for (auto it = stackIdCount.begin(); it != stackIdCount.end(); it++) {
         std::vector<uintptr_t> pcs;
         OHOS::HiviewDFX::StackId stackId;
-        stackId.value = it->first;
+        stackId.value = it->stackId;
         if (uniqueStackTable->GetPcsByStackId(stackId, pcs)) {
-            Insert(pcs, it->second);
+            Insert(pcs, it->count);
         }
     }
     std::string stack = Print();

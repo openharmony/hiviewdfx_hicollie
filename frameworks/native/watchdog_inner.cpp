@@ -63,7 +63,7 @@ static bool g_existFile = true;
 
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
-typedef int (*ThreadSamplerInitFunc)();
+typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
 typedef void (*ThreadSamplerDeinitFunc)();
@@ -184,7 +184,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
         return -1;
     }
 
-    int initThreadSamplerRet = threadSamplerInitFunc();
+    int initThreadSamplerRet = threadSamplerInitFunc(COLLECT_STACK_COUNT);
     if (initThreadSamplerRet != 0) {
         return -1;
     }
