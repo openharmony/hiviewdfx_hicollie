@@ -374,7 +374,6 @@ void* FunctionOpen(void* funcHandler, const char* funcName)
     if ((err = dlerror()) != nullptr) {
         XCOLLIE_LOGE("dlopen %{public}s failed. %{public}s\n", funcName, err);
         dlclose(funcHandler);
-        funcHandler = nullptr;
         return nullptr;
     }
     return func;

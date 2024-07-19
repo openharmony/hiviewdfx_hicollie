@@ -181,6 +181,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     auto threadSamplerSampleFunc =
         reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler_, "ThreadSamplerSample"));
     if (threadSamplerInitFunc == nullptr || threadSamplerSampleFunc == nullptr) {
+        funcHandler_ = nullptr;
         return -1;
     }
 
@@ -234,6 +235,7 @@ bool WatchdogInner::CollectStack(std::string& stack)
     auto threadSamplerCollectFunc =
         reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler_, "ThreadSamplerCollect"));
     if (threadSamplerCollectFunc == nullptr) {
+        funcHandler_ = nullptr;
         return false;
     }
     int treeFormat = 1;
@@ -254,6 +256,7 @@ void WatchdogInner::Deinit()
     auto threadSamplerDeinitFunc =
         reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler_, "ThreadSamplerDeinit"));
     if (threadSamplerDeinitFunc == nullptr) {
+        funcHandler_ = nullptr;
         return;
     }
     threadSamplerDeinitFunc();
