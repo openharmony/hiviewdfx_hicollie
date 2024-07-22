@@ -58,17 +58,18 @@ std::string TimeFormat(uint64_t time)
 
 void PutStackId(std::vector<StackIdAndCount>& stackIdCount, uint64_t stackId)
 {
-    for (auto& stackIdCnt : stackIdCount) {
-        if (stackIdCnt.stackId == stackId) {
-            stackIdCnt.count++;
-            return;
-        }
+    auto it = std::find_if(stackIdCount.begin(), stackIdCount.end(), [&stackId](auto& stackIdCnt) {
+        return stackIdCnt.stackId == stackId;
+    });
+    if (it == stackIdCount.end()) {
+        StackIdAndCount sac = {
+            .stackId = stackId,
+            .count = 1,
+        };
+        stackIdCount.emplace_back(sac);
+    } else {
+        it->count++;
     }
-    StackIdAndCount sac = {
-        .stackId = stackId,
-        .count = 1,
-    };
-    stackIdCount.emplace_back(sac);
 }
 
 void DoUnwind(ThreadUnwindContext* context, const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)
