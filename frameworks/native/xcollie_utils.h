@@ -65,6 +65,7 @@ const int64_t DUMPTRACE_TIME = 450;
 const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
 const std::string WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 const std::string KEY_HIVIEW_USER_TYPE = "const.logsystem.versiontype";
+const std::string KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
@@ -111,6 +112,8 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack);
 int64_t GetTimeStamp();
 
 bool IsCommercialVersion();
+
+bool IsAncoEnable();
 
 void* FunctionOpen(void* funcHandler, const char* funcName);
 } // end of HiviewDFX
