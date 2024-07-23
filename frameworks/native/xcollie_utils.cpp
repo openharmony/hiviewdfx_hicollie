@@ -362,6 +362,12 @@ bool IsCommercialVersion()
     return userType == "commercial";
 }
 
+bool IsAncoEnable()
+{
+    auto enableType = system::GetParameter(KEY_ANCO_ENABLE_TYPE, "");
+    return (enableType.find("true") != std::string::npos);
+}
+
 void* FunctionOpen(void* funcHandler, const char* funcName)
 {
     if (funcHandler == nullptr) {
