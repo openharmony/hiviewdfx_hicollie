@@ -330,6 +330,7 @@ __attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSam
     }
 
     uint64_t end = GetCurrentTimeNanoseconds();
+    contextArray[index].processTime = 0;
     contextArray[index].snapshotTime = end;
     writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
 
@@ -405,7 +406,6 @@ void ThreadSampler::ProcessStackBuffer()
         PutStackId(stackIdCount_, stackId);
 
         uint64_t ts = GetCurrentTimeNanoseconds();
-        context->processTime = ts;
 
 #if defined(CONSUME_STATISTICS)
         processTimeCost_ += ts - unwindStart;
@@ -415,6 +415,7 @@ void ThreadSampler::ProcessStackBuffer()
 #endif  //#if defined(CONSUME_STATISTICS)
         context->requestTime = 0;
         context->snapshotTime = 0;
+        context->processTime = ts;
     }
 #endif  // #if defined(__aarch64__)
 }
