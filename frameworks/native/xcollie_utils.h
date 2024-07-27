@@ -107,7 +107,8 @@ std::string GetFormatDate();
 
 bool CreateWatchdogDir();
 
-bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack);
+bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
+    const std::string& eventName);
 
 int64_t GetTimeStamp();
 

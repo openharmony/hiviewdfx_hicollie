@@ -343,7 +343,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     EXPECT_TRUE(ret);
     std::string path = "";
     std::string stack = "STACK";
-    ret = WriteStackToFd(getprocpid(), path, stack);
+    ret = WriteStackToFd(getprocpid(), path, stack, "test");
     EXPECT_TRUE(ret);
 }
 } // namespace HiviewDFX

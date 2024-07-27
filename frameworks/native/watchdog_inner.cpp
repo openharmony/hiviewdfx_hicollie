@@ -144,7 +144,7 @@ bool WatchdogInner::ReportMainThreadEvent()
     if (buissnessThreadInfo_.size() != 0) {
         eventName = "BUSSINESS_THREAD_JANK";
     }
-    if (!WriteStackToFd(getprocpid(), path, stack)) {
+    if (!WriteStackToFd(getprocpid(), path, stack, eventName)) {
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
