@@ -305,7 +305,7 @@ bool CreateWatchdogDir()
     return true;
 }
 
-bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
+bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const std::string& eventName)
 {
     if (!CreateWatchdogDir()) {
         return false;
@@ -316,7 +316,7 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack)
         XCOLLIE_LOGE("Path to realPath failed.");
         return false;
     }
-    path = realPath + "/" + "MAIN_THREAD_JANK" + "_" + time.c_str() + "_" +
+    path = realPath + "/" + eventName + "_" + time.c_str() + "_" +
         std::to_string(pid).c_str() + ".txt";
     uint64_t stackSize = stack.size();
     uint64_t fileSize = OHOS::GetFolderSize(realPath) + stackSize;
