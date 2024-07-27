@@ -262,13 +262,30 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
 {
     int testValue = 150; // test value
+
     int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(testValue);
     int32_t left = 4;
     int32_t end = time(nullptr) + left;
     while (left > 0) {
         left = end - time(nullptr);
     }
+    EXPECT_EQ(ret, -1);
+
+    left = 10;
+    end = time(nullptr) + left;
+    while (left > 0) {
+        left = end - time(nullptr);
+    }
+
+    ret = WatchdogInner::GetInstance().StartProfileMainThread(testValue);
+    left = 5;
+    end = time(nullptr) + left;
+    while (left > 0) {
+        left = end - time(nullptr);
+    }
+    sleep(4);
     EXPECT_EQ(ret, 0);
+
     std::string stack = "";
     WatchdogInner::GetInstance().CollectStack(stack);
     printf("stack:\n%s", stack.c_str());

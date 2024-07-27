@@ -106,6 +106,7 @@ private:
     bool ReportMainThreadEvent();
     bool CheckEventTimer(const int64_t& currentTime);
     void StartTraceProfile(int32_t interval);
+    void ThreadSampleTask(int32_t (*threadSamplerSampleFunc)());
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -122,6 +123,7 @@ private:
     time_t timeCallback_;
     bool isHmos = false;
     void* funcHandler_ = nullptr;
+    uint64_t watchdogStartTime_ {0};
 
     bool isMainThreadProfileTaskEnabled_ {false};
     bool isMainThreadTraceEnabled_ {false};

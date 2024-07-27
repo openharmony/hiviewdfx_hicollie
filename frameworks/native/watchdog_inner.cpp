@@ -61,6 +61,7 @@ static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = -1;
 static bool g_existFile = true;
 
+constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
 typedef int (*ThreadSamplerInitFunc)(int);
@@ -170,9 +171,44 @@ bool WatchdogInner::CheckEventTimer(const int64_t& currentTime)
         (timeContent_.curEnd - timeContent_.curBegin > DURATION_TIME * MILLISEC_TO_NANOSEC);
 }
 
+void WatchdogInner::ThreadSampleTask(int32_t (*threadSamplerSampleFunc)())
+{
+    if (sampleTaskState_ == DumpStackState::DEFAULT) {
+        sampleTaskState_++;
+        return;
+    }
+    int64_t currentTime = GetTimeStamp();
+    if (stackContent_.collectCount > DumpStackState::DEFAULT &&
+        stackContent_.collectCount < COLLECT_STACK_COUNT) {
+        threadSamplerSampleFunc();
+        stackContent_.collectCount++;
+    } else if (stackContent_.collectCount == COLLECT_STACK_COUNT) {
+        ReportMainThreadEvent();
+        isMainThreadProfileTaskEnabled_ = true;
+        return;
+    } else {
+        if (CheckEventTimer(currentTime)) {
+            threadSamplerSampleFunc();
+            stackContent_.collectCount++;
+        } else {
+            stackContent_.detectorCount++;
+        }
+    }
+    if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
+        isMainThreadProfileTaskEnabled_ = true;
+    }
+}
+
 int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
 {
     std::unique_lock<std::mutex> lock(lock_);
+
+    uint64_t now = GetCurrentTickMillseconds();
+    if (now - watchdogStartTime_ < MAX_START_TIME) {
+        XCOLLIE_LOGI("application is in starting period.\n");
+        stackContent_.stackState = DumpStackState::DEFAULT;
+        return -1;
+    }
 
     funcHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
 
@@ -194,30 +230,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     stackContent_.detectorCount = 0;
     stackContent_.collectCount = 0;
     auto sampleTask = [this, threadSamplerSampleFunc]() {
-        if (sampleTaskState_ == DumpStackState::DEFAULT) {
-            sampleTaskState_++;
-            return;
-        }
-        int64_t currentTime = GetTimeStamp();
-        if (stackContent_.collectCount > DumpStackState::DEFAULT &&
-            stackContent_.collectCount < COLLECT_STACK_COUNT) {
-            threadSamplerSampleFunc();
-            stackContent_.collectCount++;
-        } else if (stackContent_.collectCount == COLLECT_STACK_COUNT) {
-            ReportMainThreadEvent();
-            isMainThreadProfileTaskEnabled_ = true;
-            return;
-        } else {
-            if (CheckEventTimer(currentTime)) {
-                threadSamplerSampleFunc();
-                stackContent_.collectCount++;
-            } else {
-                stackContent_.detectorCount++;
-            }
-        }
-        if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
-            isMainThreadProfileTaskEnabled_ = true;
-        }
+        ThreadSampleTask(threadSamplerSampleFunc);
     };
 
     WatchdogTask task("ThreadSampler", sampleTask, 0, interval, true);
@@ -228,7 +241,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
 bool WatchdogInner::CollectStack(std::string& stack)
 {
     if (funcHandler_ == nullptr) {
-        printf("open library failed.");
+        XCOLLIE_LOGE("open library failed.");
         return false;
     }
 
@@ -249,7 +262,7 @@ bool WatchdogInner::CollectStack(std::string& stack)
 void WatchdogInner::Deinit()
 {
     if (funcHandler_ == nullptr) {
-        printf("open library failed.");
+        XCOLLIE_LOGE("open library failed.");
         return;
     }
 
@@ -693,7 +706,7 @@ bool WatchdogInner::Start()
         XCOLLIE_LOGW("Failed to set threadName for watchdog, errno:%d.", errno);
     }
     SetThreadSignalMask(SIGDUMP, false, false);
-
+    watchdogStartTime_ = GetCurrentTickMillseconds();
     XCOLLIE_LOGD("Watchdog is running in thread(%{public}d)!", getproctid());
     if (SetThreadInfoCallback != nullptr) {
         SetThreadInfoCallback(ThreadInfo);
