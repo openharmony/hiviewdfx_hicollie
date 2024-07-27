@@ -12,6 +12,9 @@
     "component": {
         "name": "hicollie",
         "subsystem": "hiviewdfx",
+        "syscap": [
+            "SystemCapability.HiviewDFX.HiCollie"
+        ],
         "adapted_system_type": [
             "standard"
         ],
