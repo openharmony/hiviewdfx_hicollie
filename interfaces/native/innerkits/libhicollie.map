@@ -25,6 +25,8 @@
         "OHOS::HiviewDFX::Watchdog::InitFfrtWatchdog()";
         "OHOS::HiviewDFX::Watchdog::SetBundleInfo(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
         "OHOS::HiviewDFX::Watchdog::SetForeground(bool const&)";
+        "OHOS::HiviewDFX::Watchdog::RemovePeriodicalTask(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
+        "OHOS::HiviewDFX::Watchdog::InitMainLooperWatcher(void (**)(char const*), void (**)(char const*))";
     };
   local:
     *;

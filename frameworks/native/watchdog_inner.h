@@ -52,6 +52,9 @@ struct TraceContent {
     int dumpCount;
 };
 
+typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
+typedef void (*WatchdogInnerEndFunc)(const char* eventName);
+
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
@@ -83,11 +86,14 @@ public:
     void Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
-    void ChangeState(int& state);
+    void ChangeState(int& state, int targetState);
     void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime);
+    void RemoveInnerTask(const std::string& name);
+    void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     std::string currentScene_;
     TimePoint lastTraceTime_;
     TimePoint lastStackTime_;
+    TimePoint bussinessBeginTime_;
     TimeContent timeContent_ {0};
     StackContent stackContent_ {0};
     TraceContent traceContent_ {0};
@@ -116,6 +122,7 @@ private:
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
     std::set<std::string> taskNameSet_;
+    std::set<int64_t> buissnessThreadInfo_;
     std::shared_ptr<AppExecFwk::EventRunner> mainRunner_;
     std::shared_ptr<AppExecFwk::EventHandler> binderCheckHander_;
     int cntCallback_;

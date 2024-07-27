@@ -34,7 +34,8 @@
                 "ipc",
                 "init",
                 "hiview",
-                "storage_service"
+                "storage_service",
+                "samgr"
             ],
             "third_party": []
         },
@@ -42,7 +43,8 @@
             "sub_component": [
                 "//base/hiviewdfx/hicollie/interfaces/native/innerkits:libhicollie",
                 "//base/hiviewdfx/hicollie/frameworks/native/thread_sampler:libthread_sampler",
-                "//base/hiviewdfx/hicollie/interfaces/rust:hicollie_rust"
+                "//base/hiviewdfx/hicollie/interfaces/rust:hicollie_rust",
+                "//base/hiviewdfx/hicollie/interfaces/ndk:ohhicollie"
             ],
             "inner_kits": [
                 {

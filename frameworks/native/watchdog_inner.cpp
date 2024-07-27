@@ -139,11 +139,15 @@ bool WatchdogInner::ReportMainThreadEvent()
     CollectStack(stack);
     Deinit();
     std::string path = "";
+    std::string eventName = "MAIN_THREAD_JANK";
+    if (buissnessThreadInfo_.size() != 0) {
+        eventName = "BUSSINESS_THREAD_JANK";
+    }
     if (!WriteStackToFd(getprocpid(), path, stack)) {
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
-    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "MAIN_THREAD_JANK",
+    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName,
         HiSysEvent::EventType::FAULT,
         "BUNDLE_VERSION", bundleVersion_,
         "BUNDLE_NAME", bundleName_,
@@ -262,11 +266,11 @@ void WatchdogInner::Deinit()
     threadSamplerDeinitFunc();
 }
 
-void WatchdogInner::ChangeState(int& state)
+void WatchdogInner::ChangeState(int& state, int targetState)
 {
     timeContent_.reportBegin = timeContent_.curBegin;
     timeContent_.reportEnd = timeContent_.curEnd;
-    state = DumpStackState::COMPLETE;
+    state = targetState;
 }
 
 void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime)
@@ -362,7 +366,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         if (IsAncoEnable()) {
             return;
         }
-        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState);
+        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
+            DumpStackState::COMPLETE);
         WatchdogInner::GetInstance().lastStackTime_ = endTime;
 
         int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(TASK_INTERVAL);
@@ -378,7 +383,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
             return;
         }
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
-        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().traceContent_.traceState);
+        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().traceContent_.traceState,
+            DumpStackState::COMPLETE);
         WatchdogInner::GetInstance().lastTraceTime_ = endTime;
         WatchdogInner::GetInstance().CollectTrace();
     }
@@ -871,6 +877,9 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
 bool WatchdogInner::Stop()
 {
     IPCDfx::SetIPCProxyLimit(0, nullptr);
+    if (mainRunner_ != nullptr) {
+        mainRunner_->SetMainLooperWatcher(nullptr, nullptr);
+    }
     isNeedStop_.store(true);
     condition_.notify_all();
     if (threadLoop_ != nullptr && threadLoop_->joinable()) {
@@ -888,6 +897,75 @@ void WatchdogInner::KillPeerBinderProcess(const std::string &description)
     }
     if (!result) {
         WatchdogInner::LeftTimeExitProcess(description);
+    }
+}
+
+void WatchdogInner::RemoveInnerTask(const std::string& name)
+{
+    if (name.empty()) {
+        XCOLLIE_LOGI("Remove XCollieTask fail, cname is null");
+        return;
+    }
+    std::priority_queue<WatchdogTask> tmpQueue;
+    std::unique_lock<std::mutex> lock(lock_);
+    size_t size = checkerQueue_.size();
+    if (size == 0) {
+        XCOLLIE_LOGE("Remove XCollieTask %{public}s fail, empty queue!", name.c_str());
+        return;
+    }
+    while (!checkerQueue_.empty()) {
+        const WatchdogTask& task = checkerQueue_.top();
+        if (task.name != name) {
+            tmpQueue.push(task);
+        }
+        checkerQueue_.pop();
+    }
+    if (tmpQueue.size() == size) {
+        XCOLLIE_LOGE("Remove XCollieTask fail, can not find name %{public}s, size=%{public}zu!",
+            name.c_str(), size);
+        return;
+    }
+    tmpQueue.swap(checkerQueue_);
+}
+
+void InitBeginFunc(const char* name)
+{
+    std::string nameStr(name);
+    WatchdogInner::GetInstance().bussinessBeginTime_ = DistributeStart(nameStr);
+}
+
+void InitEndFunc(const char* name)
+{
+    std::string nameStr(name);
+    DistributeEnd(nameStr, WatchdogInner::GetInstance().bussinessBeginTime_);
+}
+
+void WatchdogInner::InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc,
+    WatchdogInnerEndFunc* endFunc)
+{
+    int64_t tid = getproctid();
+    if (beginFunc && endFunc) {
+        if (buissnessThreadInfo_.find(tid) != buissnessThreadInfo_.end()) {
+            XCOLLIE_LOGI("Tid =%{public}" PRId64 "already exits, "
+                "no repeated initialization.", tid);
+            return;
+        }
+        if (mainRunner_ != nullptr) {
+            mainRunner_->SetMainLooperWatcher(nullptr, nullptr);
+            ChangeState(stackContent_.stackState, DumpStackState::DEFAULT);
+            ChangeState(traceContent_.traceState, DumpStackState::DEFAULT);
+        }
+        *beginFunc = InitBeginFunc;
+        *endFunc = InitEndFunc;
+        buissnessThreadInfo_.insert(tid);
+    } else {
+        if (buissnessThreadInfo_.find(tid) != buissnessThreadInfo_.end()) {
+            XCOLLIE_LOGI("Remove already init tid=%{public}." PRId64, tid);
+            mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
+            buissnessThreadInfo_.erase(tid);
+            ChangeState(stackContent_.stackState, DumpStackState::DEFAULT);
+            ChangeState(traceContent_.traceState, DumpStackState::DEFAULT);
+        }
     }
 }
 } // end of namespace HiviewDFX

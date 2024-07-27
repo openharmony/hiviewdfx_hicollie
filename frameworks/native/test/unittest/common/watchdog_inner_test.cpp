@@ -311,7 +311,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     ret = WatchdogInner::GetInstance().ReportMainThreadEvent();
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
     int state = 1; // test value
-    WatchdogInner::GetInstance().ChangeState(state);
+    WatchdogInner::GetInstance().ChangeState(state, 1);
     int32_t interval = 150; // test value
     WatchdogInner::GetInstance().StartTraceProfile(interval);
     ret = IsFileNameFormat('1');

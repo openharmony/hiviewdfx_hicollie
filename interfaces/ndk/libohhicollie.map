@@ -1,0 +1,12 @@
+{
+  global:
+  extern "C" {
+        OH_HiCollie_Init_StuckDetection;
+        OH_HiCollie_Init_JankDetection;
+        OH_HiCollie_Report;
+    };
+    extern "C++" {
+    };
+  local:
+    *;
+};
