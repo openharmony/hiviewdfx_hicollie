@@ -22,6 +22,10 @@
 
 using Task = std::function<void()>;
 using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;
+
+typedef void (*WatchdogBeginFunc)(const char* eventName);
+typedef void (*WatchdogEndFunc)(const char* eventName);
+
 namespace OHOS {
 namespace HiviewDFX {
 class Watchdog : public Singleton<Watchdog> {
@@ -99,6 +103,18 @@ public:
      *
      */
     void SetForeground(const bool& isForeground);
+
+    /**
+     * @brief Remove a periodical task by name.
+     *
+     * @param name, task name
+     */
+    void RemovePeriodicalTask(const std::string& name);
+
+    /**
+     * @brief Init MainLooperWatcher in bussiness watchdog thread.
+     */
+    void InitMainLooperWatcher(WatchdogBeginFunc* beginFunc, WatchdogEndFunc* endFunc);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

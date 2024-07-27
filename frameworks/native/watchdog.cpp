@@ -67,5 +67,15 @@ void Watchdog::SetForeground(const bool& isForeground)
 {
     return WatchdogInner::GetInstance().SetForeground(isForeground);
 }
+
+void Watchdog::RemovePeriodicalTask(const std::string& name)
+{
+    WatchdogInner::GetInstance().RemoveInnerTask(name);
+}
+
+void Watchdog::InitMainLooperWatcher(WatchdogBeginFunc* beginFunc, WatchdogEndFunc* endFunc)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(beginFunc, endFunc);
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
