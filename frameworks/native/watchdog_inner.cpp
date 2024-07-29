@@ -930,6 +930,13 @@ void WatchdogInner::RemoveInnerTask(const std::string& name)
         const WatchdogTask& task = checkerQueue_.top();
         if (task.name != name) {
             tmpQueue.push(task);
+        } else {
+            size_t nameSize = taskNameSet_.size();
+            if (nameSize != 0 && !task.isOneshotTask) {
+                taskNameSet_.erase(name);
+                XCOLLIE_LOGD("Remove watchdog task name %{public}s, remove result=%{public}d",
+                    name.c_str(), nameSize > taskNameSet_.size());
+            }
         }
         checkerQueue_.pop();
     }

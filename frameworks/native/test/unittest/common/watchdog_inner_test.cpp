@@ -107,8 +107,15 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_RunPeriodicalTask_001, TestSize.Le
 {
     int taskResult = 0;
     auto taskFunc = [&taskResult]() { taskResult = 1; };
-    WatchdogInner::GetInstance().RunPeriodicalTask("", taskFunc, 2000, 0);
+    WatchdogInner::GetInstance().RunPeriodicalTask("RunPeriodicalTask_001",
+        taskFunc, 2000, 0);
     ASSERT_EQ(taskResult, 0);
+    size_t beforeSize = WatchdogInner::GetInstance().taskNameSet_.size();
+    printf("Before remove watchdog beforeSize = %zu\n", beforeSize);
+    WatchdogInner::GetInstance().RemoveInnerTask("RunPeriodicalTask_001");
+    size_t afterSize = WatchdogInner::GetInstance().taskNameSet_.size();
+    printf("After remove watchdog afterSize = %zu\n", afterSize);
+    ASSERT_EQ(beforeSize, (afterSize + 1));
 }
 
 /**
