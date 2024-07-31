@@ -972,8 +972,6 @@ void WatchdogInner::InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc,
         }
         if (mainRunner_ != nullptr) {
             mainRunner_->SetMainLooperWatcher(nullptr, nullptr);
-            ChangeState(stackContent_.stackState, DumpStackState::DEFAULT);
-            ChangeState(traceContent_.traceState, DumpStackState::DEFAULT);
         }
         *beginFunc = InitBeginFunc;
         *endFunc = InitEndFunc;
@@ -983,8 +981,6 @@ void WatchdogInner::InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc,
             XCOLLIE_LOGI("Remove already init tid=%{public}." PRId64, tid);
             mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
             buissnessThreadInfo_.erase(tid);
-            ChangeState(stackContent_.stackState, DumpStackState::DEFAULT);
-            ChangeState(traceContent_.traceState, DumpStackState::DEFAULT);
         }
     }
 }
