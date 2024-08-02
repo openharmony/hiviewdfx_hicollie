@@ -286,13 +286,15 @@ void WatchdogInner::ChangeState(int& state, int targetState)
     state = targetState;
 }
 
-void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime)
+void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime,
+    int64_t checkTimer)
 {
     auto diff = currenTime - lastEndTime;
     int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>
         (diff).count();
-    if (intervalTime >= ONE_DAY_LIMIT) {
-        XCOLLIE_LOGI("MainThread StartProfileMainThread Over Oneday");
+    if (intervalTime >= checkTimer) {
+        XCOLLIE_LOGD("MainThread StartProfileMainThread Over checkTimer: "
+            "%{public}" PRId64 " ms", checkTimer);
         state = DumpStackState::DEFAULT;
     }
 }
@@ -367,16 +369,20 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
+        int64_t checkTimer = ONE_DAY_LIMIT;
+        if (IsEnableVersion(KEY_DEVELOPER_MODE_STATE, ENABLE_VAULE)) {
+            checkTimer = ONE_HOUR_LIMIT;
+        }
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
-            endTime, WatchdogInner::GetInstance().lastStackTime_);
+            endTime, WatchdogInner::GetInstance().lastStackTime_, checkTimer);
     }
     if (WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::COMPLETE) {
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().traceContent_.traceState,
-            endTime, WatchdogInner::GetInstance().lastTraceTime_);
+            endTime, WatchdogInner::GetInstance().lastTraceTime_, ONE_DAY_LIMIT);
     }
     if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
-        if (IsAncoEnable()) {
+        if (IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
             return;
         }
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -387,12 +393,10 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
             "Duration Time: %{public}" PRId64 " ms", ret, durationTime);
     }
-    if (!IsCommercialVersion()) {
-        return;
-    }
     if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
-        if (IsAncoEnable()) {
+        if (!IsEnableVersion(KEY_HIVIEW_USER_TYPE, ENABLE_HIVIEW_USER_VAULE) ||
+            IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
             return;
         }
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);

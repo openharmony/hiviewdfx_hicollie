@@ -46,6 +46,7 @@ constexpr int64_t SEC_TO_MANOSEC = 1000000000;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr uint64_t MIN_APP_UID = 20000;
 constexpr int64_t ONE_DAY_LIMIT = 86400000;
+constexpr int64_t ONE_HOUR_LIMIT = 3600000;
 constexpr int64_t MILLISEC_TO_NANOSEC = 1000000;
 constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
 const int BUFF_STACK_SIZE = 20 * 1024;
@@ -66,6 +67,9 @@ const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
 const std::string WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 const std::string KEY_HIVIEW_USER_TYPE = "const.logsystem.versiontype";
 const std::string KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
+const std::string KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
+const std::string ENABLE_VAULE = "true";
+const std::string ENABLE_HIVIEW_USER_VAULE = "commercial";
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
@@ -112,9 +116,7 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
 
 int64_t GetTimeStamp();
 
-bool IsCommercialVersion();
-
-bool IsAncoEnable();
+bool IsEnableVersion(const std::string& key, const std::string& type);
 
 void* FunctionOpen(void* funcHandler, const char* funcName);
 } // end of HiviewDFX

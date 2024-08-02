@@ -356,16 +356,10 @@ int64_t GetTimeStamp()
     return ms.count();
 }
 
-bool IsCommercialVersion()
+bool IsEnableVersion(const std::string& key, const std::string& type)
 {
-    std::string userType = system::GetParameter(KEY_HIVIEW_USER_TYPE, "");
-    return userType == "commercial";
-}
-
-bool IsAncoEnable()
-{
-    auto enableType = system::GetParameter(KEY_ANCO_ENABLE_TYPE, "");
-    return (enableType.find("true") != std::string::npos);
+    auto enableType = system::GetParameter(key, "");
+    return (enableType.find(type) != std::string::npos);
 }
 
 void* FunctionOpen(void* funcHandler, const char* funcName)

@@ -87,7 +87,7 @@ public:
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
     void ChangeState(int& state, int targetState);
-    void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime);
+    void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime, int64_t checkTimer);
     void RemoveInnerTask(const std::string& name);
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     std::string currentScene_;
