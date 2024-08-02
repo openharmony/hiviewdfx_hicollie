@@ -37,6 +37,10 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+static const int CRASH_SIGNAL_LIST[] = {
+    SIGILL, SIGABRT, SIGBUS, SIGFPE,
+    SIGSEGV, SIGSTKFLT, SIGSYS, SIGTRAP
+};
 
 void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context)
 {
@@ -233,6 +237,9 @@ bool ThreadSampler::InstallSignalHandler()
 {
     struct sigaction action {};
     sigfillset(&action.sa_mask);
+    for (size_t i = 0; i < sizeof(CRASH_SIGNAL_LIST) / sizeof(CRASH_SIGNAL_LIST[0]); i++) {
+        sigdelset(&action.sa_mask, CRASH_SIGNAL_LIST[i]);
+    }
     action.sa_sigaction = ThreadSampler::ThreadSamplerSignalHandler;
     action.sa_flags = SA_RESTART | SA_SIGINFO;
     if (sigaction(MUSL_SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
