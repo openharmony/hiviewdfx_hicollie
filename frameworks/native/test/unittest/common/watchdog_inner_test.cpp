@@ -310,7 +310,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     std::string result = GetFormatDate();
     printf("GetFormatDate:%s\n", result.c_str());
     EXPECT_TRUE(!result.empty());
-    bool ret = IsCommercialVersion();
+    bool ret = IsEnableVersion("test", "test");
     printf("ret:%s\n", ret ? "true" : "false");
     int64_t ret1 = GetTimeStamp();
     EXPECT_TRUE(ret1 > 0);
