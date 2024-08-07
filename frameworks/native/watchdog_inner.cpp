@@ -148,7 +148,7 @@ bool WatchdogInner::ReportMainThreadEvent()
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
-    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName,
+    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "MAIN_THREAD_JANK",
         HiSysEvent::EventType::FAULT,
         "BUNDLE_VERSION", bundleVersion_,
         "BUNDLE_NAME", bundleName_,
