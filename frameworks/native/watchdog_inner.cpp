@@ -317,6 +317,7 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
             if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
                 CreateWatchdogDir();
                 appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
+                appCaller.isBusinessJank = (buissnessThreadInfo_.size() != 0) ? true : false;
                 auto result = traceCollector_->CaptureDurationTrace(appCaller);
                 XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
             }

@@ -147,6 +147,7 @@ private:
         .happenTime = 0,
         .beginTime = 0,
         .endTime = 0,
+        .isBusinessJank = false,
     };
 };
 } // end of namespace HiviewDFX
