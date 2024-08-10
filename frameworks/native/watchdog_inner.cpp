@@ -921,14 +921,14 @@ void WatchdogInner::KillPeerBinderProcess(const std::string &description)
 void WatchdogInner::RemoveInnerTask(const std::string& name)
 {
     if (name.empty()) {
-        XCOLLIE_LOGI("Remove XCollieTask fail, cname is null");
+        XCOLLIE_LOGI("RemoveInnerTask fail, cname is null");
         return;
     }
     std::priority_queue<WatchdogTask> tmpQueue;
     std::unique_lock<std::mutex> lock(lock_);
     size_t size = checkerQueue_.size();
     if (size == 0) {
-        XCOLLIE_LOGE("Remove XCollieTask %{public}s fail, empty queue!", name.c_str());
+        XCOLLIE_LOGE("RemoveInnerTask %{public}s fail, empty queue!", name.c_str());
         return;
     }
     while (!checkerQueue_.empty()) {
@@ -939,14 +939,14 @@ void WatchdogInner::RemoveInnerTask(const std::string& name)
             size_t nameSize = taskNameSet_.size();
             if (nameSize != 0 && !task.isOneshotTask) {
                 taskNameSet_.erase(name);
-                XCOLLIE_LOGD("Remove watchdog task name %{public}s, remove result=%{public}d",
+                XCOLLIE_LOGD("RemoveInnerTask name %{public}s, remove result=%{public}d",
                     name.c_str(), nameSize > taskNameSet_.size());
             }
         }
         checkerQueue_.pop();
     }
     if (tmpQueue.size() == size) {
-        XCOLLIE_LOGE("Remove XCollieTask fail, can not find name %{public}s, size=%{public}zu!",
+        XCOLLIE_LOGE("RemoveInnerTask fail, can not find name %{public}s, size=%{public}zu!",
             name.c_str(), size);
         return;
     }

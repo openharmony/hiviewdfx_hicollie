@@ -112,6 +112,13 @@ public:
     void RemovePeriodicalTask(const std::string& name);
 
     /**
+     * @brief Remove the thread by name.
+     *
+     * @param name: task name
+     */
+    void RemoveThread(const std::string& name);
+
+    /**
      * @brief Init MainLooperWatcher in bussiness watchdog thread.
      */
     void InitMainLooperWatcher(WatchdogBeginFunc* beginFunc, WatchdogEndFunc* endFunc);
