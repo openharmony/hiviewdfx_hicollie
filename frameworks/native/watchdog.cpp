@@ -73,6 +73,11 @@ void Watchdog::RemovePeriodicalTask(const std::string& name)
     WatchdogInner::GetInstance().RemoveInnerTask(name);
 }
 
+void Watchdog::RemoveThread(const std::string& name)
+{
+    WatchdogInner::GetInstance().RemoveInnerTask(name);
+}
+
 void Watchdog::InitMainLooperWatcher(WatchdogBeginFunc* beginFunc, WatchdogEndFunc* endFunc)
 {
     WatchdogInner::GetInstance().InitMainLooperWatcher(beginFunc, endFunc);
