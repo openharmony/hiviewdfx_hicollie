@@ -215,6 +215,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
 {
+    XCOLLIE_LOGD("SendXCollieEvent start");
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
         XCOLLIE_LOGI("heap dump or debug for %{public}d, don't report.", pid);
@@ -226,26 +227,24 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
         "timeout timer: " + timerName + "\n" +keyMsg;
 
+    std::string kernelStack = "";
     struct HstackVal val;
-    if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {
-        XCOLLIE_LOGE("memset val failed\n");
-        return;
-    }
     val.tid = watchdogTid;
     val.magic = MAGIC_NUM;
-    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
-    if (fd < 0) {
-        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
-        return;
+    int ret;
+    DumpKernelStack(val, ret);
+    if (ret == 0) {
+        kernelStack += val.hstackLogBuff;
+        if (uid == SAMGR_INIT_UID) {
+            XCOLLIE_LOGD("DumpKernelStack dump init stack start");
+            val.tid = 1;
+            DumpKernelStack(val, ret);
+            XCOLLIE_LOGD("DumpKernelStack dump init stack end");
+            if (ret == 0) {
+                kernelStack += val.hstackLogBuff;
+            }
+        }
     }
-    int ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    close(fd);
-    if (ret != 0) {
-        XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
-    } else {
-        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
-    }
-
     std::string eventName = "SERVICE_TIMEOUT";
     std::string stack = "";
     if (uid > uidTypeThreshold) {
@@ -259,9 +258,27 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg, "STACK", stack + "\n"+ (ret != 0 ? "" : val.hstackLogBuff));
+        "MSG", sendMsg, "STACK", stack + "\n"+ kernelStack);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
+}
+
+void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
+{
+    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
+        ret = -1;
+        return;
+    }
+    ret = ioctl(fd, LOGGER_GET_STACK, &val);
+    close(fd);
+
+    if (ret != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel getStack failed, errno is %{public}d", errno);
+    } else {
+        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
+    }
 }
 
 int WatchdogTask::EvaluateCheckerState()
