@@ -27,6 +27,7 @@
 
 #include "backtrace_local.h"
 #include "hisysevent.h"
+#include "musl_preinit_common.h"
 #include "watchdog_inner.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
@@ -136,6 +137,9 @@ void WatchdogTask::Run(uint64_t now)
     }
 
     if (timeout != 0) {
+        if (IsMemHookOn()) {
+            return;
+        }
         DoCallback();
     } else if (task != nullptr) {
         task();
@@ -275,6 +279,9 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
+            if (IsMemHookOn()) {
+                return waitState;
+            }
             if (name.compare(IPC_FULL) != 0) {
                 SendEvent(description, "SERVICE_WARNING");
             }
@@ -286,6 +293,9 @@ int WatchdogTask::EvaluateCheckerState()
         if (timeOutCallback != nullptr) {
             timeOutCallback(name, waitState);
         } else {
+            if (IsMemHookOn()) {
+                return waitState;
+            }
             if (name.compare(IPC_FULL) == 0) {
                 SendEvent(description, IPC_FULL);
             } else {
@@ -306,6 +316,15 @@ std::string WatchdogTask::GetBlockDescription(uint64_t interval)
     desc += name;
     desc += ") blocked " + std::to_string(interval) + "s";
     return desc;
+}
+
+bool WatchdogTask::IsMemHookOn()
+{
+    bool hookFlag = __get_global_hook_flag();
+    if (hookFlag) {
+        XCOLLIE_LOGI("memory hook is on, timeout task will skip");
+    }
+    return hookFlag;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

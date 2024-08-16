@@ -91,6 +91,9 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
+
+private:
+    bool IsMemHookOn();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

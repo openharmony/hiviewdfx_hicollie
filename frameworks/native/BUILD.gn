@@ -48,6 +48,10 @@ ohos_source_set("libhicollie_source") {
   ]
 
   defines = []
+  if (!is_asan) {
+    defines += [ "HOOK_ENABLE" ]
+  }
+
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
