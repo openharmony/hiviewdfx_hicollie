@@ -70,6 +70,7 @@ public:
     void SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const;
     void DoCallback();
     void TimerCountTask();
+    void DumpKernelStack(struct HstackVal& val, int& ret) const;
 
     int EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
