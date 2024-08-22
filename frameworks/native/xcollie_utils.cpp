@@ -364,16 +364,12 @@ bool IsEnableVersion(const std::string& key, const std::string& type)
 
 void* FunctionOpen(void* funcHandler, const char* funcName)
 {
-    if (funcHandler == nullptr) {
-        XCOLLIE_LOGE("funcHandler is nullptr.\n");
-        return nullptr;
-    }
     dlerror();
     char* err = nullptr;
     void* func = dlsym(funcHandler, funcName);
-    if ((err = dlerror()) != nullptr) {
+    err = dlerror();
+    if (err != nullptr) {
         XCOLLIE_LOGE("dlopen %{public}s failed. %{public}s\n", funcName, err);
-        dlclose(funcHandler);
         return nullptr;
     }
     return func;

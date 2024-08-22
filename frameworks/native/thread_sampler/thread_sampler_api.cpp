@@ -40,9 +40,9 @@ int ThreadSamplerCollect(char* stack, size_t size, int treeFormat)
     return success;
 }
 
-void ThreadSamplerDeinit()
+int ThreadSamplerDeinit()
 {
-    ThreadSampler::GetInstance().Deinit();
+    return ThreadSampler::GetInstance().Deinit() ? SUCCESS : FAIL;
 }
 }
 }

@@ -20,6 +20,7 @@
 #include <condition_variable>
 #include <memory>
 #include <string>
+#include <mutex>
 
 #include <sys/mman.h>
 
@@ -74,7 +75,7 @@ public:
     int32_t Sample();   // Interface of sample, to send sample request.
     // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
     bool CollectStack(std::string& stack, bool treeFormat = true);
-    void Deinit();  // Release sampler
+    bool Deinit();  // Release sampler
 
 private:
     bool InitRecordBuffer();

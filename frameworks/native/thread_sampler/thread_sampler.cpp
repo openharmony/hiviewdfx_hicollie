@@ -35,17 +35,29 @@
 #include "thread_sampler_utils.h"
 #include "file_ex.h"
 
+#define NO_SANITIZER __attribute__((no_sanitize("address"), no_sanitize("hwaddress"), no_sanitize("thread")))
+
 namespace OHOS {
 namespace HiviewDFX {
 static const int CRASH_SIGNAL_LIST[] = {
     SIGILL, SIGABRT, SIGBUS, SIGFPE,
     SIGSEGV, SIGSTKFLT, SIGSYS, SIGTRAP
 };
+static pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
+constexpr int LOCK_TIMEOUT = 10;
 
 void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context)
 {
 #if defined(__aarch64__)
+    int preErrno = errno;
+    int err = pthread_mutex_trylock(&mutex_);
+    if (err != 0) {
+        errno = preErrno;
+        return;
+    }
     ThreadSampler::GetInstance().WriteContext(context);
+    pthread_mutex_unlock(&mutex_);
+    errno = preErrno;
 #endif
 }
 
@@ -277,6 +289,9 @@ int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
 
 ThreadUnwindContext* ThreadSampler::GetReadContext()
 {
+    if (mmapStart_ == MAP_FAILED) {
+        return nullptr;
+    }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = readIndex_;
     if (contextArray[index].requestTime == 0 || contextArray[index].snapshotTime == 0) {
@@ -290,6 +305,9 @@ ThreadUnwindContext* ThreadSampler::GetReadContext()
 
 ThreadUnwindContext* ThreadSampler::GetWriteContext()
 {
+    if (mmapStart_ == MAP_FAILED) {
+        return nullptr;
+    }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = writeIndex_;
     if (contextArray[index].requestTime > 0 &&
@@ -299,7 +317,7 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
     return &contextArray[index];
 }
 
-__attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSampler::WriteContext(void* context)
+NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 {
 #if defined(__aarch64__)
     if (!init_) {
@@ -308,6 +326,9 @@ __attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSam
 #if defined(CONSUME_STATISTICS)
     uint64_t begin = GetCurrentTimeNanoseconds();
 #endif
+    if (mmapStart_ == MAP_FAILED) {
+        return;
+    }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = writeIndex_;
 #if defined(CONSUME_STATISTICS)
@@ -336,10 +357,10 @@ __attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSam
             reinterpret_cast<const char*>(contextArray[index].sp)[pos];
     }
 
+    writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
     uint64_t end = GetCurrentTimeNanoseconds();
     contextArray[index].processTime = 0;
     contextArray[index].snapshotTime = end;
-    writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
 
 #if defined(CONSUME_STATISTICS)
     copyStackCount_++;
@@ -385,19 +406,19 @@ void ThreadSampler::ProcessStackBuffer()
             break;
         }
 
-        struct TimeAndFrames taf;
-        taf.requestTime = context->requestTime;
-        taf.snapshotTime = context->snapshotTime;
-
-#if defined(CONSUME_STATISTICS)
-        uint64_t unwindStart = GetCurrentTimeNanoseconds();
-#endif
         UnwindInfo unwindInfo = {
             .context = context,
             .maps = maps_.get(),
         };
 
-        DoUnwind(context, unwinder_, unwindInfo);
+        struct TimeAndFrames taf;
+        taf.requestTime = unwindInfo.context->requestTime;
+        taf.snapshotTime = unwindInfo.context->snapshotTime;
+
+#if defined(CONSUME_STATISTICS)
+        uint64_t unwindStart = GetCurrentTimeNanoseconds();
+#endif
+        DoUnwind(unwinder_, unwindInfo);
 #if defined(CONSUME_STATISTICS)
         uint64_t unwindEnd = GetCurrentTimeNanoseconds();
 #endif
@@ -506,15 +527,26 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     return true;
 }
 
-void ThreadSampler::Deinit()
+bool ThreadSampler::Deinit()
 {
+    if (!init_) {
+        return true;
+    }
+    UninstallSignalHandler();
+    struct timespec timeout;
+    timeout.tv_sec = time(nullptr) + LOCK_TIMEOUT;
+    timeout.tv_nsec = 0;
+    int err = pthread_mutex_timedlock(&mutex_, &timeout);
+    if (err == ETIMEDOUT) {
+        XCOLLIE_LOGE("Failed to get lock when deinit thread_sampler.\n");
+        return false;
+    }
     DeinitUniqueStackTable();
     DestroyUnwinder();
     ReleaseRecordBuffer();
-    UninstallSignalHandler();
-    uniqueStackTableSize_ = DEFAULT_UNIQUE_STACK_TABLE_SIZE;
-    uniTableMMapName_ = "hicollie_buf";
     init_ = false;
+    pthread_mutex_unlock(&mutex_);
+    return !init_;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
