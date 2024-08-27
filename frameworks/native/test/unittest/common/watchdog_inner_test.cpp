@@ -116,6 +116,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
         count++;
     }
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, DumpStackState::COMPLETE);
 }
 
 /**
@@ -420,11 +421,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
     int state = 1; // test value
     TimePoint currenTime = std::chrono::steady_clock::now();
     TimePoint lastEndTime = std::chrono::steady_clock::now();
-    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 0);
-    EXPECT_EQ(state, 0);
-    state = 1; // test value
     WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 2);
-    EXPECT_EQ(state, 1);
+    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 0);
+    EXPECT_EQ(state, DumpStackState::DEFAULT);
     WatchdogInner::GetInstance().StartTraceProfile(150); // test value
     FunctionOpen(nullptr, "test");
 }
