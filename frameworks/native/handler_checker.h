@@ -30,7 +30,7 @@ enum CheckStatus {
     WAITED_HALF = 2,
 };
 
-class HandlerChecker {
+class HandlerChecker : public std::enable_shared_from_this<HandlerChecker> {
 public:
     HandlerChecker(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler)
         : name_(name), handler_(handler) {};

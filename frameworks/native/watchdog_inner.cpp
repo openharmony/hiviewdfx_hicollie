@@ -481,7 +481,7 @@ void WatchdogInner::RemoveXCollieTask(int64_t id)
     }
     while (!checkerQueue_.empty()) {
         const WatchdogTask& task = checkerQueue_.top();
-        if (task.id != id) {
+        if (task.id != id || task.timeout == 0) {
             tmpQueue.push(task);
         }
         checkerQueue_.pop();
