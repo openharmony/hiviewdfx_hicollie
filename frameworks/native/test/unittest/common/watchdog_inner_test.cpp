@@ -443,7 +443,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSiz
     beginTest("Test");
     sleep(3); // test value
     endTest("Test");
-    WatchdogInner::GetInstance().CreateWatchdogThreadIfNeed();
+    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, DumpStackState::DEFAULT);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
