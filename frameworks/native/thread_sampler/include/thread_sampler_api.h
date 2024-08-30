@@ -42,7 +42,7 @@ int32_t ThreadSamplerSample();
 int ThreadSamplerCollect(char* stack, size_t size, int treeFormat = 1);
 
 /* To deinitial thread sampler and unload the resources. */
-void ThreadSamplerDeinit();
+int ThreadSamplerDeinit();
 
 #ifdef __cplusplus
 }

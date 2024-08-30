@@ -67,7 +67,7 @@ constexpr size_t STACK_LENGTH = 32 * 1024;
 typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
-typedef void (*ThreadSamplerDeinitFunc)();
+typedef int (*ThreadSamplerDeinitFunc)();
 
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
@@ -143,7 +143,7 @@ bool WatchdogInner::ReportMainThreadEvent()
 {
     std::string stack = "";
     CollectStack(stack);
-    Deinit();
+
     std::string path = "";
     std::string eventName = "MAIN_THREAD_JANK";
     if (buissnessThreadInfo_.size() != 0) {
@@ -220,12 +220,17 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     }
 
     funcHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
+    if (funcHandler_ == nullptr) {
+        XCOLLIE_LOGE("dlopen failed, funcHandler is nullptr.\n");
+        return -1;
+    }
 
     auto threadSamplerInitFunc =
         reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler_, "ThreadSamplerInit"));
     auto threadSamplerSampleFunc =
         reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler_, "ThreadSamplerSample"));
     if (threadSamplerInitFunc == nullptr || threadSamplerSampleFunc == nullptr) {
+        dlclose(funcHandler_);
         funcHandler_ = nullptr;
         return -1;
     }
@@ -257,6 +262,7 @@ bool WatchdogInner::CollectStack(std::string& stack)
     auto threadSamplerCollectFunc =
         reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler_, "ThreadSamplerCollect"));
     if (threadSamplerCollectFunc == nullptr) {
+        dlclose(funcHandler_);
         funcHandler_ = nullptr;
         return false;
     }
@@ -268,20 +274,22 @@ bool WatchdogInner::CollectStack(std::string& stack)
     return collectRet == 0;
 }
 
-void WatchdogInner::Deinit()
+bool WatchdogInner::Deinit()
 {
     if (funcHandler_ == nullptr) {
         XCOLLIE_LOGE("open library failed.");
-        return;
+        return false;
     }
 
     auto threadSamplerDeinitFunc =
         reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler_, "ThreadSamplerDeinit"));
     if (threadSamplerDeinitFunc == nullptr) {
+        dlclose(funcHandler_);
         funcHandler_ = nullptr;
-        return;
+        return false;
     }
-    threadSamplerDeinitFunc();
+    int ret = threadSamplerDeinitFunc();
+    return ret == 0;
 }
 
 void WatchdogInner::ChangeState(int& state, int targetState)
@@ -674,8 +682,10 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
         checkerQueue_.pop();
         taskNameSet_.erase("ThreadSampler");
         isMainThreadProfileTaskEnabled_ = false;
-        dlclose(funcHandler_);
-        funcHandler_ = nullptr;
+        if (Deinit()) {
+            dlclose(funcHandler_);
+            funcHandler_ = nullptr;
+        }
         XCOLLIE_LOGI("STACK_CHECKER Task pop");
     } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
         checkerQueue_.pop();

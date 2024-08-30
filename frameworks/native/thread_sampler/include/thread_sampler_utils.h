@@ -40,7 +40,7 @@ namespace HiviewDFX {
 uint64_t GetCurrentTimeNanoseconds();
 std::string TimeFormat(uint64_t time);
 void PutStackId(std::vector<StackIdAndCount>& stackIdCount, uint64_t stackId);
-void DoUnwind(ThreadUnwindContext* context, const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo);
+void DoUnwind(const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo);
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif
