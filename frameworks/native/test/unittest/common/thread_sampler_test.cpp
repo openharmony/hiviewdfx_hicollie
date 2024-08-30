@@ -311,6 +311,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
 
     WaitSomeTime();
     printf("stack:\n%s", stack);
+    ASSERT_NE(stack, "");
     sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
     sigdelset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
     delete[] stack;

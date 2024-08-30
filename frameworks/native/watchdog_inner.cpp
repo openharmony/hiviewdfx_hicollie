@@ -58,7 +58,7 @@ const std::string KICK_TIME_HMOS = "kick,foundation";
 const int32_t NOT_OPEN = -1;
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
-static int32_t g_fd = -1;
+static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
 
 constexpr uint64_t MAX_START_TIME = 10 * 1000;
@@ -146,7 +146,7 @@ bool WatchdogInner::ReportMainThreadEvent()
 
     std::string path = "";
     std::string eventName = "MAIN_THREAD_JANK";
-    if (buissnessThreadInfo_.size() != 0) {
+    if (!buissnessThreadInfo_.empty()) {
         eventName = "BUSSINESS_THREAD_JANK";
     }
     if (!WriteStackToFd(getprocpid(), path, stack, eventName)) {
@@ -329,9 +329,9 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
         if (traceContent_.traceCount >= COLLECT_TRACE_MAX) {
             if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
                 CreateWatchdogDir();
-                appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-                appCaller.isBusinessJank = (buissnessThreadInfo_.size() != 0) ? true : false;
-                auto result = traceCollector_->CaptureDurationTrace(appCaller);
+                appCaller_.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
+                appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
+                auto result = traceCollector_->CaptureDurationTrace(appCaller_);
                 XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
             }
             isMainThreadTraceEnabled_ = true;
@@ -347,17 +347,17 @@ void WatchdogInner::CollectTrace()
     traceCollector_ = UCollectClient::TraceCollector::Create();
     int32_t pid = getprocpid();
     int32_t uid = static_cast<int64_t>(getuid());
-    appCaller.actionId = UCollectClient::ACTION_ID_START_TRACE;
-    appCaller.bundleName = bundleName_;
-    appCaller.bundleVersion = bundleVersion_;
-    appCaller.uid = uid;
-    appCaller.pid = pid;
-    appCaller.threadName = GetSelfProcName();
-    appCaller.foreground = isForeground_;
-    appCaller.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
-    appCaller.beginTime = timeContent_.reportBegin / MILLISEC_TO_NANOSEC;
-    appCaller.endTime = timeContent_.reportEnd / MILLISEC_TO_NANOSEC;
-    auto result = traceCollector_->CaptureDurationTrace(appCaller);
+    appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
+    appCaller_.bundleName = bundleName_;
+    appCaller_.bundleVersion = bundleVersion_;
+    appCaller_.uid = uid;
+    appCaller_.pid = pid;
+    appCaller_.threadName = GetSelfProcName();
+    appCaller_.foreground = isForeground_;
+    appCaller_.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
+    appCaller_.beginTime = timeContent_.reportBegin / MILLISEC_TO_NANOSEC;
+    appCaller_.endTime = timeContent_.reportEnd / MILLISEC_TO_NANOSEC;
+    auto result = traceCollector_->CaptureDurationTrace(appCaller_);
     XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d", result.retCode);
     if (result.retCode != 0) {
         return;
@@ -539,7 +539,7 @@ void WatchdogInner::TriggerTimerCountTask(const std::string &name, bool bTrigger
 {
     std::unique_lock<std::mutex> lock(lock_);
 
-    if (!checkerQueue_.size()) {
+    if (checkerQueue_.empty()) {
         XCOLLIE_LOGE("TriggerTimerCountTask name : %{public}s fail, empty queue!", name.c_str());
         return;
     }
@@ -570,11 +570,7 @@ void WatchdogInner::TriggerTimerCountTask(const std::string &name, bool bTrigger
 
 bool WatchdogInner::IsTaskExistLocked(const std::string& name)
 {
-    if (taskNameSet_.find(name) != taskNameSet_.end()) {
-        return true;
-    }
-
-    return false;
+    return (taskNameSet_.find(name) != taskNameSet_.end());
 }
 
 bool WatchdogInner::IsExceedMaxTaskLocked()
@@ -782,7 +778,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
     if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
         XCOLLIE_LOGE("watchdogWrite msg failed");
         close(g_fd);
-        g_fd = -1;
+        g_fd = NOT_OPEN;
         return false;
     }
     XCOLLIE_LOGE("Send %{public}s to hungtask Successful\n", msg.c_str());
@@ -821,8 +817,6 @@ void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
     }
     if (write(fd, str, strlen(str)) < 0) {
         XCOLLIE_LOGI("failed to write 0 for %{public}s", file);
-        close(fd);
-        return;
     }
     close(fd);
     return;
@@ -918,6 +912,10 @@ bool WatchdogInner::Stop()
     if (threadLoop_ != nullptr && threadLoop_->joinable()) {
         threadLoop_->join();
         threadLoop_ = nullptr;
+    }
+    if (g_fd != NOT_OPEN) {
+        close(g_fd);
+        g_fd = NOT_OPEN;
     }
     return true;
 }

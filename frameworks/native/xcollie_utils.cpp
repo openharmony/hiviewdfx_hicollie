@@ -125,9 +125,8 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
 
 std::string GetLimitedSizeName(std::string name)
 {
-    const size_t nameStartPos = 0;
     if (name.size() > MAX_NAME_SIZE) {
-        return name.substr(nameStartPos, MAX_NAME_SIZE);
+        return name.substr(0, MAX_NAME_SIZE);
     }
     return name;
 }
