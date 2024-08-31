@@ -42,9 +42,9 @@ struct ThreadUnwindContext {
     uintptr_t sp {0};
     uintptr_t fp {0};
     uintptr_t lr {0};
-    uint64_t requestTime {0}; // begin sample
-    uint64_t snapshotTime {0}; // end of stack copy in signal handler
-    uint64_t processTime {0}; // end of unwind and unique stack
+    std::atomic<uint64_t> requestTime {0}; // begin sample
+    std::atomic<uint64_t> snapshotTime {0}; // end of stack copy in signal handler
+    std::atomic<uint64_t> processTime {0}; // end of unwind and unique stack
     uint8_t buffer[STACK_BUFFER_SIZE] {0}; // 16K stack buffer
 };
 
