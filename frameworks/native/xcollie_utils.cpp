@@ -134,20 +134,10 @@ std::string GetLimitedSizeName(std::string name)
 bool IsProcessDebug(int32_t pid)
 {
     const int buffSize = 128;
-    char param[buffSize] = {0};
-    std::string filter = "hiviewdfx.freeze.filter." + GetProcessNameFromProcCmdline(pid);
-    GetParameter(filter.c_str(), "", param, buffSize - 1);
-    int32_t debugPid = atoi(param);
-    std::string procCmdlineContent = GetProcessNameFromProcCmdline(pid);
-    if (debugPid == pid) {
-        XCOLLIE_LOGI("appfreeze filtration %{public}s_%{public}d don't exit.",
-            procCmdlineContent.c_str(), debugPid);
-        return true;
-    }
-
     char paramBundle[buffSize] = {0};
     GetParameter("hiviewdfx.appfreeze.filter_bundle_name", "", paramBundle, buffSize - 1);
     std::string debugBundle(paramBundle);
+    std::string procCmdlineContent = GetProcessNameFromProcCmdline(pid);
     if (procCmdlineContent.compare(debugBundle) == 0) {
         XCOLLIE_LOGI("appfreeze filtration %{public}s_%{public}s don't exit.",
             debugBundle.c_str(), procCmdlineContent.c_str());
