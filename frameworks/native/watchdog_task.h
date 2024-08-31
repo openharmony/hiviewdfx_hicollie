@@ -66,7 +66,7 @@ public:
 
     void Run(uint64_t now);
     void RunHandlerCheckerTask();
-    void SendEvent(const std::string &msg, const std::string &eventName) const;
+    void SendEvent(const std::string &msg, const std::string &eventName);
     void SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const;
     void DoCallback();
     void TimerCountTask();
