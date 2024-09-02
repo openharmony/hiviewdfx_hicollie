@@ -35,7 +35,7 @@
 #include "thread_sampler_utils.h"
 #include "file_ex.h"
 
-#define NO_SANITIZER __attribute__((no_sanitize("address"), no_sanitize("hwaddress"), no_sanitize("thread")))
+#define NO_SANITIZER __attribute__((no_sanitize("address"), no_sanitize("hwaddress")))
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -359,8 +359,8 @@ NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 
     writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
     uint64_t end = GetCurrentTimeNanoseconds();
-    contextArray[index].processTime = 0;
-    contextArray[index].snapshotTime = end;
+    contextArray[index].processTime.store(0, std::memory_order_relaxed);
+    contextArray[index].snapshotTime.store(end, std::memory_order_release);
 
 #if defined(CONSUME_STATISTICS)
     copyStackCount_++;
@@ -441,9 +441,9 @@ void ThreadSampler::ProcessStackBuffer()
         unwindCount_++;
         unwindTimeCost_ += unwindEnd - unwindStart;
 #endif  //#if defined(CONSUME_STATISTICS)
-        context->requestTime = 0;
-        context->snapshotTime = 0;
-        context->processTime = ts;
+        context->requestTime.store(0, std::memory_order_release);
+        context->snapshotTime.store(0, std::memory_order_release);
+        context->processTime.store(ts, std::memory_order_release);
     }
 #endif  // #if defined(__aarch64__)
 }
