@@ -18,6 +18,10 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+namespace {
+constexpr int SUCCESS = 0;
+constexpr int FAIL = -1;
+}
 int ThreadSamplerInit(int collectStackCount)
 {
     return ThreadSampler::GetInstance().Init(collectStackCount) ? SUCCESS : FAIL;

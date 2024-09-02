@@ -105,7 +105,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
 {
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
-    WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT;
+    WatchdogInner::GetInstance().stackContent_.stackState == 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     int count = 0;
     sleep(10); // test value
@@ -116,7 +116,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
         count++;
     }
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
-    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, DumpStackState::COMPLETE);
+    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, 1);
 }
 
 /**
@@ -423,7 +423,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
     TimePoint lastEndTime = std::chrono::steady_clock::now();
     WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 2);
     WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 0);
-    EXPECT_EQ(state, DumpStackState::DEFAULT);
+    EXPECT_EQ(state, 0);
     WatchdogInner::GetInstance().StartTraceProfile(150); // test value
     FunctionOpen(nullptr, "test");
 }
@@ -436,14 +436,14 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSize.Level1)
 {
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
-    WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT;
+    WatchdogInner::GetInstance().traceContent_.traceState == 0;
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     beginTest("Test");
     sleep(3); // test value
     endTest("Test");
-    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, DumpStackState::DEFAULT);
+    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, 0);
 }
 } // namespace HiviewDFX
 } // namespace OHOS

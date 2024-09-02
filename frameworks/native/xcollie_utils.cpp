@@ -35,13 +35,24 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+namespace {
+constexpr int64_t SEC_TO_MANOSEC = 1000000000;
+constexpr int64_t SEC_TO_MICROSEC = 1000000;
+constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
+const int MAX_NAME_SIZE = 128;
+const int MIN_WAIT_NUM = 3;
+const int TIME_INDEX_MAX = 32;
+const int INIT_PID = 1;
+constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
+constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
+}
 uint64_t GetCurrentTickMillseconds()
 {
     struct timespec t;
     t.tv_sec = 0;
     t.tv_nsec = 0;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return (int64_t)((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
+    return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
 bool IsFileNameFormat(char c)
@@ -255,7 +266,7 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
 bool KillProcessByPid(int32_t pid)
 {
     std::ifstream fin;
-    std::string path = LOGGER_BINDER_PROC_PATH;
+    std::string path = std::string(LOGGER_TEANSPROC_PATH);
     char resolvePath[PATH_MAX] = {0};
     if (realpath(path.c_str(), resolvePath) == nullptr) {
         XCOLLIE_LOGI("GetBinderPeerPids realpath error");
