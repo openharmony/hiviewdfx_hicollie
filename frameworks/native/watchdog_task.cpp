@@ -18,6 +18,7 @@
 #include <cinttypes>
 #include <ctime>
 #include <cstdio>
+#include <regex>
 #include <securec.h>
 #include <thread>
 
@@ -52,7 +53,6 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     nextTickTime = GetCurrentTickMillseconds();
     isTaskScheduled = false;
     isOneshotTask = false;
-    watchdogTid = getproctid();
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
@@ -192,7 +192,7 @@ void WatchdogTask::RunHandlerCheckerTask()
     }
 }
 
-void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
+void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName)
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -205,9 +205,12 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
     sendMsg += checker->GetDumpInfo();
+    std::regex pattern(".*Thread ID = (\\d+)");
+    std::smatch matches;
+    watchdogTid = std::regex_search(sendMsg, matches, pattern) ? std::stoi(matches[1]) : pid;
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
-        "TID", watchdogTid < pid ? pid : watchdogTid,
+        "TID", watchdogTid,
         "TGID", gid,
         "UID", uid,
         "MODULE_NAME", name,

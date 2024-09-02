@@ -19,6 +19,7 @@
 #include <climits>
 #include <mutex>
 
+#include <regex>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -874,10 +875,19 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     buffer[FFRT_BUFFER_SIZE] = 0;
     ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
     sendMsg += buffer;
-    sendMsg += "\n" + GetProcessStacktrace();
     delete[] buffer;
+    int32_t tid = pid;
+    std::regex patternQueueName(".*queue name \\[(\\w+)\\]");
+    std::smatch matches;
+    if (std::regex_search(sendMsg, matches, patternQueueName)) {
+        std::regex patternTid(".*worker tid (\\d+) is running, task id (\\d+) name " + matches[1].str());
+        if (std::regex_search(sendMsg, matches, patternTid)) {
+            tid = std::stoi(matches[1]);
+        }
+    }
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
+        "TID", tid,
         "TGID", gid,
         "UID", uid,
         "MODULE_NAME", taskInfo,
