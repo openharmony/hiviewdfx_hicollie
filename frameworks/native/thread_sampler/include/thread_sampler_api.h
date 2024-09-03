@@ -20,9 +20,6 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr int SUCCESS = 0;
-constexpr int FAIL = -1;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

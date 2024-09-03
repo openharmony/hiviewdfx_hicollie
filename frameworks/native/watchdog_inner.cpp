@@ -43,6 +43,31 @@ typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
 namespace OHOS {
 namespace HiviewDFX {
+namespace {
+enum DumpStackState {
+    DEFAULT = 0,
+    COMPLETE = 1,
+    SAMPLE_COMPLETE = 2
+};
+constexpr char IPC_CHECKER[] = "IpcChecker";
+constexpr char STACK_CHECKER[] = "ThreadSampler";
+constexpr char TRACE_CHECKER[] = "TraceCollector";
+constexpr int64_t ONE_DAY_LIMIT = 86400000;
+constexpr int64_t ONE_HOUR_LIMIT = 3600000;
+constexpr int MILLISEC_TO_NANOSEC = 1000000;
+const int FFRT_BUFFER_SIZE = 512 * 1024;
+const int DETECT_STACK_COUNT = 2;
+const int COLLECT_STACK_COUNT = 10;
+const int COLLECT_TRACE_MIN = 1;
+const int COLLECT_TRACE_MAX = 20;
+const int TASK_INTERVAL = 155;
+const int DURATION_TIME = 150;
+const int DISTRIBUTE_TIME = 2000;
+const int DUMPTRACE_TIME = 450;
+constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
+constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
+constexpr const char* const ENABLE_VAULE = "true";
+constexpr const char* const ENABLE_HIVIEW_USER_VAULE = "commercial";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
@@ -52,19 +77,15 @@ constexpr int32_t WATCHED_UID = 5523;
 constexpr int  SERVICE_WARNING = 1;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
-const std::string ON_KICK_TIME = "on,72";
-const std::string ON_KICK_TIME_HMOS = "on,63,foundation";
-const std::string KICK_TIME = "kick";
-const std::string KICK_TIME_HMOS = "kick,foundation";
 const int32_t NOT_OPEN = -1;
+constexpr uint64_t MAX_START_TIME = 10 * 1000;
+const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
+constexpr size_t STACK_LENGTH = 32 * 1024;
+}
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
-
-constexpr uint64_t MAX_START_TIME = 10 * 1000;
-const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
-constexpr size_t STACK_LENGTH = 32 * 1024;
 typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);

@@ -35,8 +35,15 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-int64_t WatchdogTask::curId = 0;
+namespace {
 const char* BBOX_PATH = "/dev/bbox";
+static const int COUNT_LIMIT_NUM_MAX_RATIO = 2;
+static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
+static const int UID_TYPE_THRESHOLD = 20000;
+const int BUFF_STACK_SIZE = 20 * 1024;
+constexpr int32_t SAMGR_INIT_UID = 5555;
+}
+int64_t WatchdogTask::curId = 0;
 struct HstackVal {
     uint32_t magic;
     pid_t tid;
@@ -83,7 +90,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLi
       isTaskScheduled(false), isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit)
 {
     id = ++curId;
-    checkInterval = timeLimit / timeLimitIntervalRatio;
+    checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;
     nextTickTime = GetCurrentTickMillseconds();
 }
 
@@ -102,7 +109,7 @@ void WatchdogTask::DoCallback()
         std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
         SendXCollieEvent(name, msg);
     }
-    if (getuid() > uidTypeThreshold) {
+    if (getuid() > UID_TYPE_THRESHOLD) {
         XCOLLIE_LOGI("check uid is app, do not exit");
         return;
     }
@@ -170,7 +177,7 @@ void WatchdogTask::TimerCountTask()
         size--;
     }
 
-    if (triggerTimes.size() > static_cast<unsigned long>(countLimit * countLimitNumMaxRatio)) {
+    if (triggerTimes.size() > static_cast<unsigned long>(countLimit * COUNT_LIMIT_NUM_MAX_RATIO)) {
         triggerTimes.erase(triggerTimes.begin(), triggerTimes.end() - countLimit);
     }
 }
@@ -254,7 +261,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     }
     std::string eventName = "SERVICE_TIMEOUT";
     std::string stack = "";
-    if (uid > uidTypeThreshold) {
+    if (uid > UID_TYPE_THRESHOLD) {
         eventName = "APP_HICOLLIE";
         if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
             XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);

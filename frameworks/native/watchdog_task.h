@@ -30,9 +30,6 @@ namespace OHOS {
 namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
-    static const int countLimitNumMaxRatio = 2;
-    static const int timeLimitIntervalRatio = 2;
-    static const int uidTypeThreshold = 20000;
 public:
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);

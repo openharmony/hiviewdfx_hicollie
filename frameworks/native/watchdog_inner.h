@@ -32,6 +32,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 struct TimeContent {
     int64_t reportBegin;
