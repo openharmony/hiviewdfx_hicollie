@@ -148,7 +148,7 @@ bool WatchdogInner::ReportMainThreadEvent()
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
-    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName,
+    int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "MAIN_THREAD_JANK",
         HiSysEvent::EventType::FAULT,
         "BUNDLE_VERSION", bundleVersion_,
         "BUNDLE_NAME", bundleName_,
@@ -747,19 +747,7 @@ bool WatchdogInner::Start()
 bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 {
     if (g_fd == NOT_OPEN) {
-        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
-        if (g_fd < 0) {
-            g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
-            if (g_fd < 0) {
-                XCOLLIE_LOGE("can't open hungtask file");
-                g_existFile = false;
-                return false;
-            }
-            XCOLLIE_LOGE("change to hmos kernel");
-            isHmos = true;
-        } else {
-            XCOLLIE_LOGE("change to linux kernel");
-        }
+        return false;
     }
 
     ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
@@ -775,7 +763,27 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 
 bool WatchdogInner::KickWatchdog()
 {
-    return true;
+    if (g_fd == NOT_OPEN) {
+        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
+        if (g_fd < 0) {
+            g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
+            if (g_fd < 0) {
+                XCOLLIE_LOGE("can't open hungtask file");
+                g_existFile = false;
+                return false;
+            }
+            XCOLLIE_LOGE("change to hmos kernel");
+            isHmos = true;
+        } else {
+            XCOLLIE_LOGE("change to linux kernel");
+        }
+
+        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_HMOS : ON_KICK_TIME)) {
+            XCOLLIE_LOGE("KickWatchdog SendMsgToHungtask false");
+            return false;
+        }
+    }
+    return SendMsgToHungtask(isHmos ? KICK_TIME_HMOS : KICK_TIME);
 }
 
 void WatchdogInner::IpcCheck()
@@ -792,19 +800,19 @@ void WatchdogInner::IpcCheck()
     }
 }
 
-void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
+void WatchdogInner::WriteStringToFile(int32_t pid, const char *str)
 {
     char file[PATH_LEN] = {0};
-    int32_t newPid = static_cast<int32_t>(pid);
-    if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", newPid) == -1) {
-        XCOLLIE_LOGI("failed to build path for %{public}d.", newPid);
+    if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", pid) == -1) {
+        XCOLLIE_LOGE("failed to build path for %{public}d.", pid);
+        return;
     }
     int fd = open(file, O_RDWR);
     if (fd == -1) {
         return;
     }
     if (write(fd, str, strlen(str)) < 0) {
-        XCOLLIE_LOGI("failed to write 0 for %{public}s", file);
+        XCOLLIE_LOGE("failed to write 0 for %{public}s", file);
         close(fd);
         return;
     }
@@ -864,7 +872,6 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     buffer[FFRT_BUFFER_SIZE] = 0;
     ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
     sendMsg += buffer;
-    sendMsg += "\n" + GetProcessStacktrace();
     delete[] buffer;
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,

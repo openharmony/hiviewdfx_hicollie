@@ -41,7 +41,7 @@ uint64_t GetCurrentTickMillseconds()
     t.tv_sec = 0;
     t.tv_nsec = 0;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return (int64_t)((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
+    return static_cast<int64_t> ((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
 bool IsFileNameFormat(char c)
@@ -313,7 +313,7 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
     std::string time = GetFormatDate();
     std::string realPath;
     if (!OHOS::PathToRealPath(WATCHDOG_DIR, realPath)) {
-        XCOLLIE_LOGE("Path to realPath failed.");
+        XCOLLIE_LOGE("Path to realPath failed. errno: %{public}d", errno);
         return false;
     }
     path = realPath + "/" + eventName + "_" + time.c_str() + "_" +
@@ -321,7 +321,7 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
     uint64_t stackSize = stack.size();
     uint64_t fileSize = OHOS::GetFolderSize(realPath) + stackSize;
     if (fileSize > MAX_FILE_SIZE) {
-        XCOLLIE_LOGE("CurrentDir already over limit. Will not write to stack file."
+        XCOLLIE_LOGI("CurrentDir already over limit. Will not write to stack file."
             "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
             fileSize, MAX_FILE_SIZE);
         return true;
@@ -329,10 +329,10 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
     constexpr mode_t defaultLogFileMode = 0644;
     auto fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, defaultLogFileMode);
     if (fd < 0) {
-        XCOLLIE_LOGE("Failed to create path");
+        XCOLLIE_LOGI("Failed to create path");
         return false;
     } else {
-        XCOLLIE_LOGE("path=%{public}s", path.c_str());
+        XCOLLIE_LOGI("path=%{public}s", path.c_str());
     }
     OHOS::SaveStringToFd(fd, stack);
     close(fd);

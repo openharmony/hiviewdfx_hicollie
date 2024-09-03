@@ -137,6 +137,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_001, TestSize.Level1
         delay, interval, isOneshot));
     ASSERT_GT(id, 0);
     WatchdogInner::GetInstance().isNeedStop_.store(true);
+    printf("FetchNextTask=%llu", WatchdogInner::GetInstance().FetchNextTask(now, task));
     ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 60000);
     WatchdogInner::GetInstance().isNeedStop_.store(false);
     WatchdogTask task1;
