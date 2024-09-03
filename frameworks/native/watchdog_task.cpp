@@ -97,7 +97,7 @@ void WatchdogTask::DoCallback()
         return;
     }
     if (flag & XCOLLIE_FLAG_LOG) {
-        /* send to freezedetetor */
+        /* send to freezedetector */
         std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
         SendXCollieEvent(name, msg);
     }
@@ -223,8 +223,8 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
-    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
-        "timeout timer: " + timerName + "\n" +keyMsg;
+    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
+        "timeout timer: " + timerName + "\n" + keyMsg;
 
     struct HstackVal val;
     if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {

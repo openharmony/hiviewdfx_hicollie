@@ -57,7 +57,7 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
     ASSERT_GT(id, 0);
 
     /**
-     * @tc.steps: step2. input param name include special string,cancel timer
+     * @tc.steps: step2. input param name include special string, cancel timer
      * @tc.expected: step2. update timer successfully;
      */
     XCollie::GetInstance().CancelTimer(id);
