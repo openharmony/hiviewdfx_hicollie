@@ -35,20 +35,12 @@ constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
 constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
 constexpr uint32_t NOTIFY_APP_FAULT = 38;
 constexpr uint32_t APP_MGR_SERVICE_ID = 501;
-constexpr int64_t MIN_APP_UID_BUSSINESS = 20000;
 
 bool IsAppMainThread()
 {
-    static int pid = -1;
-    static int64_t uid = -1;
-
-    if (pid == -1) {
-        pid = getpid();
-    }
-    if (uid == -1) {
-        uid = static_cast<int64_t>(getuid());
-    }
-    if (pid == gettid() && uid >= MIN_APP_UID_BUSSINESS) {
+    static int pid = getpid();
+    static uint64_t uid = getuid();
+    if (pid == gettid() && uid >= MIN_APP_UID) {
         return true;
     }
     return false;

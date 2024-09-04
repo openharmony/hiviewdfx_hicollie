@@ -96,13 +96,12 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_JankDetection_1, TestSize.Level1)
  */
 HWTEST_F(HiCollieTest, Test_OH_HiCollie_Report_1, TestSize.Level1)
 {
-    bool* isSixSecond = new bool;
-    *isSixSecond = false;
-    int result = OH_HiCollie_Report(isSixSecond);
+    bool isSixSecond = false;
+    int result = OH_HiCollie_Report(&isSixSecond);
     printf("OH_HiCollie_Report result: %d\n", result);
-    EXPECT_TRUE(*isSixSecond);
-    result = OH_HiCollie_Report(isSixSecond);
+    EXPECT_TRUE(isSixSecond);
+    result = OH_HiCollie_Report(&isSixSecond);
     printf("OH_HiCollie_Report result: %d\n", result);
-    EXPECT_FALSE(*isSixSecond);
+    EXPECT_FALSE(isSixSecond);
 }
 } // namespace
