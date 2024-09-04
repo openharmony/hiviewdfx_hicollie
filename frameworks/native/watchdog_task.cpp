@@ -36,7 +36,6 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
-const char* BBOX_PATH = "/dev/bbox";
 static const int COUNT_LIMIT_NUM_MAX_RATIO = 2;
 static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
 static const int UID_TYPE_THRESHOLD = 20000;
@@ -241,24 +240,15 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
         "timeout timer: " + timerName + "\n" +keyMsg;
 
-    std::string kernelStack = "";
-    struct HstackVal val;
-    val.tid = watchdogTid;
-    val.magic = MAGIC_NUM;
-    int ret;
-    DumpKernelStack(val, ret);
-    if (ret == 0) {
-        kernelStack += val.hstackLogBuff;
-        if (uid == SAMGR_INIT_UID) {
-            XCOLLIE_LOGD("DumpKernelStack dump init stack start");
-            val.tid = 1;
-            DumpKernelStack(val, ret);
-            XCOLLIE_LOGD("DumpKernelStack dump init stack end");
-            if (ret == 0) {
-                kernelStack += val.hstackLogBuff;
-            }
+    std::string userStack = "";
+    if (uid == SAMGR_INIT_UID) {
+        XCOLLIE_LOGD("DumpUserStack dump init stack start");
+        if (!GetBacktraceStringByTid(userStack, 1, 0, true)) {
+            XCOLLIE_LOGE("get tid:1 BacktraceString failed");
         }
+        XCOLLIE_LOGD("DumpUserStack dump init stack end");
     }
+
     std::string eventName = "SERVICE_TIMEOUT";
     std::string stack = "";
     if (uid > UID_TYPE_THRESHOLD) {
@@ -272,27 +262,9 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg, "STACK", stack + "\n"+ kernelStack);
+        "MSG", sendMsg, "STACK", stack + "\n"+ userStack);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
-}
-
-void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
-{
-    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
-    if (fd < 0) {
-        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
-        ret = -1;
-        return;
-    }
-    ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    close(fd);
-
-    if (ret != 0) {
-        XCOLLIE_LOGE("XCollieDumpKernel getStack failed, errno is %{public}d", errno);
-    } else {
-        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
-    }
 }
 
 int WatchdogTask::EvaluateCheckerState()
