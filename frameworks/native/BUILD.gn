@@ -11,9 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("//base/hiviewdfx/hicollie/hicollie.gni")
 import("//build/ohos.gni")
-
-hicollie_part_path = "//base/hiviewdfx/hicollie"
 config("hicollie_include") {
   include_dirs = [
     ".",
@@ -50,6 +49,10 @@ ohos_source_set("libhicollie_source") {
   defines = []
   if (!is_asan) {
     defines += [ "HOOK_ENABLE" ]
+  }
+
+  if (hicollie_jank_detection_enable) {
+    defines += [ "HICOLLIE_JANK_ENABLE" ]
   }
 
   if (defined(global_parts_info) &&

@@ -403,6 +403,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         XCOLLIE_LOGI("BlockMonitor event name: %{public}s, Duration Time: %{public}" PRId64 " ms",
             name.c_str(), durationTime);
     }
+#ifdef HICOLLIE_JANK_ENABLE
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         int64_t checkTimer = ONE_DAY_LIMIT;
@@ -441,6 +442,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
         WatchdogInner::GetInstance().lastTraceTime_ = endTime;
         WatchdogInner::GetInstance().CollectTrace();
     }
+#endif // HICOLLIE_JANK_ENABLE
 }
 
 int WatchdogInner::AddThread(const std::string &name,
