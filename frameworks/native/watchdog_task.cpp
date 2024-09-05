@@ -27,11 +27,14 @@
 #include <unistd.h>
 
 #include "backtrace_local.h"
-#include "hisysevent.h"
 #include "musl_preinit_common.h"
 #include "watchdog_inner.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
+
+#ifdef HISYSEVENT_ENABLE
+#include "hisysevent.h"
+#endif
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -168,8 +171,12 @@ void WatchdogTask::TimerCountTask()
         if (timeInterval < timeLimit) {
             std::string sendMsg = name + " occured " + std::to_string(countLimit) + " times in " +
                 std::to_string(timeInterval) + " ms, " + message;
+#ifdef HISYSEVENT_ENABLE
             HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, name, HiSysEvent::EventType::FAULT,
                 "PID", getprocpid(), "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg);
+#else
+       XCOLLIE_LOGI("hisysevent not exists");
+#endif
             triggerTimes.clear();
             return;
         }
@@ -214,6 +221,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     std::regex pattern(".*Thread ID = (\\d+)");
     std::smatch matches;
     watchdogTid = std::regex_search(sendMsg, matches, pattern) ? std::stoi(matches[1]) : pid;
+#ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TID", watchdogTid,
@@ -224,6 +232,9 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "MSG", sendMsg);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
         ret, eventName.c_str(), msg.c_str());
+#else
+       XCOLLIE_LOGI("hisysevent not exists");
+#endif
 }
 
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
@@ -259,12 +270,15 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     } else {
         stack = GetProcessStacktrace();
     }
-
+#ifdef HISYSEVENT_ENABLE
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg, "STACK", stack + "\n"+ userStack);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
+#else
+       XCOLLIE_LOGI("hisysevent not exists");
+#endif
 }
 
 int WatchdogTask::EvaluateCheckerState()

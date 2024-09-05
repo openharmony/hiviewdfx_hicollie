@@ -39,7 +39,6 @@ ohos_source_set("libhicollie_source") {
     "faultloggerd:libbacktrace_local",
     "ffrt:libffrt",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
     "hiview:libucollection_client",
     "init:libbegetutil",
     "ipc:ipc_core",
@@ -60,6 +59,10 @@ ohos_source_set("libhicollie_source") {
     external_deps += [ "eventhandler:libeventhandler" ]
   }
 
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"
 }
