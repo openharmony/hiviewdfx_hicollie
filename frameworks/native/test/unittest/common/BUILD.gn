@@ -124,15 +124,15 @@ ohos_unittest("HandlerCheckerTest") {
     "ffrt:libffrt",
     "hilog:libhilog",
   ]
-  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
-    external_deps += [ "hisysevent:libhisysevent" ]
-    defines += [ "HISYSEVENT_ENABLE" ]
-  }
 
   defines = []
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
+  }
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
   }
 }
 
@@ -151,15 +151,15 @@ ohos_unittest("WatchdogTaskTest") {
     "ffrt:libffrt",
     "hilog:libhilog",
   ]
-  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
-    external_deps += [ "hisysevent:libhisysevent" ]
-    defines += [ "HISYSEVENT_ENABLE" ]
-  }
 
   defines = []
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
+  }
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
   }
 }
 
