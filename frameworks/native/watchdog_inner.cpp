@@ -32,7 +32,9 @@
 #include <dlfcn.h>
 
 #include "backtrace_local.h"
+#ifdef HISYSEVENT_ENABLE
 #include "hisysevent.h"
+#endif
 #include "ipc_skeleton.h"
 #include "xcollie_utils.h"
 #include "xcollie_define.h"
@@ -175,6 +177,7 @@ bool WatchdogInner::ReportMainThreadEvent()
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
+#ifdef HISYSEVENT_ENABLE
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "MAIN_THREAD_JANK",
         HiSysEvent::EventType::FAULT,
         "BUNDLE_VERSION", bundleVersion_,
@@ -189,6 +192,9 @@ bool WatchdogInner::ReportMainThreadEvent()
         "LOG_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC);
     XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d", result);
     return result >= 0;
+#else
+    XCOLLIE_LOGI("hisysevent not exists");
+#endif
 }
 
 bool WatchdogInner::CheckEventTimer(const int64_t& currentTime)
@@ -908,6 +914,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
             tid = std::stoi(matches[1]);
         }
     }
+#ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
         "TID", tid,
@@ -918,6 +925,9 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
         "MSG", sendMsg);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", ret, eventName.c_str(), msg.c_str());
+#else
+    XCOLLIE_LOGI("hisysevent not exists");
+#endif
 }
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)

@@ -41,8 +41,11 @@ ohos_unittest("XCollieUnitTest") {
   external_deps = [
     "c_utils:utils",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
   ]
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
 }
 
 ohos_unittest("WatchdogUnitTest") {
@@ -59,8 +62,11 @@ ohos_unittest("WatchdogUnitTest") {
     "c_utils:utils",
     "ffrt:libffrt",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
   ]
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
 
   defines = []
   if (defined(global_parts_info) &&
@@ -83,8 +89,11 @@ ohos_unittest("WatchdogInnerUnitTest") {
     "c_utils:utils",
     "ffrt:libffrt",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
   ]
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
 
   defines = []
   if (defined(global_parts_info) &&
@@ -112,8 +121,11 @@ ohos_unittest("HandlerCheckerTest") {
     "c_utils:utils",
     "ffrt:libffrt",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
   ]
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
 
   defines = []
   if (defined(global_parts_info) &&
@@ -136,8 +148,11 @@ ohos_unittest("WatchdogTaskTest") {
     "c_utils:utils",
     "ffrt:libffrt",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
   ]
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
 
   defines = []
   if (defined(global_parts_info) &&
@@ -158,8 +173,11 @@ ohos_unittest("ThreadSamplerTest") {
     "ffrt:libffrt",
     "hicollie:libhicollie",
     "hilog:libhilog",
-    "hisysevent:libhisysevent",
   ]
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
 }
 
 ###############################################################################
