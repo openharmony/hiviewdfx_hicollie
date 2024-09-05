@@ -12,6 +12,9 @@
     "component": {
         "name": "hicollie",
         "subsystem": "hiviewdfx",
+        "features": [
+            "hicollie_jank_detection_enable"
+        ],
         "syscap": [
             "SystemCapability.HiviewDFX.HiCollie"
         ],

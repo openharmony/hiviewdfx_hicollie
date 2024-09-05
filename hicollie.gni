@@ -15,3 +15,6 @@
 hicollie_part_path = "//base/hiviewdfx/hicollie"
 hicollie_libthread_sampler =
     "//base/hiviewdfx/hicollie/frameworks/native/thread_sampler"
+declare_args() {
+  hicollie_jank_detection_enable = true
+}
