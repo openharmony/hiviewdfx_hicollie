@@ -48,6 +48,7 @@ ohos_moduletest("XCollieTimeoutModuleTest") {
     "c_utils:utils",
     "hilog:libhilog",
   ]
+  defines = []
   if (defined(global_parts_info.hiviewdfx_hisysevent)) {
     external_deps += [ "hisysevent:libhisysevent" ]
     defines += [ "HISYSEVENT_ENABLE" ]
