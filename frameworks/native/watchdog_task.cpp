@@ -44,6 +44,9 @@ static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
 static const int UID_TYPE_THRESHOLD = 20000;
 const int BUFF_STACK_SIZE = 20 * 1024;
 constexpr int32_t SAMGR_INIT_UID = 5555;
+constexpr const char* CORE_PROCS[] = {
+    "anco_service_br", "aptouch_daemon", "foundation", "init", "multimodalinput", "ohos.sceneboard", "render_service"
+};
 }
 int64_t WatchdogTask::curId = 0;
 struct HstackVal {
@@ -260,19 +263,19 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
         XCOLLIE_LOGD("DumpUserStack dump init stack end");
     }
 
-    std::string eventName = "SERVICE_TIMEOUT";
+    std::string eventName = "APP_HICOLLIE";
+    std::string processName = GetSelfProcName();
     std::string stack = "";
-    if (uid > UID_TYPE_THRESHOLD) {
-        eventName = "APP_HICOLLIE";
-        if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
-            XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);
-        }
-    } else {
+    if (uid <= UID_TYPE_THRESHOLD) {
+        eventName = std::find(std::begin(CORE_PROCS), std::end(CORE_PROCS), processName) != std::end(CORE_PROCS) ?
+            "SERVICE_TIMEOUT" : "SERVICE_TIMEOUT_WARNING";
         stack = GetProcessStacktrace();
+    } else if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
+        XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);
     }
 #ifdef HISYSEVENT_ENABLE
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
-        "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", GetSelfProcName(),
+        "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", processName,
         "MSG", sendMsg, "STACK", stack + "\n"+ userStack);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
