@@ -181,6 +181,13 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_004, TestSize.Level1)
     sleep(3);
     XCollie::GetInstance().CancelTimer(id);
     ASSERT_EQ(flag, true);
+    flag = false;
+    id = XCollie::GetInstance().SetTimer("XCollieTimerParam_005", 3, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id, 0);
+    id = XCollie::GetInstance().SetTimer("XCollieTimerParam_006", 3, callbackFunc, nullptr, XCOLLIE_FLAG_LOG);
+    ASSERT_GT(id, 0);
+    XCollie::GetInstance().CancelTimer(0);
+    ASSERT_EQ(flag, false);
 }
 
 /**
