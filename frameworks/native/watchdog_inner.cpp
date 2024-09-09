@@ -19,7 +19,6 @@
 #include <climits>
 #include <mutex>
 
-#include <regex>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -906,14 +905,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     sendMsg += buffer;
     delete[] buffer;
     int32_t tid = pid;
-    std::regex patternQueueName(".*queue name \\[(\\w+)\\]");
-    std::smatch matches;
-    if (std::regex_search(sendMsg, matches, patternQueueName)) {
-        std::regex patternTid(".*worker tid (\\d+) is running, task id (\\d+) name " + matches[1].str());
-        if (std::regex_search(sendMsg, matches, patternTid)) {
-            tid = std::stoi(matches[1]);
-        }
-    }
+    GetFfrtTaskTid(tid, sendMsg);
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
@@ -928,6 +920,48 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
 #else
     XCOLLIE_LOGI("hisysevent not exists");
 #endif
+}
+
+void WatchdogInner::GetFfrtTaskTid(int32_t& tid, const std::string& msg)
+{
+    std::string queueNameFrontStr = "us. queue name [";
+    size_t queueNameFrontPos = msg.find(queueNameFrontStr);
+    if (queueNameFrontPos == std::string::npos) {
+        return;
+    }
+    size_t queueNameRearPos = msg.find("], remaining tasks count=");
+    if (queueNameRearPos == std::string::npos) {
+        return;
+    }
+    size_t queueNameLength = queueNameRearPos - queueNameFrontPos - queueNameFrontStr.length();
+    if (queueNameLength <= 0) {
+        return;
+    }
+
+    std::string workerTidFrontStr = " worker tid ";
+    std::string taskIdFrontStr = " is running, task id ";
+    std::string queueNameStr = " name " + msg.substr(queueNameFrontPos + queueNameFrontStr.length(), queueNameLength);
+    std::istringstream issMsg(msg);
+    std::string line;
+    while (std::getline(issMsg, line, '\n')) {
+        size_t workerTidFrontPos = line.find(workerTidFrontStr);
+        size_t taskIdFrontPos = line.find(taskIdFrontStr);
+        size_t queueNamePos = line.find(queueNameStr);
+        if (workerTidFrontPos == std::string::npos || taskIdFrontPos == std::string::npos ||
+            queueNamePos == std::string::npos) {
+            continue;
+        }
+        size_t tidLength = taskIdFrontPos - workerTidFrontPos - workerTidFrontStr.length();
+        if (tidLength > 0 && tidLength < std::to_string(INT32_MAX).length()) {
+            std::string tidStr = line.substr(workerTidFrontPos + workerTidFrontStr.length(), tidLength);
+            if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char& c) {
+                return isdigit(c);
+            })) {
+                tid = std::stoi(tidStr);
+                return;
+            }
+        }
+    }
 }
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)

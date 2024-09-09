@@ -18,7 +18,6 @@
 #include <cinttypes>
 #include <ctime>
 #include <cstdio>
-#include <regex>
 #include <securec.h>
 #include <thread>
 
@@ -221,9 +220,23 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
         "\n" + msg + "\n";
     sendMsg += checker->GetDumpInfo();
-    std::regex pattern(".*Thread ID = (\\d+)");
-    std::smatch matches;
-    watchdogTid = std::regex_search(sendMsg, matches, pattern) ? std::stoi(matches[1]) : pid;
+
+    std::string tidFrontStr = "Thread ID = ";
+    std::string tidRearStr = ") is running";
+    std::size_t frontPos = sendMsg.find(tidFrontStr);
+    std::size_t rearPos = sendMsg.find(tidRearStr);
+    if (frontPos != std::string::npos && rearPos != std::string::npos) {
+        size_t tidLength = rearPos - frontPos - tidFrontStr.length();
+        if (tidLength > 0 && tidLength < std::to_string(INT32_MAX).length()) {
+            std::string tidStr = sendMsg.substr(frontPos + tidFrontStr.length(), tidLength);
+            if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char &c) {
+                return isdigit(c);
+            })) {
+                watchdogTid = std::stoi(tidStr);
+            }
+        }
+    }
+
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid,
