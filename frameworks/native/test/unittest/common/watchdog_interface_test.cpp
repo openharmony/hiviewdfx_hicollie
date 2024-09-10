@@ -236,10 +236,15 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_AddTreadTest_002, TestSize.Level1)
     bool ret = handler->PostTask(blockFunc, "Block002", 0, EventQueue::Priority::LOW);
     ASSERT_EQ(ret, true);
 
-    int result = Watchdog::GetInstance().AddThread("RemoveTest", handler, nullptr, checkPeriod);
-    Watchdog::GetInstance().RemoveThread("RemoveTest");
+    int result = Watchdog::GetInstance().AddThread("RemoveTest001", handler, nullptr, checkPeriod);
+    Watchdog::GetInstance().RemoveThread("RemoveTest001");
+    ASSERT_EQ(result, 0);
+    result = Watchdog::GetInstance().AddThread("RemoveTest002", handler, nullptr, checkPeriod);
+    ASSERT_EQ(result, 0);
+    result = Watchdog::GetInstance().AddThread("RemoveTest003", handler, nullptr, checkPeriod);
     ASSERT_EQ(result, 0);
     Sleep(blockTime);
+    Watchdog::GetInstance().RemoveThread("RemoveTest001");
 }
 
 /**
