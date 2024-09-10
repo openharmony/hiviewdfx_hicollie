@@ -120,6 +120,11 @@ static bool IsInAppspwan()
     if (getuid() == 0 && GetSelfProcName().find("appspawn") != std::string::npos) {
         return true;
     }
+
+    if (getuid() == 0 && GetSelfProcName().find("nativespawn") != std::string::npos) {
+        return true;
+    }
+
     return false;
 }
 
