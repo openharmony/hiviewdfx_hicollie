@@ -24,6 +24,7 @@ config("hicollie_include") {
 }
 
 ohos_source_set("libhicollie_source") {
+  branch_protector_ret = "pac_ret"
   sources = [
     "handler_checker.cpp",
     "watchdog.cpp",
