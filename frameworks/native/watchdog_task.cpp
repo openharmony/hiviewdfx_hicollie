@@ -221,6 +221,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "\n" + msg + "\n";
     sendMsg += checker->GetDumpInfo();
 
+    watchdogTid = pid;
     std::string tidFrontStr = "Thread ID = ";
     std::string tidRearStr = ") is running";
     std::size_t frontPos = sendMsg.find(tidFrontStr);
