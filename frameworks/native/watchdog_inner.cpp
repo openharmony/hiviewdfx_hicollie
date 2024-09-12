@@ -488,7 +488,6 @@ void WatchdogInner::RemoveXCollieTask(int64_t id)
     if (tmpQueue.size() == size) {
         XCOLLIE_LOGE("Remove XCollieTask fail, can not find timer %{public}lld, size=%{public}zu!",
             static_cast<long long>(id), size);
-        return;
     }
     tmpQueue.swap(checkerQueue_);
 }
@@ -944,7 +943,7 @@ void WatchdogInner::RemoveInnerTask(const std::string& name)
     }
     while (!checkerQueue_.empty()) {
         const WatchdogTask& task = checkerQueue_.top();
-        if (task.name != name) {
+        if (task.name != name || task.timeout == 0) {
             tmpQueue.push(task);
         } else {
             size_t nameSize = taskNameSet_.size();
@@ -959,7 +958,6 @@ void WatchdogInner::RemoveInnerTask(const std::string& name)
     if (tmpQueue.size() == size) {
         XCOLLIE_LOGE("Remove XCollieTask fail, can not find name %{public}s, size=%{public}zu!",
             name.c_str(), size);
-        return;
     }
     tmpQueue.swap(checkerQueue_);
 }

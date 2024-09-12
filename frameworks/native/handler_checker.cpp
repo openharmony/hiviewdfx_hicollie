@@ -35,8 +35,12 @@ void HandlerChecker::ScheduleCheck()
 
     isCompleted_.store(false);
     taskSlow = false;
-    auto f = [this] () {
-        this->isCompleted_.store(true);
+    auto weak = weak_from_this();
+    auto f = [weak] () {
+        auto self = weak.lock();
+        if (self) {
+            self->isCompleted_.store(true);
+        }
     };
     if (!handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
         XCOLLIE_LOGE("XCollie Watchdog Task PostTask False.");
