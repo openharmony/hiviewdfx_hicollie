@@ -30,6 +30,7 @@
 #include "unwinder.h"
 #include "dfx_regs.h"
 #include "dfx_elf.h"
+#include "dfx_ark.h"
 #include "dfx_frame_formatter.h"
 #include "sample_stack_printer.h"
 #include "thread_sampler_utils.h"
@@ -241,6 +242,7 @@ void ThreadSampler::DeinitUniqueStackTable()
 void ThreadSampler::DestroyUnwinder()
 {
     maps_.reset();
+    DfxArk::ArkDestoryLocal();
     unwinder_.reset();
     accessors_.reset();
 }
@@ -537,7 +539,7 @@ bool ThreadSampler::Deinit()
     timeout.tv_sec = time(nullptr) + LOCK_TIMEOUT;
     timeout.tv_nsec = 0;
     int err = pthread_mutex_timedlock(&mutex_, &timeout);
-    if (err == ETIMEDOUT) {
+    if (err != 0) {
         XCOLLIE_LOGE("Failed to get lock when deinit thread_sampler.\n");
         return false;
     }
