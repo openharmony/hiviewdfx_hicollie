@@ -19,6 +19,7 @@ config("libhicollie_pub_config") {
 }
 
 ohos_shared_library("libhicollie") {
+  branch_protector_ret = "pac_ret"
   public_configs = [ ":libhicollie_pub_config" ]
   deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
 
