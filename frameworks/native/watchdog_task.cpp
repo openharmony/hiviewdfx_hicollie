@@ -41,7 +41,6 @@ namespace {
 static const int COUNT_LIMIT_NUM_MAX_RATIO = 2;
 static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
 static const int UID_TYPE_THRESHOLD = 20000;
-const int BUFF_STACK_SIZE = 20 * 1024;
 constexpr int32_t SAMGR_INIT_UID = 5555;
 constexpr const char* CORE_PROCS[] = {
     "anco_service_br", "aptouch_daemon", "foundation", "init", "multimodalinput", "ohos.sceneboard", "render_service"

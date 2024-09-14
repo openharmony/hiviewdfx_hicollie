@@ -341,7 +341,6 @@ void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastE
 
 void WatchdogInner::StartTraceProfile(int32_t interval)
 {
-    std::unique_lock<std::mutex> lock(lock_);
     if (traceCollector_ == nullptr) {
         XCOLLIE_LOGI("MainThread TraceCollector Failed.");
         return;
@@ -366,6 +365,7 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
         }
     };
     WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
+    std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked("TraceCollector", std::move(task));
 }
 
