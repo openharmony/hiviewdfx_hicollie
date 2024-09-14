@@ -48,11 +48,6 @@ constexpr const char* CORE_PROCS[] = {
 };
 }
 int64_t WatchdogTask::curId = 0;
-struct HstackVal {
-    uint32_t magic;
-    pid_t tid;
-    char hstackLogBuff[BUFF_STACK_SIZE];
-};
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr),

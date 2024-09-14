@@ -341,6 +341,7 @@ void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastE
 
 void WatchdogInner::StartTraceProfile(int32_t interval)
 {
+    std::unique_lock<std::mutex> lock(lock_);
     if (traceCollector_ == nullptr) {
         XCOLLIE_LOGI("MainThread TraceCollector Failed.");
         return;
@@ -365,7 +366,6 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
         }
     };
     WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
-    std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked("TraceCollector", std::move(task));
 }
 
@@ -933,10 +933,6 @@ void WatchdogInner::GetFfrtTaskTid(int32_t& tid, const std::string& msg)
         return;
     }
     size_t queueNameLength = queueNameRearPos - queueNameFrontPos - queueNameFrontStr.length();
-    if (queueNameLength <= 0) {
-        return;
-    }
-
     std::string workerTidFrontStr = " worker tid ";
     std::string taskIdFrontStr = " is running, task id ";
     std::string queueNameStr = " name " + msg.substr(queueNameFrontPos + queueNameFrontStr.length(), queueNameLength);
