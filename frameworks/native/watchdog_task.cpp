@@ -41,18 +41,12 @@ namespace {
 static const int COUNT_LIMIT_NUM_MAX_RATIO = 2;
 static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
 static const int UID_TYPE_THRESHOLD = 20000;
-const int BUFF_STACK_SIZE = 20 * 1024;
 constexpr int32_t SAMGR_INIT_UID = 5555;
 constexpr const char* CORE_PROCS[] = {
     "anco_service_br", "aptouch_daemon", "foundation", "init", "multimodalinput", "ohos.sceneboard", "render_service"
 };
 }
 int64_t WatchdogTask::curId = 0;
-struct HstackVal {
-    uint32_t magic;
-    pid_t tid;
-    char hstackLogBuff[BUFF_STACK_SIZE];
-};
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr),

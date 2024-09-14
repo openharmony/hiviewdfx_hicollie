@@ -933,10 +933,6 @@ void WatchdogInner::GetFfrtTaskTid(int32_t& tid, const std::string& msg)
         return;
     }
     size_t queueNameLength = queueNameRearPos - queueNameFrontPos - queueNameFrontStr.length();
-    if (queueNameLength <= 0) {
-        return;
-    }
-
     std::string workerTidFrontStr = " worker tid ";
     std::string taskIdFrontStr = " is running, task id ";
     std::string queueNameStr = " name " + msg.substr(queueNameFrontPos + queueNameFrontStr.length(), queueNameLength);
