@@ -929,26 +929,28 @@ void WatchdogInner::GetFfrtTaskTid(int32_t& tid, const std::string& msg)
         return;
     }
     size_t queueNameRearPos = msg.find("], remaining tasks count=");
-    if (queueNameRearPos == std::string::npos) {
+    size_t queueStartPos = queueNameFrontPos + queueNameFrontStr.length();
+    if (queueNameRearPos == std::string::npos || queueNameRearPos <= queueStartPos) {
         return;
     }
-    size_t queueNameLength = queueNameRearPos - queueNameFrontPos - queueNameFrontStr.length();
+    size_t queueNameLength = queueNameRearPos - queueStartPos;
     std::string workerTidFrontStr = " worker tid ";
     std::string taskIdFrontStr = " is running, task id ";
-    std::string queueNameStr = " name " + msg.substr(queueNameFrontPos + queueNameFrontStr.length(), queueNameLength);
+    std::string queueNameStr = " name " + msg.substr(queueStartPos, queueNameLength);
     std::istringstream issMsg(msg);
     std::string line;
     while (std::getline(issMsg, line, '\n')) {
         size_t workerTidFrontPos = line.find(workerTidFrontStr);
         size_t taskIdFrontPos = line.find(taskIdFrontStr);
         size_t queueNamePos = line.find(queueNameStr);
+        size_t workerStartPos = workerTidFrontPos + workerTidFrontStr.length();
         if (workerTidFrontPos == std::string::npos || taskIdFrontPos == std::string::npos ||
-            queueNamePos == std::string::npos) {
+            queueNamePos == std::string::npos || taskIdFrontPos <= workerStartPos) {
             continue;
         }
-        size_t tidLength = taskIdFrontPos - workerTidFrontPos - workerTidFrontStr.length();
-        if (tidLength > 0 && tidLength < std::to_string(INT32_MAX).length()) {
-            std::string tidStr = line.substr(workerTidFrontPos + workerTidFrontStr.length(), tidLength);
+        size_t tidLength = taskIdFrontPos - workerStartPos;
+        if (tidLength < std::to_string(INT32_MAX).length()) {
+            std::string tidStr = line.substr(workerStartPos, tidLength);
             if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char& c) {
                 return isdigit(c);
             })) {
