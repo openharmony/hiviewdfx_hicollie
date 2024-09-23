@@ -28,7 +28,7 @@
 #include "watchdog_task.h"
 #include "c/ffrt_dump.h"
 #include "singleton.h"
-#include "client/trace_collector.h"
+#include "client/trace_collector_client.h"
 
 namespace OHOS {
 namespace HiviewDFX {
