@@ -98,5 +98,21 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_003, TestSize.Level1)
     int ret = task1.EvaluateCheckerState();
     EXPECT_TRUE(ret >= 0);
 }
+
+/**
+ * @tc.name: WatchdogTaskTest_004
+ * @tc.desc: add testcase code coverage
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_004, TestSize.Level1)
+{
+    WatchdogTask task("WatchdogTaskTest_004", 0, 1);
+    uint64_t now = GetCurrentTickMillseconds();
+    task.triggerTimes.push_back(now);
+    task.triggerTimes.push_back(now + 1000);
+    task.triggerTimes.push_back(now + 2000);
+    task.TimerCountTask();
+    EXPECT_TRUE(task.countLimit != 0);
+}
 } // namespace HiviewDFX
 } // namespace OHOS
