@@ -206,7 +206,7 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
             break;
         }
 
-        if (line.find("async") != std::string::npos) {
+        if (line.find("async\t") != std::string::npos) {
             continue;
         }
 
