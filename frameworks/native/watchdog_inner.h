@@ -113,7 +113,7 @@ private:
     bool ReportMainThreadEvent();
     bool CheckEventTimer(const int64_t& currentTime);
     void StartTraceProfile(int32_t interval);
-    void ThreadSampleTask(int32_t (*threadSamplerSampleFunc)());
+    void ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t (*threadSamplerSampleFunc)());
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
