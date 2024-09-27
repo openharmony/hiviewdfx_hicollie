@@ -207,10 +207,17 @@ bool WatchdogInner::CheckEventTimer(const int64_t& currentTime)
         (timeContent_.curEnd - timeContent_.curBegin > DURATION_TIME * MILLISEC_TO_NANOSEC);
 }
 
-void WatchdogInner::ThreadSampleTask(int32_t (*threadSamplerSampleFunc)())
+void WatchdogInner::ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t (*threadSamplerSampleFunc)())
 {
     if (sampleTaskState_ == DumpStackState::DEFAULT) {
         sampleTaskState_++;
+        int initThreadSamplerRet = threadSamplerInitFunc(COLLECT_STACK_COUNT);
+        if (initThreadSamplerRet != 0) {
+            isMainThreadProfileTaskEnabled_ = true;
+            XCOLLIE_LOGE("Thread sampler init failed. ret %{public}d\n", initThreadSamplerRet);
+            return;
+        }
+        XCOLLIE_LOGI("Thread sampler initialized. ret %{public}d\n", initThreadSamplerRet);
         return;
     }
     int64_t currentTime = GetTimeStamp();
@@ -262,16 +269,11 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
         return -1;
     }
 
-    int initThreadSamplerRet = threadSamplerInitFunc(COLLECT_STACK_COUNT);
-    if (initThreadSamplerRet != 0) {
-        return -1;
-    }
-
     sampleTaskState_ = 0;
     stackContent_.detectorCount = 0;
     stackContent_.collectCount = 0;
-    auto sampleTask = [this, threadSamplerSampleFunc]() {
-        ThreadSampleTask(threadSamplerSampleFunc);
+    auto sampleTask = [this, threadSamplerInitFunc, threadSamplerSampleFunc]() {
+        ThreadSampleTask(threadSamplerInitFunc, threadSamplerSampleFunc);
     };
 
     WatchdogTask task("ThreadSampler", sampleTask, 0, interval, true);
