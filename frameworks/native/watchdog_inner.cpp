@@ -75,7 +75,7 @@ constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
-constexpr int  SERVICE_WARNING = 1;
+constexpr int SERVICE_WARNING = 1;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const int32_t NOT_OPEN = -1;
@@ -909,13 +909,16 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     GetFfrtTaskTid(tid, sendMsg);
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid,
-        "TID", tid,
-        "TGID", gid,
-        "UID", uid,
-        "MODULE_NAME", taskInfo,
-        "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg);
+        "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg, "STACK", GetProcessStacktrace());
+    if (ret == ERR_OVER_SIZE) {
+        std::string stack = "";
+        GetBacktraceStringByTid(stack, tid, 0, true);
+        ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+            "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo,
+            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack);
+    }
+
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", ret, eventName.c_str(), msg.c_str());
 #else
