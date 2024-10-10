@@ -20,7 +20,8 @@
 #include <fcntl.h>
 #include <sys/prctl.h>
 #include <unistd.h>
-
+#include <dlfcn.h>
+#include <chrono>
 #include "watchdog_inner_test.h"
 
 #define private public
@@ -85,6 +86,38 @@ void InitSeLinuxEnabled()
     }
 }
 
+static void InitBeginFuncTest(const char* name)
+{
+    std::string nameStr(name);
+}
+
+static void InitEndFuncTest(const char* name)
+{
+    std::string nameStr(name);
+}
+
+/**
+ * @tc.name: WatchdogInner InitMainLooperWatcher Test
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSize.Level1)
+{
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+    int count = 0;
+    sleep(10); // test value
+    while (count < 2) {
+        beginTest("Test");
+        usleep(350 * 1000); // test value
+        endTest("Test");
+        count++;
+    }
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+}
+
 /**
  * @tc.name: WatchdogInner thread run a oneshot task
  * @tc.desc: Verify whether the task has been executed failed
@@ -107,15 +140,21 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_RunPeriodicalTask_001, TestSize.Le
 {
     int taskResult = 0;
     auto taskFunc = [&taskResult]() { taskResult = 1; };
-    WatchdogInner::GetInstance().RunPeriodicalTask("RunPeriodicalTask_001",
-        taskFunc, 2000, 0);
+    std::string name = "RunPeriodicalTask_001";
+    WatchdogInner::GetInstance().RunPeriodicalTask(name, taskFunc, 2000, 0);
+    printf("checkerQueue_=%zu\n", WatchdogInner::GetInstance().checkerQueue_.size());
+    WatchdogInner::GetInstance().TriggerTimerCountTask(name, false, "test");
+    WatchdogInner::GetInstance().TriggerTimerCountTask(name, true, "test");
     ASSERT_EQ(taskResult, 0);
     size_t beforeSize = WatchdogInner::GetInstance().taskNameSet_.size();
     printf("Before remove watchdog beforeSize = %zu\n", beforeSize);
-    WatchdogInner::GetInstance().RemoveInnerTask("RunPeriodicalTask_001");
+    WatchdogInner::GetInstance().RemoveInnerTask(name);
     size_t afterSize = WatchdogInner::GetInstance().taskNameSet_.size();
     printf("After remove watchdog afterSize = %zu\n", afterSize);
     ASSERT_EQ(beforeSize, (afterSize + 1));
+    WatchdogInner::GetInstance().RunPeriodicalTask("", taskFunc, 2000, 0);
+    WatchdogInner::GetInstance().SetTimerCountTask("", 1, 1);
+    WatchdogInner::GetInstance().RemoveInnerTask("");
 }
 
 /**
@@ -292,12 +331,11 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     }
     sleep(4);
     EXPECT_EQ(ret, 0);
-
     std::string stack = "";
     WatchdogInner::GetInstance().CollectStack(stack);
     printf("stack:\n%s", stack.c_str());
-    WatchdogInner::GetInstance().CollectTrace();
     WatchdogInner::GetInstance().Deinit();
+    WatchdogInner::GetInstance().CollectTrace();
 }
 
 /**
@@ -314,6 +352,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     printf("ret:%s\n", ret ? "true" : "false");
     int64_t ret1 = GetTimeStamp();
     EXPECT_TRUE(ret1 > 0);
+    std::string stack = "";
+    const char* samplePath = "libthread_sampler.z.so";
+    WatchdogInner::GetInstance().funcHandler_ = dlopen(samplePath, RTLD_LAZY);
+    EXPECT_TRUE(WatchdogInner::GetInstance().funcHandler_ != nullptr);
+    WatchdogInner::GetInstance().CollectStack(stack);
+    printf("stack:\n%s", stack.c_str());
+    WatchdogInner::GetInstance().Deinit();
 }
 
 /**
@@ -352,6 +397,54 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     std::string stack = "STACK";
     ret = WriteStackToFd(getprocpid(), path, stack, "test");
     EXPECT_TRUE(ret);
+}
+
+/**
+ * @tc.name: WatchdogInner Test
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().buissnessThreadInfo_.insert(getproctid());
+    EXPECT_TRUE(WatchdogInner::GetInstance().buissnessThreadInfo_.size() > 0);
+    int ret = WatchdogInner::GetInstance().ReportMainThreadEvent();
+    EXPECT_EQ(ret, 1);
+    WatchdogInner::GetInstance().timeContent_.reportBegin = GetTimeStamp();
+    WatchdogInner::GetInstance().timeContent_.reportEnd = GetTimeStamp();
+    sleep(2);
+    WatchdogInner::GetInstance().timeContent_.curBegin = GetTimeStamp();
+    WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
+    EXPECT_TRUE(WatchdogInner::GetInstance().timeContent_.reportBegin !=
+        WatchdogInner::GetInstance().timeContent_.curBegin);
+    int state = 1; // test value
+    TimePoint currenTime = std::chrono::steady_clock::now();
+    TimePoint lastEndTime = std::chrono::steady_clock::now();
+    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 0);
+    EXPECT_EQ(state, 0);
+    state = 1; // test value
+    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 2);
+    EXPECT_EQ(state, 1);
+    WatchdogInner::GetInstance().StartTraceProfile(150); // test value
+    FunctionOpen(nullptr, "test");
+}
+
+/**
+ * @tc.name: WatchdogInner InitMainLooperWatcher Test
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT;
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+    beginTest("Test");
+    sleep(3); // test value
+    endTest("Test");
+    WatchdogInner::GetInstance().CreateWatchdogThreadIfNeed();
 }
 } // namespace HiviewDFX
 } // namespace OHOS

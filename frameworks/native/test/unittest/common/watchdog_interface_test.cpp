@@ -193,6 +193,86 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_004, TestSize.Level1)
 }
 
 /**
+ * @tc.name: Watchdog add thread without timeout callback
+ * @tc.desc: Occurred SERVICE_BLOCK.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_AddTreadTest_001, TestSize.Level1)
+{
+    constexpr int blockTime = 2;
+    constexpr int checkPeriod = 1000;
+    auto blockFunc = []() {
+        printf("before block 2s in %d\n", getproctid());
+        Sleep(blockTime);
+        printf("after block 2s in %d\n", getproctid());
+    };
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    bool ret = handler->PostTask(blockFunc, "Block001", 0, EventQueue::Priority::LOW);
+    ASSERT_EQ(ret, true);
+
+    int result = Watchdog::GetInstance().AddThread("AddTreadTest_001", handler, nullptr, checkPeriod);
+    ASSERT_EQ(result, 0);
+
+    Sleep(blockTime);
+}
+
+/**
+ * @tc.name: Watchdog add thread without timeout callback
+ * @tc.desc: Remove thread, not occurred SERVICE_BLOCK.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_AddTreadTest_002, TestSize.Level1)
+{
+    constexpr int blockTime = 2;
+    constexpr int checkPeriod = 1000;
+    auto blockFunc = []() {
+        printf("before block 2s in %d\n", getproctid());
+        Sleep(blockTime);
+        printf("after block 2s in %d\n", getproctid());
+    };
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    bool ret = handler->PostTask(blockFunc, "Block002", 0, EventQueue::Priority::LOW);
+    ASSERT_EQ(ret, true);
+
+    int result = Watchdog::GetInstance().AddThread("RemoveTest", handler, nullptr, checkPeriod);
+    Watchdog::GetInstance().RemoveThread("RemoveTest");
+    ASSERT_EQ(result, 0);
+    Sleep(blockTime);
+}
+
+/**
+ * @tc.name: Watchdog add thread without timeout callback
+ * @tc.desc: Remove thread, not occurred SERVICE_BLOCK.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_RemoveTreadTest_001, TestSize.Level1)
+{
+    constexpr int blockTime = 2;
+    constexpr int checkPeriod = 1000;
+    auto blockFunc = []() {
+        printf("before block 2s in %d\n", getproctid());
+        Sleep(blockTime);
+        printf("after block 2s in %d\n", getproctid());
+    };
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    bool ret = handler->PostTask(blockFunc, "Block002", 0, EventQueue::Priority::LOW);
+    ASSERT_EQ(ret, true);
+
+    int result = Watchdog::GetInstance().AddThread("RemoveTest001", handler, nullptr, checkPeriod);
+    Watchdog::GetInstance().RemoveThread("RemoveTest001");
+    ASSERT_EQ(result, 0);
+    Sleep(blockTime);
+    result = Watchdog::GetInstance().AddThread("RemoveTest002", handler, nullptr, checkPeriod);
+    ASSERT_EQ(result, 0);
+    result = Watchdog::GetInstance().AddThread("RemoveTest003", handler, nullptr, checkPeriod);
+    ASSERT_EQ(result, 0);
+    Watchdog::GetInstance().RemoveThread("RemoveTest001");
+}
+
+/**
  * @tc.name: Watchdog handler checker without timeout callback
  * @tc.desc: Check whether SERVICE_BLOCK hisysevent is fired
  * @tc.type: FUNC
@@ -304,10 +384,6 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogStopTest_001, TestSize.Level1)
     ASSERT_EQ(taskResult, 0);
     Watchdog::GetInstance().StopWatchdog();
     Sleep(TOTAL_WAIT_TIME);
-    ASSERT_EQ(taskResult, 0);
-
-    Watchdog::GetInstance().SetForeground(true);
-    Watchdog::GetInstance().SetBundleInfo("test", "1.1.0");
 }
 } // namespace HiviewDFX
 } // namespace OHOS

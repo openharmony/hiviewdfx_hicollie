@@ -139,7 +139,7 @@ private:
     bool isForeground_ {false};
     int sampleTaskState_;
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector_;
-    UCollectClient::AppCaller appCaller {
+    UCollectClient::AppCaller appCaller_ {
         .actionId = 0,
         .foreground = 0,
         .uid = 0,
