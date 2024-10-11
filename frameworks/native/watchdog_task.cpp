@@ -235,13 +235,16 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid,
-        "TID", watchdogTid,
-        "TGID", gid,
-        "UID", uid,
-        "MODULE_NAME", name,
-        "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg);
+        "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
+        "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", GetProcessStacktrace());
+    if (ret == ERR_OVER_SIZE) {
+        std::string stack = "";
+        GetBacktraceStringByTid(stack, watchdogTid, 0, true);
+        ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+            "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
+            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack);
+    }
+
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
         ret, eventName.c_str(), msg.c_str());
 #else
