@@ -41,7 +41,7 @@ uint64_t GetCurrentTickMillseconds()
     t.tv_sec = 0;
     t.tv_nsec = 0;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
+    return static_cast<int64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
 bool IsFileNameFormat(char c)
