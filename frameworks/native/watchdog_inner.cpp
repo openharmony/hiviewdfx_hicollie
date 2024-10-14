@@ -99,14 +99,13 @@ void ThreadInfo(char *buf  __attribute__((unused)),
                 void* ucontext  __attribute__((unused)))
 {
     if (ucontext == nullptr) {
-        XCOLLIE_LOGI("ThreadInfo ucontext == nullptr");
         return;
     }
 
     auto ret = memcpy_s(buf, len, WatchdogInner::GetInstance().currentScene_.c_str(),
         WatchdogInner::GetInstance().currentScene_.size());
     if (ret != 0) {
-        XCOLLIE_LOGE("memcpy_s ret = %d!", ret);
+        return;
     }
 }
 
