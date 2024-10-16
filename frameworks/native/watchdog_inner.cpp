@@ -1082,5 +1082,15 @@ void WatchdogInner::InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc,
         }
     }
 }
+
+void WatchdogInner::SetAppDebug(bool isAppDebug)
+{
+    isAppDebug_ = isAppDebug;
+}
+
+bool WatchdogInner::GetAppDebug()
+{
+    return isAppDebug_;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

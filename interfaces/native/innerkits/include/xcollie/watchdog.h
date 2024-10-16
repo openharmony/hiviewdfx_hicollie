@@ -122,6 +122,16 @@ public:
      * @brief Init MainLooperWatcher in bussiness watchdog thread.
      */
     void InitMainLooperWatcher(WatchdogBeginFunc* beginFunc, WatchdogEndFunc* endFunc);
+
+    /**
+     * @brief Set isAppDebug.
+     */
+    void SetAppDebug(bool isAppDebug);
+
+    /**
+     * @brief Get isAppDebug.
+     */
+    bool GetAppDebug();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

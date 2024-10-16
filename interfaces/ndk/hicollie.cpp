@@ -140,6 +140,10 @@ HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
     if (isSixSecond == nullptr) {
         return HICOLLIE_INVALID_ARGUMENT;
     }
+    if (OHOS::HiviewDFX::Watchdog::GetInstance().GetAppDebug()) {
+        XCOLLIE_LOGD("Bussiness: Get appDebug state is true");
+        return HICOLLIE_SUCCESS;
+    }
     if (OHOS::HiviewDFX::Report(isSixSecond) != 0) {
         return HICOLLIE_REMOTE_FAILED;
     }
