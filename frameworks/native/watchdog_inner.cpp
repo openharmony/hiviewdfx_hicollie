@@ -66,6 +66,7 @@ const int DURATION_TIME = 150;
 const int DISTRIBUTE_TIME = 2000;
 const int DUMPTRACE_TIME = 450;
 constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
+constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_HIVIEW_USER_VAULE = "commercial";
@@ -414,7 +415,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         int64_t checkTimer = ONE_DAY_LIMIT;
-        if (IsEnableVersion(KEY_DEVELOPER_MODE_STATE, ENABLE_VAULE)) {
+        if (IsEnableVersion(KEY_DEVELOPER_MODE_STATE, ENABLE_VAULE) ||
+            GetProcessNameFromProcCmdline(getprocpid()).find(KEY_SCB_STATE) != std::string::npos) {
             checkTimer = ONE_HOUR_LIMIT;
         }
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
