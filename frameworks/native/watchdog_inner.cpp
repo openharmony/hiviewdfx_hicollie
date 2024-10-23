@@ -65,11 +65,7 @@ const int TASK_INTERVAL = 155;
 const int DURATION_TIME = 150;
 const int DISTRIBUTE_TIME = 2000;
 const int DUMPTRACE_TIME = 450;
-constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
 constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
-constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
-constexpr const char* const ENABLE_VAULE = "true";
-constexpr const char* const ENABLE_HIVIEW_USER_VAULE = "commercial";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
@@ -415,8 +411,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         int64_t checkTimer = ONE_DAY_LIMIT;
-        if (IsEnableVersion(KEY_DEVELOPER_MODE_STATE, ENABLE_VAULE) ||
-            GetProcessNameFromProcCmdline(getprocpid()).find(KEY_SCB_STATE) != std::string::npos) {
+        if (IsDeveloperOpen() || (GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
             checkTimer = ONE_HOUR_LIMIT;
         }
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -428,7 +423,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
-        if (IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
+        if (IsEnableVersion()) {
             return;
         }
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -441,8 +436,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
-        if (!IsEnableVersion(KEY_HIVIEW_USER_TYPE, ENABLE_HIVIEW_USER_VAULE) ||
-            IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
+        if (IsBetaVersion() || IsEnableVersion()) {
             return;
         }
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
