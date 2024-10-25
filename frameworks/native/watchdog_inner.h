@@ -90,6 +90,8 @@ public:
     void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime, int64_t checkTimer);
     void RemoveInnerTask(const std::string& name);
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
+    void SetAppDebug(bool isAppDebug);
+    bool GetAppDebug();
     std::string currentScene_;
     TimePoint lastTraceTime_;
     TimePoint lastStackTime_;
@@ -137,6 +139,7 @@ private:
     std::string bundleName_;
     std::string bundleVersion_;
     bool isForeground_ {false};
+    bool isAppDebug_ {false};
     int sampleTaskState_;
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector_;
     UCollectClient::AppCaller appCaller_ {
@@ -147,6 +150,7 @@ private:
         .happenTime = 0,
         .beginTime = 0,
         .endTime = 0,
+        .isBusinessJank = false,
     };
 };
 } // end of namespace HiviewDFX

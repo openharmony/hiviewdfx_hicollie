@@ -337,6 +337,17 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogStopTest_001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: Watchdog Set Or Get isAppDebug.
+ * @tc.desc: Verify isAppDebug is true
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, WatchdogAppDebugTest_001, TestSize.Level1)
+{
+    Watchdog::GetInstance().SetAppDebug(true);
+    ASSERT_TRUE(Watchdog::GetInstance().GetAppDebug());
+}
+
+/**
  * @tc.name: Watchdog add thread without timeout callback
  * @tc.desc: Occurred SERVICE_BLOCK.
  * @tc.type: FUNC
