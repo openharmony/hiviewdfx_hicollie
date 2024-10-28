@@ -411,7 +411,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         int64_t checkTimer = ONE_DAY_LIMIT;
-        if (IsDeveloperOpen() || (GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
+        if (IsDeveloperOpen() || (IsBetaVersion() &&
+            GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
             checkTimer = ONE_HOUR_LIMIT;
         }
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
