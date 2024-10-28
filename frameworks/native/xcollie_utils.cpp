@@ -35,11 +35,6 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
-constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
-constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
-constexpr const char* const ENABLE_VAULE = "true";
-constexpr const char* const ENABLE_BETA_VAULE = "beta";
 uint64_t GetCurrentTickMillseconds()
 {
     struct timespec t;
@@ -106,32 +101,8 @@ std::string GetFirstLine(const std::string& path)
     return firstLine;
 }
 
-bool IsDeveloperOpen()
-{
-    static std::string isDeveloperOpen;
-    if (!isDeveloperOpen.empty()) {
-        return (isDeveloperOpen.find(ENABLE_VAULE) != std::string::npos);
-    }
-    isDeveloperOpen = system::GetParameter(KEY_DEVELOPER_MODE_STATE, "");
-    return (isDeveloperOpen.find(ENABLE_VAULE) != std::string::npos);
-}
-
-bool IsBetaVersion()
-{
-    static std::string isBetaVersion;
-    if (!isBetaVersion.empty()) {
-        return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
-    }
-    isBetaVersion = system::GetParameter(KEY_BETA_TYPE, "");
-    return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
-}
-
 std::string GetProcessNameFromProcCmdline(int32_t pid)
 {
-    static std::string curProcName;
-    if (!curProcName.empty()) {
-        return curProcName;
-    }
     std::string procCmdlinePath = "/proc/" + std::to_string(pid) + "/cmdline";
     std::string procCmdlineContent = GetFirstLine(procCmdlinePath);
     if (procCmdlineContent.empty()) {
@@ -149,9 +120,7 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
         }
     }
     size_t endPos = procNameEndPos - procNameStartPos;
-    curProcName = procCmdlineContent.substr(procNameStartPos, endPos);
-    XCOLLIE_LOGD("curProcName is empty, name %{public}s pid %{public}d", curProcName.c_str(), pid);
-    return curProcName;
+    return procCmdlineContent.substr(procNameStartPos, endPos);
 }
 
 std::string GetLimitedSizeName(std::string name)
@@ -315,6 +284,12 @@ bool KillProcessByPid(int32_t pid)
     return (ret >= 0);
 }
 
+bool IsBetaVersion()
+{
+    auto versionType = OHOS::system::GetParameter(KEY_HIVIEW_USER_TYPE, "unknown");
+    return (versionType.find("beta") != std::string::npos);
+}
+
 bool CreateWatchdogDir()
 {
     constexpr mode_t defaultLogDirMode = 0770;
@@ -380,10 +355,10 @@ int64_t GetTimeStamp()
     return ms.count();
 }
 
-bool IsEnableVersion()
+bool IsEnableVersion(const std::string& key, const std::string& type)
 {
-    auto enableType = system::GetParameter(KEY_ANCO_ENABLE_TYPE, "");
-    return (enableType.find(ENABLE_VAULE) != std::string::npos);
+    auto enableType = system::GetParameter(key, "");
+    return (enableType.find(type) != std::string::npos);
 }
 
 void* FunctionOpen(void* funcHandler, const char* funcName)
