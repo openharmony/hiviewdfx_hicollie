@@ -49,7 +49,6 @@ constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr int32_t WATCHED_UID = 5523;
 constexpr int SERVICE_WARNING = 1;
-constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const std::string ON_KICK_TIME = "on,72";
@@ -322,7 +321,7 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
             if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
                 CreateWatchdogDir();
                 appCaller_.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-                appCaller_.isBusinessJank = (buissnessThreadInfo_.size() != 0) ? true : false;
+                appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
                 auto result = traceCollector_->CaptureDurationTrace(appCaller_);
                 XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
             }
@@ -376,7 +375,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         int64_t checkTimer = ONE_DAY_LIMIT;
-        if (IsDeveloperOpen() || (GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
+        if (IsEnableVersion(KEY_DEVELOPER_MODE_STATE, ENABLE_VAULE)) {
             checkTimer = ONE_HOUR_LIMIT;
         }
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -388,7 +387,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
-        if (IsEnableVersion()) {
+        if (IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
             return;
         }
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -401,7 +400,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
-        if (IsBetaVersion() || IsEnableVersion()) {
+        if (!IsEnableVersion(KEY_HIVIEW_USER_TYPE, ENABLE_HIVIEW_USER_VAULE) ||
+            IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
             return;
         }
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
