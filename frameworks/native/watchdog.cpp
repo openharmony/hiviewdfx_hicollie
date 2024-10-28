@@ -82,5 +82,15 @@ void Watchdog::InitMainLooperWatcher(WatchdogBeginFunc* beginFunc, WatchdogEndFu
 {
     WatchdogInner::GetInstance().InitMainLooperWatcher(beginFunc, endFunc);
 }
+
+void Watchdog::SetAppDebug(bool isAppDebug)
+{
+    WatchdogInner::GetInstance().SetAppDebug(isAppDebug);
+}
+
+bool Watchdog::GetAppDebug()
+{
+    return WatchdogInner::GetInstance().GetAppDebug();
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
