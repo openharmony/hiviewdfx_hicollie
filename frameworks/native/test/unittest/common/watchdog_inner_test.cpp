@@ -479,6 +479,20 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtTaskTid_004, TestSize.Level
 }
 
 /**
+ * @tc.name: WatchdogInner GetProcessNameFromProcCmdline test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcNameFromProcCmdline_001, TestSize.Level1)
+{
+    std::string procName1 = GetProcessNameFromProcCmdline(getpid());
+    std::string procName2 = GetProcessNameFromProcCmdline(25221); // test value
+    EXPECT_TRUE(procName1 != procName2);
+    std::string procName3 = GetProcessNameFromProcCmdline(getpid());
+    EXPECT_TRUE(procName1 == procName3);
+}
+
+/**
  * @tc.name: WatchdogInner InitMainLooperWatcher Test
  * @tc.desc: add testcase
  * @tc.type: FUNC
