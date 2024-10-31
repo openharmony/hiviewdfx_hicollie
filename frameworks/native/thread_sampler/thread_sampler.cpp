@@ -30,7 +30,6 @@
 #include "unwinder.h"
 #include "dfx_regs.h"
 #include "dfx_elf.h"
-#include "dfx_ark.h"
 #include "dfx_frame_formatter.h"
 #include "sample_stack_printer.h"
 #include "thread_sampler_utils.h"
@@ -242,7 +241,6 @@ void ThreadSampler::DeinitUniqueStackTable()
 void ThreadSampler::DestroyUnwinder()
 {
     maps_.reset();
-    DfxArk::ArkDestoryLocal();
     unwinder_.reset();
     accessors_.reset();
 }
