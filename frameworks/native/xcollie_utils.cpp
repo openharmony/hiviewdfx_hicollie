@@ -50,6 +50,9 @@ constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developer
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_BETA_VAULE = "beta";
+static std::string g_curProcName;
+static int32_t g_lastPid;
+static std::mutex g_lock;
 }
 uint64_t GetCurrentTickMillseconds()
 {
@@ -139,9 +142,8 @@ bool IsBetaVersion()
 
 std::string GetProcessNameFromProcCmdline(int32_t pid)
 {
-    static std::string curProcName;
-    if (!curProcName.empty()) {
-        return curProcName;
+    if (!g_curProcName.empty() && g_lastPid == pid) {
+        return g_curProcName;
     }
     std::string procCmdlinePath = "/proc/" + std::to_string(pid) + "/cmdline";
     std::string procCmdlineContent = GetFirstLine(procCmdlinePath);
@@ -160,9 +162,12 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
         }
     }
     size_t endPos = procNameEndPos - procNameStartPos;
-    curProcName = procCmdlineContent.substr(procNameStartPos, endPos);
-    XCOLLIE_LOGD("curProcName is empty, name %{public}s pid %{public}d", curProcName.c_str(), pid);
-    return curProcName;
+    g_lock.lock();
+    g_curProcName = procCmdlineContent.substr(procNameStartPos, endPos);
+    g_lastPid = pid;
+    g_lock.unlock();
+    XCOLLIE_LOGD("g_curProcName is empty, name %{public}s pid %{public}d", g_curProcName.c_str(), pid);
+    return g_curProcName;
 }
 
 std::string GetLimitedSizeName(std::string name)
