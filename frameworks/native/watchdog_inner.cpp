@@ -820,7 +820,7 @@ bool WatchdogInner::KickWatchdog()
 void WatchdogInner::IpcCheck()
 {
     uint32_t uid = getuid();
-    if (uid == FOUNDATION_UID || uid == RENDER_SERVICE_UID || GetSelfProcName() == "ohos.sceneboard") {
+    if (uid == FOUNDATION_UID || uid == RENDER_SERVICE_UID || GetSelfProcName() == KEY_SCB_STATE) {
         if (binderCheckHander_ == nullptr) {
             auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
             binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
