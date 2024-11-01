@@ -855,6 +855,14 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     std::string description = "FfrtCallback: task(";
     description += taskInfo;
     description += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
+    std::string info(taskInfo);
+    if (info.find("Queue_Schedule_Timeout") != std::string::npos) {
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
+        description += ", report twice instead of exiting process.";
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
+        WatchdogInner::KillPeerBinderProcess(description);
+        return;
+    }
     bool isExist = false;
     {
         std::unique_lock<std::mutex> lock(lockFfrt_);
