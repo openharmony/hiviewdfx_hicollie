@@ -52,7 +52,7 @@ std::string GetSelfProcName();
 
 std::string GetFirstLine(const std::string& path);
 
-std::string GetProcessNameFromProcCmdline(int32_t pid);
+std::string GetProcessNameFromProcCmdline(int32_t pid = 0);
 
 std::string GetLimitedSizeName(std::string name);
 

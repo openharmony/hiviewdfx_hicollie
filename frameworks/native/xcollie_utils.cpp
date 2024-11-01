@@ -86,18 +86,7 @@ bool IsFileNameFormat(char c)
 
 std::string GetSelfProcName()
 {
-    constexpr uint16_t READ_SIZE = 128;
-    std::ifstream fin;
-    fin.open("/proc/self/comm", std::ifstream::in);
-    if (!fin.is_open()) {
-        XCOLLIE_LOGE("fin.is_open() false");
-        return "";
-    }
-    char readStr[READ_SIZE] = {'\0'};
-    fin.getline(readStr, READ_SIZE - 1);
-    fin.close();
-
-    std::string ret = std::string(readStr);
+    std::string ret = GetProcessNameFromProcCmdline();
     ret.erase(std::remove_if(ret.begin(), ret.end(), IsFileNameFormat), ret.end());
     return ret;
 }
@@ -142,10 +131,16 @@ bool IsBetaVersion()
 
 std::string GetProcessNameFromProcCmdline(int32_t pid)
 {
-    if (!g_curProcName.empty() && g_lastPid == pid) {
-        return g_curProcName;
+    if (pid > 0) {
+        g_lock.lock();
+        if (!g_curProcName.empty() && g_lastPid == pid) {
+            g_lock.unlock();
+            return g_curProcName;
+        }
     }
-    std::string procCmdlinePath = "/proc/" + std::to_string(pid) + "/cmdline";
+
+    std::string pidStr = pid > 0 ? std::to_string(pid) : "self";
+    std::string procCmdlinePath = "/proc/" + pidStr + "/cmdline";
     std::string procCmdlineContent = GetFirstLine(procCmdlinePath);
     if (procCmdlineContent.empty()) {
         return "";
@@ -162,7 +157,9 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
         }
     }
     size_t endPos = procNameEndPos - procNameStartPos;
-    g_lock.lock();
+    if (pid <= 0) {
+        return procCmdlineContent.substr(procNameStartPos, endPos);
+    }
     g_curProcName = procCmdlineContent.substr(procNameStartPos, endPos);
     g_lastPid = pid;
     g_lock.unlock();
