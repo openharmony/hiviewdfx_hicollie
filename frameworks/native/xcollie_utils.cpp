@@ -143,6 +143,9 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
     std::string procCmdlinePath = "/proc/" + pidStr + "/cmdline";
     std::string procCmdlineContent = GetFirstLine(procCmdlinePath);
     if (procCmdlineContent.empty()) {
+        if (pid > 0) {
+            g_lock.unlock();
+        }
         return "";
     }
 
