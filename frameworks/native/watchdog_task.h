@@ -52,7 +52,9 @@ public:
           isOneshotTask(false),
           watchdogTid(0),
           timeLimit(0),
-          countLimit(0) {};
+          countLimit(0),
+          bootTimeStart(0),
+          monoTimeStart(0) {};
     ~WatchdogTask() {};
 
     bool operator<(const WatchdogTask &obj) const
@@ -88,6 +90,8 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
+    long long bootTimeStart;
+    long long monoTimeStart;
 
 private:
     bool IsMemHookOn();

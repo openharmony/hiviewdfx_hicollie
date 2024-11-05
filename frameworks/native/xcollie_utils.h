@@ -46,6 +46,10 @@ constexpr uint64_t MIN_APP_UID = 20000;
 
 uint64_t GetCurrentTickMillseconds();
 
+uint64_t GetCurrentBootMillseconds();
+
+void CalculateTimes(long long& bootTimeStart, long long& monoTimeStart);
+
 bool IsFileNameFormat(char c);
 
 std::string GetSelfProcName();
