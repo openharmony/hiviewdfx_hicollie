@@ -80,6 +80,7 @@ const int32_t NOT_OPEN = -1;
 constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
+constexpr int64_t DEFAULE_SLEEP_TIME = 2 * 1000;
 }
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
@@ -682,6 +683,31 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
     });
 }
 
+bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
+{
+    long long bootTimeStart = 0;
+    long long monoTimeStart = 0;
+    long long sleepDiff = DEFAULE_SLEEP_TIME;
+    CalculateTimes(bootTimeStart, monoTimeStart);
+    long long bootTimeDetal = fabs(bootTimeStart - queuedTaskCheck.bootTimeStart);
+    long long monoTimeDetal = fabs(monoTimeStart - queuedTaskCheck.monoTimeStart);
+    long long gap = fabs(bootTimeDetal - monoTimeDetal);
+    if (gap >= sleepDiff) {
+        XCOLLIE_LOGI("Current Thread has been sleep, pid: %{public}d", getprocpid());
+        return true;
+    }
+    return false;
+}
+
+void WatchdogInner::CheckIpcFull(uint64_t now, const WatchdogTask& queuedTask)
+{
+    if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
+        if (KickWatchdog()) {
+            g_nextKickTime = now;
+        }
+    }
+}
+
 uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
 {
     std::unique_lock<std::mutex> lock(lock_);
@@ -721,13 +747,13 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     if (popCheck && checkerQueue_.empty()) {
         return DEFAULT_TIMEOUT;
     }
+    if (IsInSleep(queuedTaskCheck)) {
+        checkerQueue_.pop();
+        return DEFAULT_TIMEOUT;
+    }
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
-    if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
-        if (KickWatchdog()) {
-            g_nextKickTime = now;
-        }
-    }
+    CheckIpcFull(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
         return queuedTask.nextTickTime - now;
     }

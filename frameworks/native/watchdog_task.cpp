@@ -82,6 +82,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     isTaskScheduled = false;
     isOneshotTask = true;
     watchdogTid = getproctid();
+    CalculateTimes(bootTimeStart, monoTimeStart);
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)

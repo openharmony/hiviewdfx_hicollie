@@ -43,6 +43,11 @@ const int MAX_NAME_SIZE = 128;
 const int MIN_WAIT_NUM = 3;
 const int TIME_INDEX_MAX = 32;
 const int INIT_PID = 1;
+const int MAX_INSERT_TIMES = 3;
+const int64_t TOTAL_NUM_HALF = 2;
+const int INDEX_ZERO = 0;
+const int INDEX_ONE = 1;
+const int INDEX_TWO = 2;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
@@ -61,6 +66,50 @@ uint64_t GetCurrentTickMillseconds()
     t.tv_nsec = 0;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
+}
+
+uint64_t GetCurrentBootMillseconds()
+{
+    struct timespec t;
+    t.tv_sec = 0;
+    t.tv_nsec = 0;
+    clock_gettime(CLOCK_BOOTTIME, &t);
+    return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
+}
+
+void CalculateTimes(long long& bootTimeStart, long long& monoTimeStart)
+{
+    std::vector<long long> bootTime;
+    std::vector<long long> monoTime;
+    std::vector<long long> bootTimeDiff;
+    std::vector<long long> monoTimeDiff;
+    for (int i = 0; i < MAX_INSERT_TIMES; i++) {
+        bootTime.push_back(static_cast<long long>(GetCurrentBootMillseconds()));
+        monoTime.push_back(static_cast<long long>(GetCurrentTickMillseconds()));
+        if (i > 0) {
+            bootTimeDiff.push_back(fabs(bootTime[i] - bootTime[i - 1]));
+            monoTimeDiff.push_back(fabs(monoTime[i] - monoTime[i - 1]));
+        }
+    }
+
+    long long bootDiff = (bootTimeDiff[INDEX_ZERO] - bootTimeDiff[INDEX_ONE]) > 0 ?
+        bootTimeDiff[INDEX_ONE] : bootTimeDiff[INDEX_ZERO];
+    long long monoDiff = (monoTimeDiff[INDEX_ZERO] - monoTimeDiff[INDEX_ONE]) > 0 ?
+        monoTimeDiff[INDEX_ONE] : monoTimeDiff[INDEX_ZERO];
+    long long diff = (bootDiff - monoDiff) > 0 ? monoDiff : bootDiff;
+    if (diff == bootTimeDiff[INDEX_ZERO]) {
+        bootTimeStart = (bootTime[INDEX_ZERO] + bootTime[INDEX_ONE]) / TOTAL_NUM_HALF;
+        monoTimeStart = monoTime[INDEX_ZERO];
+    } else if (diff == bootTimeDiff[INDEX_ONE]) {
+        bootTimeStart = (bootTime[INDEX_ONE] + bootTime[INDEX_TWO]) / TOTAL_NUM_HALF;
+        monoTimeStart = monoTime[INDEX_ONE];
+    } else if (diff == monoTimeDiff[INDEX_ZERO]) {
+        monoTimeStart = (monoTime[INDEX_ZERO] + monoTime[INDEX_ONE]) / TOTAL_NUM_HALF;
+        bootTimeStart = bootTime[INDEX_ONE];
+    } else if (diff == monoTimeDiff[INDEX_ONE]) {
+        monoTimeStart = (monoTime[INDEX_ONE] + monoTime[INDEX_TWO]) / TOTAL_NUM_HALF;
+        bootTimeStart = bootTime[INDEX_TWO];
+    }
 }
 
 bool IsFileNameFormat(char c)
