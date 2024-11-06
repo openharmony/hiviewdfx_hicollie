@@ -16,10 +16,14 @@ import("//build/test.gni")
 module_output_path = "hiviewdfx/hicollie"
 ohos_unittest("hicollie_test") {
   module_out_path = module_output_path
-  include_dirs = [ "../../include" ]
+  include_dirs = [
+    "../../include",
+    "../../../native/innerkits/include/xcollie",
+  ]
   sources = [ "hicollie_test.cpp" ]
 
   deps = [
+    "../../../native/innerkits:libhicollie",
     "../../../ndk:ohhicollie",
     "//third_party/googletest:gtest_main",
   ]
