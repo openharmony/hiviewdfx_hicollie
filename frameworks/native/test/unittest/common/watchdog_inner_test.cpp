@@ -35,6 +35,8 @@
 #include "file_ex.h"
 #include "event_handler.h"
 #include "ffrt_inner.h"
+#include "parameters.h"
+#include "watchdog_inner_util_test.h"
 
 using namespace testing::ext;
 using namespace OHOS::AppExecFwk;
@@ -50,40 +52,12 @@ void WatchdogInnerTest::TearDownTestCase(void)
 
 void WatchdogInnerTest::SetUp(void)
 {
+    InitSeLinuxEnabled();
 }
 
 void WatchdogInnerTest::TearDown(void)
 {
-}
-
-void InitSeLinuxEnabled()
-{
-    bool isSelinuxEnabled = false;
-    constexpr uint32_t BUF_SIZE_64 = 64;
-    char buffer[BUF_SIZE_64] = {'\0'};
-    FILE* fp = popen("getenforce", "r");
-    if (fp != nullptr) {
-        fgets(buffer, sizeof(buffer), fp);
-        std::string str = buffer;
-        printf("buffer is %s\n", str.c_str());
-        if (str.find("Enforcing") != str.npos) {
-            printf("Enforcing %s\n", str.c_str());
-            isSelinuxEnabled = true;
-        } else {
-            printf("This isn't Enforcing %s\n", str.c_str());
-        }
-        pclose(fp);
-    } else {
-        printf("fp == nullptr\n");
-    }
-    system("setenforce 0");
-
-    constexpr mode_t defaultLogDirMode = 0770;
-    std::string path = "/data/test/log";
-    if (!OHOS::FileExists(path)) {
-        OHOS::ForceCreateDirectory(path);
-        OHOS::ChangeModeDirectory(path, defaultLogDirMode);
-    }
+    CancelSeLinuxEnabled();
 }
 
 static void InitBeginFuncTest(const char* name)
@@ -94,6 +68,17 @@ static void InitBeginFuncTest(const char* name)
 static void InitEndFuncTest(const char* name)
 {
     std::string nameStr(name);
+}
+
+/**
+ * @tc.name: WatchdogInner thread RemoveInnerTask test
+ * @tc.desc: add test case
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_TaskRemoveInnerTask_001, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().RemoveInnerTask("WatchdogInnerTest_RemoveInnerTask_001");
+    ASSERT_EQ(WatchdogInner::GetInstance().checkerQueue_.size(), 0);
 }
 
 /**
@@ -168,6 +153,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_001, TestSize.Level1
     WatchdogInner::GetInstance().isNeedStop_.store(false);
     WatchdogTask task1;
     ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task1), 60000);
+    WatchdogTask task2("", taskFunc, delay, interval, isOneshot);
+    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task1), 60000);
 }
 
 /**
@@ -217,6 +204,21 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FfrtCallback_001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: WatchdogInner FfrtCallback Test;
+ * @tc.desc: add teatcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FfrtCallback_002, TestSize.Level1)
+{
+    uint64_t taskId = 1;
+    const char *taskInfo = "Queue_Schedule_Timeout";
+    uint32_t delayedTaskCount = 0;
+    OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogInnerUnitTest");
+    EXPECT_TRUE(IsProcessDebug(getprocpid()));
+    WatchdogInner::GetInstance().FfrtCallback(taskId, taskInfo, delayedTaskCount);
+}
+
+/**
  * @tc.name: WatchdogInner SendMsgToHungtask Test;
  * @tc.desc: add teatcase
  * @tc.type: FUNC
@@ -240,7 +242,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
     EXPECT_EQ(ret, false);
     ret = IsProcessDebug(pid);
     printf("IsProcessDebug ret=%s", ret ? "true" : "false");
-    InitSeLinuxEnabled();
     std::string path = "/data/test/log/test1.txt";
     std::ofstream ofs(path, std::ios::trunc);
     if (!ofs.is_open()) {
@@ -252,7 +253,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
     ofs << "22000:22000 to 12001:12001 code 9 wait:1 s test" << std::endl;
     ofs << "12000:12000 to 12001:12001 code 9 wait:4 s test" << std::endl;
     ofs.close();
-
     std::ifstream fin(path);
     if (!fin.is_open()) {
         printf("open path failed!, path=%s\n", path.c_str());
@@ -451,8 +451,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtTaskTid_002, TestSize.Level
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtTaskTid_003, TestSize.Level1)
 {
-    std::string msg = "us. queue name [], remaining tasks count=11,  worker tid 12220 "
-        " is running, task id 12221";
+    std::string msg = "us. queue name [], remaining tasks count=11, worker tid "
+        "12220 is running, task id 12221";
     std::string str = "], remaining tasks count=";
     auto index = msg.find(str);
     EXPECT_TRUE(index != std::string::npos);
@@ -468,7 +468,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtTaskTid_003, TestSize.Level
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtTaskTid_004, TestSize.Level1)
 {
-    std::string msg = "us. queue name [], remaining tasks count=11, worker tid abc "
+    std::string msg = "us. queue name [WatchdogInnerTest_GetFfrtTaskTid_004], "
+        "remaining tasks count=11, worker tid abc\\nWatchdogInnerTest_GetFfrtTaskTid_004 "
         " is running, task id 12221";
     std::string str = "], remaining tasks count=";
     auto index = msg.find(str);
@@ -493,6 +494,39 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcNameFromProcCmdline_001, Te
 }
 
 /**
+ * @tc.name: WatchdogInner SendFfrtEvent test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_001, TestSize.Level1)
+{
+    EXPECT_TRUE(IsProcessDebug(getprocpid()));
+    WatchdogInner::GetInstance().SendFfrtEvent("msg", "testName", "taskInfo");
+}
+
+/**
+ * @tc.name: WatchdogInner LeftTimeExitProcess test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_LeftTimeExitProcess_001, TestSize.Level1)
+{
+    EXPECT_TRUE(IsProcessDebug(getprocpid()));
+    WatchdogInner::GetInstance().LeftTimeExitProcess("msg");
+}
+
+/**
+ * @tc.name: WatchdogInner KillPeerBinderProcess test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillPeerBinderProcess_001, TestSize.Level1)
+{
+    EXPECT_TRUE(IsProcessDebug(getprocpid()));
+    WatchdogInner::GetInstance().KillPeerBinderProcess("msg");
+}
+
+/**
  * @tc.name: WatchdogInner InitMainLooperWatcher Test
  * @tc.desc: add testcase
  * @tc.type: FUNC
@@ -502,7 +536,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
-    WatchdogInner::GetInstance().stackContent_.stackState == 0;
+    WatchdogInner::GetInstance().stackContent_.stackState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     int count = 0;
     sleep(10); // test value
@@ -512,20 +546,45 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
         endTest("Test");
         count++;
     }
-    sleep(5);
-    WatchdogInner::GetInstance().traceContent_.traceState == 0;
+    WatchdogInner::GetInstance().traceContent_.traceState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     beginTest("Test");
     sleep(2); // test value
     endTest("Test");
     ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, 1);
-    WatchdogInner::GetInstance().traceContent_.traceState == 1;
-    WatchdogInner::GetInstance().stackContent_.stackState == 0;
+    WatchdogInner::GetInstance().traceContent_.traceState = 1;
+    WatchdogInner::GetInstance().stackContent_.stackState = 0;
     beginTest("Test");
-    usleep(250 * 1000); // test value
+    usleep(3500 * 1000); // test value
     endTest("Test");
-    WatchdogInner::GetInstance().traceCollector_ == nullptr;
+}
+
+/**
+ * @tc.name: WatchdogInner StartTraceProfile test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartTraceProfile_001, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().traceCollector_ = nullptr;
     WatchdogInner::GetInstance().StartTraceProfile(150);
+    EXPECT_TRUE(WatchdogInner::GetInstance().traceCollector_ == nullptr);
+}
+
+/**
+ * @tc.name: WatchdogInner GetLimitedSizeName test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetLimitedSizeName_001, TestSize.Level1)
+{
+    std::string testStr = "WatchdogInnerTest_GetLimitedSizeName_001";
+    std::string name = testStr;
+    int limitValue = 128; // name limit value
+    while (name.size() <= limitValue) {
+        name += testStr;
+    }
+    EXPECT_TRUE(GetLimitedSizeName(name).size() <= limitValue);
 }
 } // namespace HiviewDFX
 } // namespace OHOS

@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <chrono>
 
+#include "watchdog.h"
 #include "hicollie.h"
 
 using namespace testing::ext;
@@ -103,5 +104,10 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Report_1, TestSize.Level1)
     result = OH_HiCollie_Report(&isSixSecond);
     printf("OH_HiCollie_Report result: %d\n", result);
     EXPECT_FALSE(isSixSecond);
+    result = OH_HiCollie_Report(nullptr);
+    EXPECT_EQ(result, HICOLLIE_INVALID_ARGUMENT);
+    OHOS::HiviewDFX::Watchdog::GetInstance().SetAppDebug(true);
+    result = OH_HiCollie_Report(&isSixSecond);
+    EXPECT_EQ(result, HICOLLIE_SUCCESS);
 }
 } // namespace

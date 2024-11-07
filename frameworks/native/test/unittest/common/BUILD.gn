@@ -79,7 +79,10 @@ ohos_unittest("WatchdogUnitTest") {
 
 ohos_unittest("WatchdogInnerUnitTest") {
   module_out_path = module_output_path
-  sources = [ "watchdog_inner_test.cpp" ]
+  sources = [
+    "watchdog_inner_test.cpp",
+    "watchdog_inner_util_test.cpp",
+  ]
 
   configs = [ ":module_private_config" ]
 
@@ -91,6 +94,7 @@ ohos_unittest("WatchdogInnerUnitTest") {
     "c_utils:utils",
     "ffrt:libffrt",
     "hilog:libhilog",
+    "init:libbegetutil",
   ]
 
   defines = []
