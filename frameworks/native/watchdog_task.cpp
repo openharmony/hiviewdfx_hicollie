@@ -50,8 +50,8 @@ constexpr const char* CORE_PROCS[] = {
 int64_t WatchdogTask::curId = 0;
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
-    : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr),
-      arg(nullptr), flag(0), timeLimit(0), countLimit(0)
+    : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
+      timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler);
@@ -63,7 +63,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
-      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0)
+      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
 {
     id = ++curId;
     checkInterval = interval;
@@ -87,7 +87,8 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      isTaskScheduled(false), isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit)
+      isTaskScheduled(false), isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit),
+      bootTimeStart(0), monoTimeStart(0)
 {
     id = ++curId;
     checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;

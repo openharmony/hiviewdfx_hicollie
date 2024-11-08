@@ -90,8 +90,8 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
-    long long bootTimeStart;
-    long long monoTimeStart;
+    uint64_t bootTimeStart;
+    uint64_t monoTimeStart;
 
 private:
     bool IsMemHookOn();
