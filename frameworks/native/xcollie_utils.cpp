@@ -43,11 +43,8 @@ const int MAX_NAME_SIZE = 128;
 const int MIN_WAIT_NUM = 3;
 const int TIME_INDEX_MAX = 32;
 const int INIT_PID = 1;
-const int MAX_INSERT_TIMES = 3;
-const int64_t TOTAL_NUM_HALF = 2;
-const int INDEX_ZERO = 0;
-const int INDEX_ONE = 1;
-const int INDEX_TWO = 2;
+const int TIMES_ARR_SIZE = 6;
+const uint64_t TIMES_AVE_PARAM = 2;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
@@ -77,39 +74,30 @@ uint64_t GetCurrentBootMillseconds()
     return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
-void CalculateTimes(long long& bootTimeStart, long long& monoTimeStart)
+void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart)
 {
-    std::vector<long long> bootTime;
-    std::vector<long long> monoTime;
-    std::vector<long long> bootTimeDiff;
-    std::vector<long long> monoTimeDiff;
-    for (int i = 0; i < MAX_INSERT_TIMES; i++) {
-        bootTime.push_back(static_cast<long long>(GetCurrentBootMillseconds()));
-        monoTime.push_back(static_cast<long long>(GetCurrentTickMillseconds()));
-        if (i > 0) {
-            bootTimeDiff.push_back(fabs(bootTime[i] - bootTime[i - 1]));
-            monoTimeDiff.push_back(fabs(monoTime[i] - monoTime[i - 1]));
+    uint64_t timesArr[TIMES_ARR_SIZE] = {0};
+    uint64_t minTimeDiff = UINT64_MAX;
+    int index = 1;
+
+    for (int i = 0; i < TIMES_ARR_SIZE ; i++) {
+        timesArr[i] = (i & 1) ? GetCurrentTickMillseconds() : GetCurrentBootMillseconds();
+        if (i <= 1) {
+            continue;
+        }
+        uint64_t tmpDiff = GetNumsDiffAbs(timesArr[i], timesArr[i-2]);
+        if (tmpDiff < minTimeDiff) {
+            minTimeDiff = tmpDiff;
+            index = i - 1;
         }
     }
+    bootTimeStart = (index & 1) ? (timesArr[index - 1] + timesArr[index + 1]) / TIMES_AVE_PARAM : timesArr[index];
+    monoTimeStart = (index & 1) ? timesArr[index] : (timesArr[index - 1] + timesArr[index + 1]) / TIMES_AVE_PARAM;
+}
 
-    long long bootDiff = (bootTimeDiff[INDEX_ZERO] - bootTimeDiff[INDEX_ONE]) > 0 ?
-        bootTimeDiff[INDEX_ONE] : bootTimeDiff[INDEX_ZERO];
-    long long monoDiff = (monoTimeDiff[INDEX_ZERO] - monoTimeDiff[INDEX_ONE]) > 0 ?
-        monoTimeDiff[INDEX_ONE] : monoTimeDiff[INDEX_ZERO];
-    long long diff = (bootDiff - monoDiff) > 0 ? monoDiff : bootDiff;
-    if (diff == bootTimeDiff[INDEX_ZERO]) {
-        bootTimeStart = (bootTime[INDEX_ZERO] + bootTime[INDEX_ONE]) / TOTAL_NUM_HALF;
-        monoTimeStart = monoTime[INDEX_ZERO];
-    } else if (diff == bootTimeDiff[INDEX_ONE]) {
-        bootTimeStart = (bootTime[INDEX_ONE] + bootTime[INDEX_TWO]) / TOTAL_NUM_HALF;
-        monoTimeStart = monoTime[INDEX_ONE];
-    } else if (diff == monoTimeDiff[INDEX_ZERO]) {
-        monoTimeStart = (monoTime[INDEX_ZERO] + monoTime[INDEX_ONE]) / TOTAL_NUM_HALF;
-        bootTimeStart = bootTime[INDEX_ONE];
-    } else if (diff == monoTimeDiff[INDEX_ONE]) {
-        monoTimeStart = (monoTime[INDEX_ONE] + monoTime[INDEX_TWO]) / TOTAL_NUM_HALF;
-        bootTimeStart = bootTime[INDEX_TWO];
-    }
+uint64_t GetNumsDiffAbs(const uint64_t& numOne, const uint64_t& numTwo)
+{
+    return (numOne > numTwo) ? (numOne - numTwo) : (numTwo - numOne);
 }
 
 bool IsFileNameFormat(char c)

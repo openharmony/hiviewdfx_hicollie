@@ -48,7 +48,9 @@ uint64_t GetCurrentTickMillseconds();
 
 uint64_t GetCurrentBootMillseconds();
 
-void CalculateTimes(long long& bootTimeStart, long long& monoTimeStart);
+void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart);
+
+uint64_t GetNumsDiffAbs(const uint64_t& numOne, const uint64_t& numTwo);
 
 bool IsFileNameFormat(char c);
 

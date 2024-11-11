@@ -80,7 +80,7 @@ const int32_t NOT_OPEN = -1;
 constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
-constexpr int64_t DEFAULE_SLEEP_TIME = 2 * 1000;
+constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
 }
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
@@ -685,14 +685,16 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
 
 bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 {
-    long long bootTimeStart = 0;
-    long long monoTimeStart = 0;
-    long long sleepDiff = DEFAULE_SLEEP_TIME;
+    if (IsInAppspwan() || queuedTaskCheck.bootTimeStart <= 0 || queuedTaskCheck.monoTimeStart <= 0) {
+        return false;
+    }
+
+    uint64_t bootTimeStart = 0;
+    uint64_t monoTimeStart = 0;
     CalculateTimes(bootTimeStart, monoTimeStart);
-    long long bootTimeDetal = fabs(bootTimeStart - queuedTaskCheck.bootTimeStart);
-    long long monoTimeDetal = fabs(monoTimeStart - queuedTaskCheck.monoTimeStart);
-    long long gap = fabs(bootTimeDetal - monoTimeDetal);
-    if (gap >= sleepDiff) {
+    uint64_t bootTimeDetal = GetNumsDiffAbs(bootTimeStart, queuedTaskCheck.bootTimeStart);
+    uint64_t monoTimeDetal = GetNumsDiffAbs(monoTimeStart, queuedTaskCheck.monoTimeStart);
+    if (GetNumsDiffAbs(bootTimeDetal, monoTimeDetal) >= DEFAULE_SLEEP_TIME) {
         XCOLLIE_LOGI("Current Thread has been sleep, pid: %{public}d", getprocpid());
         return true;
     }
@@ -747,10 +749,6 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     if (popCheck && checkerQueue_.empty()) {
         return DEFAULT_TIMEOUT;
     }
-    if (IsInSleep(queuedTaskCheck)) {
-        checkerQueue_.pop();
-        return DEFAULT_TIMEOUT;
-    }
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
     CheckIpcFull(now, queuedTask);
@@ -792,9 +790,11 @@ bool WatchdogInner::Start()
         WatchdogTask task;
         uint64_t leftTimeMill = FetchNextTask(now, task);
         if (leftTimeMill == 0) {
-            task.Run(now);
-            ReInsertTaskIfNeed(task);
-            currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
+            if (!IsInSleep(task)) {
+                task.Run(now);
+                ReInsertTaskIfNeed(task);
+                currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
+            }
             continue;
         } else if (isNeedStop_) {
             break;

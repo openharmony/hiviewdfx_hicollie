@@ -30,6 +30,7 @@
 #undef private
 #undef protected
 
+#include "xcollie_define.h"
 #include "xcollie_utils.h"
 #include "directory_ex.h"
 #include "file_ex.h"
@@ -585,6 +586,38 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetLimitedSizeName_001, TestSize.L
         name += testStr;
     }
     EXPECT_TRUE(GetLimitedSizeName(name).size() <= limitValue);
+}
+
+/**
+ * @tc.name: WatchdogInner IsInSleep test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsInSleep_001, TestSize.Level1)
+{
+    const std::string name = "WatchdogInnerTest_IsInSleep_001";
+    bool taskResult = 0;
+    XCollieCallback callbackFunc = [&taskResult](void *) {
+        taskResult = 1;
+    };
+
+    WatchdogTask task(name, 0, callbackFunc, nullptr, XCOLLIE_FLAG_DEFAULT);
+    bool ret = WatchdogInner::GetInstance().IsInSleep(task);
+    EXPECT_TRUE(!ret);
+
+    task.bootTimeStart = 0;
+    task.monoTimeStart = 0;
+    ret = WatchdogInner::GetInstance().IsInSleep(task);
+    EXPECT_TRUE(!ret);
+
+    uint64_t bootTimeStart = 0;
+    uint64_t monoTimeStart = 0;
+    CalculateTimes(bootTimeStart, monoTimeStart);
+    uint64_t testValue = 2100;
+    task.bootTimeStart = bootTimeStart;
+    task.monoTimeStart = monoTimeStart + testValue;
+    ret = WatchdogInner::GetInstance().IsInSleep(task);
+    EXPECT_TRUE(ret);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
