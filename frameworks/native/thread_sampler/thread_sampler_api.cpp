@@ -48,5 +48,10 @@ int ThreadSamplerDeinit()
 {
     return ThreadSampler::GetInstance().Deinit() ? SUCCESS : FAIL;
 }
+
+void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context)
+{
+    ThreadSampler::ThreadSamplerSignalHandler(sig, si, context);
+}
 }
 }

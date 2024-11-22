@@ -26,15 +26,14 @@ using namespace testing::ext;
 namespace OHOS {
 namespace HiviewDFX {
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
-typedef int (*ThreadSamplerInitFunc)(int);
-typedef int32_t (*ThreadSamplerSampleFunc)();
-typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
-typedef void (*ThreadSamplerDeinitFunc)();
 
 constexpr int SAMPLE_CNT = 10;
 constexpr int INTERVAL = 100;
 constexpr size_t STACK_LENGTH = 32 * 1024;
 constexpr int MILLSEC_TO_MICROSEC = 1000;
+
+static std::mutex threadSamplerSignalMutex_;
+SigActionType ThreadSamplerTest::threadSamplerSigHandler_ = nullptr;
 
 void ThreadSamplerTest::SetUpTestCase(void)
 {
@@ -96,20 +95,85 @@ uint32_t GetMMapSizeAndName(const std::string& checkName, std::string& mmapName)
 
 void* FunctionOpen(void* funcHandler, const char* funcName)
 {
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-        return nullptr;
-    }
     dlerror();
     char* err = nullptr;
     void* func = dlsym(funcHandler, funcName);
-    if ((err = dlerror()) != nullptr) {
-        printf("dlopen %s failed. %s", funcName, err);
-        dlclose(funcHandler);
-        funcHandler = nullptr;
+    err = dlerror();
+    if (err != nullptr) {
         return nullptr;
     }
     return func;
+}
+
+void ThreadSamplerTest::ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context)
+{
+    std::lock_guard<std::mutex> lock(threadSamplerSignalMutex_);
+    if (ThreadSamplerTest::threadSamplerSigHandler_ == nullptr) {
+        return;
+    }
+    ThreadSamplerTest::threadSamplerSigHandler_(sig, si, context);
+}
+
+bool ThreadSamplerTest::InstallThreadSamplerSignal()
+{
+    struct sigaction action {};
+    sigfillset(&action.sa_mask);
+    action.sa_sigaction = ThreadSamplerTest::ThreadSamplerSigHandler;
+    action.sa_flags = SA_RESTART | SA_SIGINFO;
+    if (sigaction(MUSL_SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
+        return false;
+    }
+    return true;
+}
+
+void ThreadSamplerTest::UninstallThreadSamplerSignal()
+{
+    std::lock_guard<std::mutex> lock(threadSamplerSignalMutex_);
+    threadSamplerSigHandler_ = nullptr;
+}
+
+bool ThreadSamplerTest::InitThreadSamplerFuncs()
+{
+    threadSamplerFuncHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
+    if (threadSamplerFuncHandler_ == nullptr) {
+        return false;
+    }
+
+    threadSamplerInitFunc_ =
+        reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerInit"));
+    threadSamplerSampleFunc_ =
+        reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSample"));
+    threadSamplerCollectFunc_ =
+        reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerCollect"));
+    threadSamplerDeinitFunc_ =
+        reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
+    threadSamplerSigHandler_ =
+        reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
+    if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
+        threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
+        threadSamplerSigHandler_ == nullptr) {
+        threadSamplerInitFunc_ = nullptr;
+        threadSamplerSampleFunc_ = nullptr;
+        threadSamplerCollectFunc_ = nullptr;
+        threadSamplerDeinitFunc_ = nullptr;
+        threadSamplerSigHandler_ = nullptr;
+        dlclose(threadSamplerFuncHandler_);
+        threadSamplerFuncHandler_ = nullptr;
+        return false;
+    }
+    return true;
+}
+
+bool ThreadSamplerTest::InitThreadSampler()
+{
+    if (!InitThreadSamplerFuncs()) {
+        return false;
+    }
+
+    if (!InstallThreadSamplerSignal()) {
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -123,25 +187,18 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
     printf("ThreadSamplerTest_001\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);
 
-    void* funcHandler = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-    }
-    dlerror();
-    auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
-    auto sampleFunc = reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler, "ThreadSamplerSample"));
-    auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
-    auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
+    bool flag = InitThreadSampler();
+    ASSERT_TRUE(flag);
 
-    initFunc(SAMPLE_CNT);
-    auto sampleHandler = [sampleFunc]() {
-        sampleFunc();
+    threadSamplerInitFunc_(SAMPLE_CNT);
+    auto sampleHandler = [this]() {
+        threadSamplerSampleFunc_();
     };
 
-    char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* stk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk]() {
         int treeFormat = 0;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -152,11 +209,13 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
 
     WaitSomeTime();
 
+    std::string stack = stk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
-    delete[] stack;
-    deinitFunc();
-    dlclose(funcHandler);
+    printf("stack:\n%s", stack.c_str());
+    delete[] stk;
+    UninstallThreadSamplerSignal();
+    threadSamplerDeinitFunc_();
+    dlclose(threadSamplerFuncHandler_);
 }
 
 /**
@@ -169,25 +228,19 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
 {
     printf("ThreadSamplerTest_002\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);
-    void* funcHandler = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-    }
-    dlerror();
-    auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
-    auto sampleFunc = reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler, "ThreadSamplerSample"));
-    auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
-    auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
+    
+    bool flag = InitThreadSampler();
+    ASSERT_TRUE(flag);
 
-    initFunc(SAMPLE_CNT);
-    auto sampleHandler = [sampleFunc]() {
-        sampleFunc();
+    threadSamplerInitFunc_(SAMPLE_CNT);
+    auto sampleHandler = [this]() {
+        threadSamplerSampleFunc_();
     };
 
-    char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* stk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk]() {
         int treeFormat = 1;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -197,11 +250,14 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
+
+    std::string stack = stk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
-    delete[] stack;
-    deinitFunc();
-    dlclose(funcHandler);
+    printf("stack:\n%s", stack.c_str());
+    delete[] stk;
+    UninstallThreadSamplerSignal();
+    threadSamplerDeinitFunc_();
+    dlclose(threadSamplerFuncHandler_);
 }
 
 /**
@@ -214,36 +270,33 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 {
     printf("ThreadSamplerTest_003\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);
-    void* funcHandler = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-    }
-    dlerror();
-    auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
-    auto sampleFunc = reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler, "ThreadSamplerSample"));
-    auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
-    auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
+    
+    bool flag = InitThreadSampler();
+    ASSERT_TRUE(flag);
 
-    initFunc(SAMPLE_CNT);
-    auto sampleHandler = [sampleFunc]() {
-        sampleFunc();
+    threadSamplerInitFunc_(SAMPLE_CNT);
+    auto sampleHandler = [this]() {
+        threadSamplerSampleFunc_();
     };
 
-    char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* stk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk]() {
         int treeFormat = 1;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
-        Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, INTERVAL * i + INTERVAL);
+        uint64_t delay = INTERVAL * i + INTERVAL;
+        Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, delay);
     }
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
+
+    std::string stack = stk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
-    deinitFunc();
+    printf("stack:\n%s", stack.c_str());
+    threadSamplerDeinitFunc_();
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
         Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, INTERVAL * i + INTERVAL);
@@ -251,21 +304,28 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
+    stack = stk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
+    printf("stack:\n%s", stack.c_str());
 
-    initFunc(SAMPLE_CNT);
+    threadSamplerInitFunc_(SAMPLE_CNT);
+
+    flag = InstallThreadSamplerSignal();
+    ASSERT_TRUE(flag);
+
     for (int i = 0; i < SAMPLE_CNT; i++) {
         Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, INTERVAL * i + INTERVAL);
     }
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
+    stack = stk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
-    delete[] stack;
-    deinitFunc();
-    dlclose(funcHandler);
+    printf("stack:\n%s", stack.c_str());
+    delete[] stk;
+    UninstallThreadSamplerSignal();
+    threadSamplerDeinitFunc_();
+    dlclose(threadSamplerFuncHandler_);
 }
 
 /**
@@ -278,24 +338,19 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
 {
     printf("ThreadSamplerTest_004\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);
-    void* funcHandler = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-    }
-    dlerror();
-    auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
-    auto sampleFunc = reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler, "ThreadSamplerSample"));
-    auto collectFunc = reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(funcHandler, "ThreadSamplerCollect"));
-    auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
-    initFunc(SAMPLE_CNT);
-    auto sampleHandler = [sampleFunc]() {
-        sampleFunc();
+
+    bool flag = InitThreadSampler();
+    ASSERT_TRUE(flag);
+
+    threadSamplerInitFunc_(SAMPLE_CNT);
+    auto sampleHandler = [this]() {
+        threadSamplerSampleFunc_();
     };
 
-    char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* stk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk]() {
         int treeFormat = 1;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
     };
 
     sigset_t sigset;
@@ -310,13 +365,15 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
-    printf("stack:\n%s", stack);
+    std::string stack = stk;
+    printf("stack:\n%s", stack.c_str());
     ASSERT_NE(stack, "");
     sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
     sigdelset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
-    delete[] stack;
-    deinitFunc();
-    dlclose(funcHandler);
+    delete[] stk;
+    UninstallThreadSamplerSignal();
+    threadSamplerDeinitFunc_();
+    dlclose(threadSamplerFuncHandler_);
 }
 
 /**
@@ -336,15 +393,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
     uint32_t uniTableSize = 0;
     std::string uniStackTableMMapName = "";
 
-    void* funcHandler = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-    }
-    dlerror();
-    auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
-    auto deinitFunc = reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(funcHandler, "ThreadSamplerDeinit"));
+    bool flag = InitThreadSamplerFuncs();
+    ASSERT_TRUE(flag);
 
-    initFunc(SAMPLE_CNT);
+    threadSamplerInitFunc_(SAMPLE_CNT);
     uniTableSize = GetMMapSizeAndName("hicollie_buf", uniStackTableMMapName);
     
     uint32_t bufSize = 128 * 1024;
@@ -352,8 +404,8 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
     ASSERT_EQ(isSubStr(uniStackTableMMapName, "hicollie_buf"), true);
     printf("mmap name: %s, size: %u KB\n", uniStackTableMMapName.c_str(), uniTableSize);
 
-    deinitFunc();
-    dlclose(funcHandler);
+    threadSamplerDeinitFunc_();
+    dlclose(threadSamplerFuncHandler_);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -20,12 +20,32 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+typedef int (*ThreadSamplerInitFunc)(int);
+typedef int32_t (*ThreadSamplerSampleFunc)();
+typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
+typedef int (*ThreadSamplerDeinitFunc)();
+typedef void (*SigActionType)(int, siginfo_t*, void*);
+
 class ThreadSamplerTest : public testing::Test {
 public:
     static void SetUpTestCase(void);
     static void TearDownTestCase(void);
     void SetUp();
     void TearDown();
+
+    bool InitThreadSamplerFuncs();
+    static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
+    bool InstallThreadSamplerSignal();
+    void UninstallThreadSamplerSignal();
+    bool InitThreadSampler();
+
+    void* threadSamplerFuncHandler_  {nullptr};
+    ThreadSamplerInitFunc threadSamplerInitFunc_ {nullptr};
+    ThreadSamplerSampleFunc threadSamplerSampleFunc_ {nullptr};
+    ThreadSamplerCollectFunc threadSamplerCollectFunc_ {nullptr};
+    ThreadSamplerDeinitFunc threadSamplerDeinitFunc_ {nullptr};
+
+    static SigActionType threadSamplerSigHandler_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
