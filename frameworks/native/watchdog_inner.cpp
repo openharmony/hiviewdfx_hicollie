@@ -71,8 +71,9 @@ constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
-constexpr int32_t FOUNDATION_UID = 5523;
-constexpr int32_t RENDER_SERVICE_UID = 1003;
+constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
+constexpr uint32_t FOUNDATION_UID = 5523;
+constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
@@ -81,6 +82,7 @@ constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
 constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
+constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
 }
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
@@ -846,7 +848,9 @@ bool WatchdogInner::KickWatchdog()
 void WatchdogInner::IpcCheck()
 {
     uint32_t uid = getuid();
-    if (uid == FOUNDATION_UID || uid == RENDER_SERVICE_UID || GetSelfProcName() == KEY_SCB_STATE) {
+    bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
+        [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
+    if (isJoinIpcFullUid || GetSelfProcName() == KEY_SCB_STATE) {
         if (binderCheckHander_ == nullptr) {
             auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
             binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
