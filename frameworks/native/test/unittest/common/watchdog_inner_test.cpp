@@ -619,5 +619,17 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsInSleep_001, TestSize.Level1)
     ret = WatchdogInner::GetInstance().IsInSleep(task);
     EXPECT_TRUE(ret);
 }
+
+/**
+ * @tc.name: WatchdogInner GetUidByPid test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetUidByPid_001, TestSize.Level1)
+{
+    GetUidByPid(getprocpid());
+    int32_t uid = GetUidByPid(1);
+    EXPECT_TRUE(uid >= 0);
+}
 } // namespace HiviewDFX
 } // namespace OHOS
