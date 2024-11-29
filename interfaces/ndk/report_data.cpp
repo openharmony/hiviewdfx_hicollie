@@ -36,6 +36,11 @@ bool ReportData::WriteContent(Parcel &parcel) const
         return false;
     }
 
+    if (!parcel.WriteInt32(tid)) {
+        XCOLLIE_LOGE("Tid [%{public}u] write int32 failed.", tid);
+        return false;
+    }
+
     if (token == nullptr) {
         if (!parcel.WriteBool(false)) {
             XCOLLIE_LOGE("Token falge [false] write bool failed.");
