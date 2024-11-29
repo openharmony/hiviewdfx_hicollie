@@ -505,6 +505,7 @@ int64_t WatchdogInner::RunXCollieTask(const std::string& name, uint64_t timeout,
     }
 
     std::unique_lock<std::mutex> lock(lock_);
+    IpcCheck();
     std::string limitedName = GetLimitedSizeName(name);
     return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeout, func, arg, flag));
 }
@@ -847,6 +848,11 @@ bool WatchdogInner::KickWatchdog()
 
 void WatchdogInner::IpcCheck()
 {
+    static bool isIpcCheckInit = false;
+    if (isIpcCheckInit) {
+        return;
+    }
+
     uint32_t uid = getuid();
     bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
         [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
@@ -860,6 +866,7 @@ void WatchdogInner::IpcCheck()
             }
         }
     }
+    isIpcCheckInit = true;
 }
 
 void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
