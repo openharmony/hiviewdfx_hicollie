@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 #include <string>
+#include <sys/syscall.h>
 #include "watchdog.h"
 #include "report_data.h"
 #include "xcollie_utils.h"
@@ -35,6 +36,7 @@ constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
 constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
 constexpr uint32_t NOTIFY_APP_FAULT = 38;
 constexpr uint32_t APP_MGR_SERVICE_ID = 501;
+static int32_t g_tid = -1;
 
 bool IsAppMainThread()
 {
@@ -44,6 +46,11 @@ bool IsAppMainThread()
         return true;
     }
     return false;
+}
+
+void SetTid(int32_t tid)
+{
+    g_tid = tid;
 }
 
 int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
@@ -97,8 +104,9 @@ int Report(bool* isSixSecond)
     reportData.errorObject.stack = "";
     reportData.notifyApp = false;
     reportData.waitSaveState = false;
+    reportData.tid = g_tid > 0 ? g_tid : getpid();
     auto result = NotifyAppFault(reportData);
-    XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d", result);
+    XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d", result, reportData.tid);
     return result;
 }
 } // end of namespace HiviewDFX
@@ -112,6 +120,7 @@ HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task)
     if (!task) {
         OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("BussinessWatchdog");
     } else {
+        OHOS::HiviewDFX::SetTid(syscall(SYS_gettid));
         OHOS::HiviewDFX::Watchdog::GetInstance().RunPeriodicalTask("BussinessWatchdog", task,
             OHOS::HiviewDFX::CHECK_INTERVAL_TIME, OHOS::HiviewDFX::INI_TIMER_FIRST_SECOND);
         OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("AppkitWatchdog");
