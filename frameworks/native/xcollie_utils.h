@@ -91,6 +91,8 @@ int64_t GetTimeStamp();
 bool IsEnableVersion();
 
 void* FunctionOpen(void* funcHandler, const char* funcName);
+
+int32_t GetUidByPid(const int32_t pid);
 } // end of HiviewDFX
 } // end of OHOS
 #endif

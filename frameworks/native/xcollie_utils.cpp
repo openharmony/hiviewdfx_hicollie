@@ -45,6 +45,7 @@ const int TIME_INDEX_MAX = 32;
 const int INIT_PID = 1;
 const int TIMES_ARR_SIZE = 6;
 const uint64_t TIMES_AVE_PARAM = 2;
+const int32_t APP_MIN_UID = 20000;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
@@ -348,12 +349,19 @@ bool KillProcessByPid(int32_t pid)
             "peerBinderPid=%{public}d, pid=%{public}d", peerBinderPid, pid);
         return false;
     }
+    int32_t uid = GetUidByPid(peerBinderPid);
+    if (uid < APP_MIN_UID) {
+        XCOLLIE_LOGI("Current peer process can not kill, "
+            "peerBinderPid=%{public}d, uid=%{public}d", peerBinderPid, uid);
+        return false;
+    }
 
-    XCOLLIE_LOGI("try to Kill PeerBinder process, name=%{public}s, pid=%{public}d",
-        GetProcessNameFromProcCmdline(peerBinderPid).c_str(), peerBinderPid);
     int32_t ret = kill(peerBinderPid, SIGKILL);
     if (ret == -1) {
         XCOLLIE_LOGI("Kill PeerBinder process failed");
+    } else {
+        XCOLLIE_LOGI("Kill PeerBinder process success, name=%{public}s, pid=%{public}d",
+            GetProcessNameFromProcCmdline(peerBinderPid).c_str(), peerBinderPid);
     }
     return (ret >= 0);
 }
@@ -440,6 +448,37 @@ void* FunctionOpen(void* funcHandler, const char* funcName)
         return nullptr;
     }
     return func;
+}
+
+int32_t GetUidByPid(const int32_t pid)
+{
+    std::string uidFlag = "Uid:";
+    std::string cmdLinePath = "/proc/" + std::to_string(pid) + "/status";
+    std::string realPath = "";
+    if (!OHOS::PathToRealPath(cmdLinePath, realPath)) {
+        XCOLLIE_LOGE("Path to realPath failed.");
+        return -1;
+    }
+    std::ifstream file(realPath);
+    if (!file.is_open()) {
+        XCOLLIE_LOGE("open realPath failed.");
+        return -1;
+    }
+    int32_t uid = -1;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.compare(0, uidFlag.size(), uidFlag) == 0) {
+            std::istringstream iss(line);
+            std::string temp;
+            if (std::getline(iss, temp, ':') && std::getline(iss, line)) {
+                std::istringstream(line) >> uid;
+                XCOLLIE_LOGI("get uid is %{public}d.", uid);
+                break;
+            }
+        }
+    }
+    file.close();
+    return uid;
 }
 } // end of HiviewDFX
 } // end of OHOS
