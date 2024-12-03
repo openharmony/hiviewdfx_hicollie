@@ -239,6 +239,7 @@ void WatchdogInner::ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t 
     }
     if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
         isMainThreadProfileTaskEnabled_ = true;
+        stackContent_.stackState = DumpStackState::DEFAULT;
     }
 }
 
@@ -362,6 +363,8 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
                 appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
                 auto result = traceCollector_->CaptureDurationTrace(appCaller_);
                 XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
+            } else {
+                traceContent_.traceState = DumpStackState::DEFAULT;
             }
             isMainThreadTraceEnabled_ = true;
         }
@@ -389,6 +392,7 @@ void WatchdogInner::CollectTrace()
     auto result = traceCollector_->CaptureDurationTrace(appCaller_);
     XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d", result.retCode);
     if (result.retCode != 0) {
+        traceContent_.traceState = DumpStackState::DEFAULT;
         return;
     }
     StartTraceProfile(DURATION_TIME);
