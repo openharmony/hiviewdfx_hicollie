@@ -303,11 +303,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     EXPECT_TRUE(ret1 > 0);
     std::string stack = "";
     const char* samplePath = "libthread_sampler.z.so";
-    WatchdogInner::GetInstance().funcHandler_ = dlopen(samplePath, RTLD_LAZY);
-    EXPECT_TRUE(WatchdogInner::GetInstance().funcHandler_ != nullptr);
+    WatchdogInner::GetInstance().threadSamplerFuncHandler_ = dlopen(samplePath, RTLD_LAZY);
+    EXPECT_TRUE(WatchdogInner::GetInstance().threadSamplerFuncHandler_ != nullptr);
+    WatchdogInner::GetInstance().InitThreadSamplerFuncs();
     WatchdogInner::GetInstance().CollectStack(stack);
     printf("stack:\n%s", stack.c_str());
     WatchdogInner::GetInstance().Deinit();
+    WatchdogInner::GetInstance().ResetThreadSamplerFuncs();
 }
 
 /**
@@ -345,6 +347,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     WatchdogInner::GetInstance().CollectStack(stack);
     printf("stack:\n%s", stack.c_str());
     WatchdogInner::GetInstance().Deinit();
+    WatchdogInner::GetInstance().ResetThreadSamplerFuncs();
     WatchdogInner::GetInstance().CollectTrace();
 }
 

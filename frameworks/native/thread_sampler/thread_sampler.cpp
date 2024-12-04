@@ -39,24 +39,11 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-static const int CRASH_SIGNAL_LIST[] = {
-    SIGILL, SIGABRT, SIGBUS, SIGFPE,
-    SIGSEGV, SIGSTKFLT, SIGSYS, SIGTRAP
-};
-static pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
-constexpr int LOCK_TIMEOUT = 10;
-
 void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context)
 {
 #if defined(__aarch64__)
     int preErrno = errno;
-    int err = pthread_mutex_trylock(&mutex_);
-    if (err != 0) {
-        errno = preErrno;
-        return;
-    }
     ThreadSampler::GetInstance().WriteContext(context);
-    pthread_mutex_unlock(&mutex_);
     errno = preErrno;
 #endif
 }
@@ -152,12 +139,6 @@ bool ThreadSampler::Init(int collectStackCount)
         return false;
     }
 
-    if (!InstallSignalHandler()) {
-        XCOLLIE_LOGE("Failed to InstallSignalHandler\n");
-        Deinit();
-        return false;
-    }
-
     if (collectStackCount <= 0) {
         XCOLLIE_LOGE("Invalid collectStackCount\n");
         Deinit();
@@ -243,29 +224,6 @@ void ThreadSampler::DestroyUnwinder()
     maps_.reset();
     unwinder_.reset();
     accessors_.reset();
-}
-
-bool ThreadSampler::InstallSignalHandler()
-{
-    struct sigaction action {};
-    sigfillset(&action.sa_mask);
-    for (size_t i = 0; i < sizeof(CRASH_SIGNAL_LIST) / sizeof(CRASH_SIGNAL_LIST[0]); i++) {
-        sigdelset(&action.sa_mask, CRASH_SIGNAL_LIST[i]);
-    }
-    action.sa_sigaction = ThreadSampler::ThreadSamplerSignalHandler;
-    action.sa_flags = SA_RESTART | SA_SIGINFO;
-    if (sigaction(MUSL_SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
-        XCOLLIE_LOGE("Failed to register signal(%{public}d:%{public}d)", MUSL_SIGNAL_SAMPLE_STACK, errno);
-        return false;
-    }
-    return true;
-}
-
-void ThreadSampler::UninstallSignalHandler()
-{
-    if (signal(MUSL_SIGNAL_SAMPLE_STACK, SIG_IGN) == SIG_ERR) {
-        XCOLLIE_LOGE("Failed to unregister signal(%{public}d)", MUSL_SIGNAL_SAMPLE_STACK);
-    }
 }
 
 int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
@@ -532,20 +490,10 @@ bool ThreadSampler::Deinit()
     if (!init_) {
         return true;
     }
-    UninstallSignalHandler();
-    struct timespec timeout;
-    timeout.tv_sec = time(nullptr) + LOCK_TIMEOUT;
-    timeout.tv_nsec = 0;
-    int err = pthread_mutex_timedlock(&mutex_, &timeout);
-    if (err != 0) {
-        XCOLLIE_LOGE("Failed to get lock when deinit thread_sampler.\n");
-        return false;
-    }
     DeinitUniqueStackTable();
     DestroyUnwinder();
     ReleaseRecordBuffer();
     init_ = false;
-    pthread_mutex_unlock(&mutex_);
     return !init_;
 }
 } // end of namespace HiviewDFX

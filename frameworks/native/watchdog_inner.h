@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <csignal>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -55,6 +56,12 @@ struct TraceContent {
 
 typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
 typedef void (*WatchdogInnerEndFunc)(const char* eventName);
+
+typedef int (*ThreadSamplerInitFunc)(int);
+typedef int32_t (*ThreadSamplerSampleFunc)();
+typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
+typedef int (*ThreadSamplerDeinitFunc)();
+typedef void (*SigActionType)(int, siginfo_t*, void*);
 
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
@@ -117,8 +124,16 @@ private:
     bool ReportMainThreadEvent();
     bool CheckEventTimer(const int64_t& currentTime);
     void StartTraceProfile(int32_t interval);
-    void ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t (*threadSamplerSampleFunc)());
+    void ThreadSampleTask();
+    bool InitThreadSamplerFuncs();
+    void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
+
+    static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
+    bool InstallThreadSamplerSignal();
+    void UninstallThreadSamplerSignal();
+
+    static SigActionType threadSamplerSigHandler_;
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -135,8 +150,13 @@ private:
     int cntCallback_;
     time_t timeCallback_;
     bool isHmos = false;
-    void* funcHandler_ = nullptr;
+    void* threadSamplerFuncHandler_  {nullptr};
+    ThreadSamplerInitFunc threadSamplerInitFunc_ {nullptr};
+    ThreadSamplerSampleFunc threadSamplerSampleFunc_ {nullptr};
+    ThreadSamplerCollectFunc threadSamplerCollectFunc_ {nullptr};
+    ThreadSamplerDeinitFunc threadSamplerDeinitFunc_ {nullptr};
     uint64_t watchdogStartTime_ {0};
+    static std::mutex threadSamplerSignalMutex_;
 
     bool isMainThreadProfileTaskEnabled_ {false};
     bool isMainThreadTraceEnabled_ {false};

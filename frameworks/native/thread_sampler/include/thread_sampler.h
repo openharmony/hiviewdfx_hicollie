@@ -84,8 +84,6 @@ private:
     void DestroyUnwinder();
     bool InitUniqueStackTable();
     void DeinitUniqueStackTable();
-    bool InstallSignalHandler();
-    void UninstallSignalHandler();
     void SendSampleRequest();
     void ProcessStackBuffer();
     int AccessElfMem(uintptr_t addr, uintptr_t *val);

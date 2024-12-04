@@ -41,6 +41,9 @@ int ThreadSamplerCollect(char* stack, size_t size, int treeFormat = 1);
 /* To deinitial thread sampler and unload the resources. */
 int ThreadSamplerDeinit();
 
+/* The signal handler function */
+void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
+
 #ifdef __cplusplus
 }
 #endif
