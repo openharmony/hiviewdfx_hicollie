@@ -19,6 +19,8 @@
 #include <string>
 #include "watchdog.h"
 #include "report_data.h"
+#include "xcollie.h"
+#include "xcollie_define.h"
 #include "xcollie_utils.h"
 #include "iservice_registry.h"
 #include "iremote_object.h"
@@ -148,4 +150,48 @@ HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
         return HICOLLIE_REMOTE_FAILED;
     }
     return HICOLLIE_SUCCESS;
+}
+
+HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id)
+{
+    if (param.name == nullptr) {
+        XCOLLIE_LOGE("timer name is nullptr");
+        return HICOLLIE_INVALID_TIMER_NAME;
+    }
+    std::string timerName = param.name;
+    if (timerName.empty()) {
+        XCOLLIE_LOGE("timer name is empty");
+        return HICOLLIE_INVALID_TIMER_NAME;
+    }
+    if (param.timeout == 0) {
+        XCOLLIE_LOGE("invalid timeout value");
+        return HICOLLIE_INVALID_TIMEOUT_VALUE;
+    }
+    if (id == nullptr) {
+        XCOLLIE_LOGE("wrong timer id output param");
+        return HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM;
+    }
+    
+    int timerId = OHOS::HiviewDFX::XCollie::GetInstance().SetTimer(timerName, param.timeout, param.func, param.arg,
+        param.flag);
+    if (timerId == OHOS::HiviewDFX::INVALID_ID) {
+        XCOLLIE_LOGE("wrong process context, process is in appspawn or nativespawn");
+        return HICOLLIE_WRONG_PROCESS_CONTEXT;
+    }
+    if (timerId == 0) {
+        XCOLLIE_LOGE("timer name already exists or task quque size exceed max");
+        return HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM;
+    }
+
+    *id = timerId;
+    return HICOLLIE_SUCCESS;
+}
+
+void OH_HiCollie_CancelTimer(int id)
+{
+    if (id <= 0) {
+        XCOLLIE_LOGE("invalid timer id, cancel timer failed");
+        return;
+    }
+    OHOS::HiviewDFX::XCollie::GetInstance().CancelTimer(id);
 }
