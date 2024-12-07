@@ -28,7 +28,7 @@ void HandlerChecker::ScheduleCheck()
         auto fb = [] {
             IPCDfx::BlockUntilThreadAvailable();
         };
-        if (!handler_->PostTask(fb, "IpcCheck Task", 0, AppExecFwk::EventQueue::Priority::VIP)) {
+        if (!handler_->PostTask(fb, "IpcCheck Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
             XCOLLIE_LOGE("XCollie IpcCheck Task PostTask failed.");
         }
     }
@@ -42,7 +42,7 @@ void HandlerChecker::ScheduleCheck()
             self->isCompleted_.store(true);
         }
     };
-    if (!handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::VIP)) {
+    if (!handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
         XCOLLIE_LOGE("XCollie Watchdog Task PostTask False.");
     }
 }

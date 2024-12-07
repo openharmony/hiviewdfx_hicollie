@@ -325,7 +325,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     while (left > 0) {
         left = end - time(nullptr);
     }
-    EXPECT_EQ(ret, -1);
+    EXPECT_EQ(ret, 0);
 
     left = 10;
     end = time(nullptr) + left;
@@ -345,7 +345,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     WatchdogInner::GetInstance().CollectStack(stack);
     printf("stack:\n%s", stack.c_str());
     WatchdogInner::GetInstance().Deinit();
-    WatchdogInner::GetInstance().CollectTrace();
+    WatchdogInner::GetInstance().StartTraceProfile();
 }
 
 /**
@@ -362,14 +362,10 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     EXPECT_TRUE(result <= 0);
     int32_t pid = getprocpid();
     WatchdogInner::WriteStringToFile(pid, "0");
-    bool ret = WatchdogInner::GetInstance().CheckEventTimer(GetTimeStamp());
-    printf("CheckEventTimer ret=%s\n", ret ? "true" : "fasle");
-    ret = WatchdogInner::GetInstance().ReportMainThreadEvent();
+    bool ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid());
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
-    int state = 1; // test value
-    WatchdogInner::GetInstance().ChangeState(state, 1);
     int32_t interval = 150; // test value
-    WatchdogInner::GetInstance().StartTraceProfile(interval);
+    WatchdogInner::GetInstance().DumpTraceProfile(interval);
     ret = IsFileNameFormat('1');
     EXPECT_TRUE(!ret);
     ret = IsFileNameFormat('b');
@@ -395,21 +391,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
 {
     WatchdogInner::GetInstance().buissnessThreadInfo_.insert(getproctid());
     EXPECT_TRUE(WatchdogInner::GetInstance().buissnessThreadInfo_.size() > 0);
-    printf("ret=%d\n", WatchdogInner::GetInstance().ReportMainThreadEvent());
-    WatchdogInner::GetInstance().timeContent_.reportBegin = GetTimeStamp();
-    WatchdogInner::GetInstance().timeContent_.reportEnd = GetTimeStamp();
-    sleep(2);
-    WatchdogInner::GetInstance().timeContent_.curBegin = GetTimeStamp();
-    WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
-    EXPECT_TRUE(WatchdogInner::GetInstance().timeContent_.reportBegin !=
-        WatchdogInner::GetInstance().timeContent_.curBegin);
-    int state = 1; // test value
-    TimePoint currenTime = std::chrono::steady_clock::now();
-    TimePoint lastEndTime = std::chrono::steady_clock::now();
-    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 2);
-    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 0);
-    EXPECT_EQ(state, 0);
-    WatchdogInner::GetInstance().StartTraceProfile(150); // test value
+    printf("ret=%d\n", WatchdogInner::GetInstance().ReportMainThreadEvent(gettid()));
+    WatchdogInner::GetInstance().DumpTraceProfile(150); // test value
     FunctionOpen(nullptr, "test");
 }
 
@@ -528,6 +511,43 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillPeerBinderProcess_001, TestSiz
 }
 
 /**
+ * @tc.name: WatchdogInner SetEventParam test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventParam_001, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    EXPECT_EQ(ret, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner SetEventParam test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventParam_002, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_SAMPLE_INTERVAL] = "ab0";
+    int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    EXPECT_EQ(ret, -1);
+    paramsMap[KEY_SAMPLE_INTERVAL] = "10";
+    ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    EXPECT_EQ(ret, -1);
+    paramsMap[KEY_SAMPLE_INTERVAL] = "150";
+    paramsMap[KEY_SAMPLE_COUNT] = "200";
+    ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    EXPECT_EQ(ret, -1);
+    paramsMap[KEY_SAMPLE_INTERVAL] = "150";
+    paramsMap[KEY_SAMPLE_COUNT] = "10";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "5";
+    ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    EXPECT_EQ(ret, -1);
+}
+
+/**
  * @tc.name: WatchdogInner InitMainLooperWatcher Test
  * @tc.desc: add testcase
  * @tc.type: FUNC
@@ -537,7 +557,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
-    WatchdogInner::GetInstance().stackContent_.stackState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     int count = 0;
     sleep(10); // test value
@@ -552,12 +571,41 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     beginTest("Test");
     sleep(2); // test value
     endTest("Test");
-    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, 1);
     WatchdogInner::GetInstance().traceContent_.traceState = 1;
-    WatchdogInner::GetInstance().stackContent_.stackState = 0;
     beginTest("Test");
     usleep(3500 * 1000); // test value
     endTest("Test");
+    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
+}
+
+/**
+ * @tc.name: WatchdogInner InitMainLooperWatcher Test
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+    sleep(11); // test value
+    int count = 0;
+    std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_SAMPLE_INTERVAL] = "100";
+    paramsMap[KEY_SAMPLE_COUNT] = "1";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
+    int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    EXPECT_EQ(ret, 0);
+    while (count < 2) {
+        beginTest("Test");
+        usleep(120 * 1000); // test value
+        endTest("Test");
+        count++;
+    }
+    sleep(5);
+    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
+    ASSERT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
 }
 
 /**
@@ -568,7 +616,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartTraceProfile_001, TestSize.Level1)
 {
     WatchdogInner::GetInstance().traceCollector_ = nullptr;
-    WatchdogInner::GetInstance().StartTraceProfile(150);
+    WatchdogInner::GetInstance().DumpTraceProfile(150);
     EXPECT_TRUE(WatchdogInner::GetInstance().traceCollector_ == nullptr);
 }
 
@@ -618,6 +666,20 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsInSleep_001, TestSize.Level1)
     task.monoTimeStart = monoTimeStart + testValue;
     ret = WatchdogInner::GetInstance().IsInSleep(task);
     EXPECT_TRUE(ret);
+}
+
+/**
+ * @tc.name: WatchdogInner GetAppStartTime test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_001, TestSize.Level1)
+{
+    std::string testStr = "WatchdogInnerTest_GetAppStartTime_001";
+    int64_t time = GetAppStartTime(-1, 0);
+    EXPECT_TRUE(time < 0);
+    time = GetAppStartTime(getpid(), gettid());
+    EXPECT_TRUE(time >= 0);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
