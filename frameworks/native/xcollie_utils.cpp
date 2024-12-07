@@ -79,9 +79,9 @@ void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart)
 {
     uint64_t timesArr[TIMES_ARR_SIZE] = {0};
     uint64_t minTimeDiff = UINT64_MAX;
-    int index = 1;
+    size_t index = 1;
 
-    for (int i = 0; i < TIMES_ARR_SIZE ; i++) {
+    for (size_t i = 0; i < TIMES_ARR_SIZE ; i++) {
         timesArr[i] = (i & 1) ? GetCurrentTickMillseconds() : GetCurrentBootMillseconds();
         if (i <= 1) {
             continue;
