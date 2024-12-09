@@ -62,6 +62,26 @@ typedef enum HiCollie_ErrorCode {
     HICOLLIE_WRONG_THREAD_CONTEXT = 29800001,
     /** Remote call failed */
     HICOLLIE_REMOTE_FAILED = 29800002,
+    /**
+     * Invalid timer name
+     * @since 16
+     */
+    HICOLLIE_INVALID_TIMER_NAME = 29800003,
+    /**
+     * Invalid timeout value
+     * @since 16
+     */
+    HICOLLIE_INVALID_TIMEOUT_VALUE = 29800004,
+    /**
+     * Wrong process context
+     * @since 16
+     */
+    HICOLLIE_WRONG_PROCESS_CONTEXT = 29800005,
+    /**
+     * The pointer used to save returned timer id should not be NULL
+     * @since 16
+     */
+    HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM = 29800006,
 } HiCollie_ErrorCode;
 
 /**
@@ -153,6 +173,72 @@ HiCollie_ErrorCode OH_HiCollie_Init_JankDetection(OH_HiCollie_BeginFunc* beginFu
  * @since 12
  */
 HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond);
+
+/**
+ * @brief When user call {@link OH_HiCollie_SetTimer} and do not call {@link OH_HiCollie_CancelTimer}
+ * in specific time, the callback function will be executed.
+ *
+ * @since 16
+ */
+typedef void (*OH_HiCollie_Callback)(void*);
+
+/**
+ * @brief Defines the actions that will be executed when timeout happens.
+ *
+ * @since 16
+ */
+typedef enum HiCollie_Flag {
+    /** Default action is generate log file and do recovery */
+    HICOLLIE_FLAG_DEFAULT = (~0),
+    /* Do nothing except call the callback function */
+    HICOLLIE_FLAG_NOOP = (0),
+    /* Generate log file */
+    HICOLLIE_FLAG_LOG = (1 << 0),
+    /* Do recovery by call the exit syscall */
+    HICOLLIE_FLAG_RECOVERY = (1 << 1)
+} HiCollie_Flag;
+
+/**
+* @brief Defines the input parameter for {@link OH_HiCollie_SetTimer}
+*
+* @since 16
+*/
+typedef struct HiCollie_SetTimerParam {
+    /** The timer name */
+    const char *name;
+    /** The timeout threshold in seconds */
+    unsigned int timeout;
+    /** The callback function which is excuted when timeout happen */
+    OH_HiCollie_Callback func;
+    /** The callback function's parameter */
+    void *arg;
+    /** The action when timeout happens. Please refer to {@link HiCollie_Flag} */
+    HiCollie_Flag flag;
+} HiCollie_SetTimerParam;
+
+/**
+ * @brief This function should be used before calling a time-consuming function
+ *
+ * @param param Define the input parameter.
+ * @param id The pointer used to save returned timer id, it should not be NULL.
+ * @return {@link HICOLLIE_SUCCESS} 0 - Success.
+ *         {@link HICOLLIE_INVALID_TIMER_NAME} 29800003 - Invalid timer name, it should not be NULL or empty string.
+ *         {@link HICOLLIE_INVALID_TIMEOUT_VALUE} 29800004 - Invalid timeout value.
+ *         {@link HICOLLIE_WRONG_PROCESS_CONTEXT} 29800005 - Invalid process context, you should not call it
+ *              from appspawn and native process.
+ *         {@link HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM} 29800006 - The pointer used to save returned timer id
+ *              should not be NULL.
+ * @since 16
+ */
+HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id);
+
+/**
+ * @brief Cancel the timer right after calling the time-consuming function.
+ *
+ * @param id The timer id that is return from {@link OH_HiCollie_SetTimer}.
+ * @since 16
+ */
+void OH_HiCollie_CancelTimer(int id);
 
 #ifdef __cplusplus
 }
