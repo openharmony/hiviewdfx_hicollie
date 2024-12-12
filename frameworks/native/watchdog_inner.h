@@ -32,25 +32,39 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+constexpr const char* const KEY_SAMPLE_INTERVAL = "sample_interval";
+constexpr const char* const KEY_SAMPLE_COUNT = "sample_count";
+constexpr const char* const KEY_SAMPLE_REPORT_TIMES = "report_times_per_app";
+constexpr const char* const KEY_LOG_TYPE = "log_type";
+constexpr const char* const KEY_SET_TIMES_FLAG = "set_report_times_flag";
+const int SAMPLE_DEFULE_INTERVAL = 150;
+const int SAMPLE_DEFULE_COUNT = 10;
+const int SAMPLE_DEFULE_REPORT_TIMES = 1;
+const int SET_TIMES_FLAG = 1;
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 struct TimeContent {
-    int64_t reportBegin;
-    int64_t reportEnd;
     int64_t curBegin;
     int64_t curEnd;
 };
 
 struct StackContent {
-    int stackState;
-    int detectorCount;
-    int collectCount;
+    bool isStartSampleEnabled {true};
+    int detectorCount {0};
+    int collectCount {0};
+    int reportTimes {SAMPLE_DEFULE_REPORT_TIMES};
+    int64_t reportBegin {0};
+    int64_t reportEnd {0};
+    TimePoint lastEndTime;
 };
 
 struct TraceContent {
-    int traceState;
-    int traceCount;
-    int dumpCount;
+    int traceState {0};
+    int traceCount {0};
+    int dumpCount {0};
+    int64_t reportBegin {0};
+    int64_t reportEnd {0};
+    TimePoint lastEndTime;
 };
 
 typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
@@ -83,23 +97,28 @@ public:
     static void KillPeerBinderProcess(const std::string &description);
     int32_t StartProfileMainThread(int32_t interval);
     bool CollectStack(std::string& stack);
-    void CollectTrace();
     bool Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
-    void ChangeState(int& state, int targetState);
-    void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime, int64_t checkTimer);
     void RemoveInnerTask(const std::string& name);
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
+    int SetEventParam(std::map<std::string, std::string> paramsMap);
+    void SampleStackDetect(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
+    void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
+
+public:
     std::string currentScene_;
-    TimePoint lastTraceTime_;
-    TimePoint lastStackTime_;
     TimePoint bussinessBeginTime_;
     TimeContent timeContent_ {0};
-    StackContent stackContent_ {0};
-    TraceContent traceContent_ {0};
+    StackContent stackContent_;
+    TraceContent traceContent_;
+    std::map<std::string, int> jankParamsMap = {
+        {KEY_SAMPLE_INTERVAL, SAMPLE_DEFULE_INTERVAL}, {KEY_SAMPLE_COUNT, SAMPLE_DEFULE_COUNT},
+        {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFULE_REPORT_TIMES}, {KEY_LOG_TYPE, 0},
+        {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}
+    };
 
 private:
     bool Start();
@@ -111,14 +130,19 @@ private:
     int64_t InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
     bool IsInSleep(const WatchdogTask& queuedTaskCheck);
     void CheckIpcFull(uint64_t now, const WatchdogTask& queuedTask);
+    bool CheckCurrentTask(const WatchdogTask& queuedTaskCheck);
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
-    bool ReportMainThreadEvent();
-    bool CheckEventTimer(const int64_t& currentTime);
-    void StartTraceProfile(int32_t interval);
-    void ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t (*threadSamplerSampleFunc)());
+    bool ReportMainThreadEvent(int64_t tid);
+    bool CheckEventTimer(int64_t currentTime, int64_t reportBegin, int64_t reportEnd, int interval);
+    void DumpTraceProfile(int32_t interval);
+    int32_t StartTraceProfile();
+    void UpdateTime(int64_t& reportBegin, int64_t& reportEnd, TimePoint& lastEndTime, const TimePoint& endTime);
+    void ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t (*threadSamplerSampleFunc)(),
+        int sampleInterval, int sampleCount, int64_t tid);
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
+    int ConvertStrToNum(const std::string& str);
 
     static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -138,13 +162,12 @@ private:
     void* funcHandler_ = nullptr;
     uint64_t watchdogStartTime_ {0};
 
-    bool isMainThreadProfileTaskEnabled_ {false};
+    bool isMainThreadStackEnabled_ {false};
     bool isMainThreadTraceEnabled_ {false};
     std::string bundleName_;
     std::string bundleVersion_;
     bool isForeground_ {false};
     bool isAppDebug_ {false};
-    int sampleTaskState_;
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector_;
     UCollectClient::AppCaller appCaller_ {
         .actionId = 0,
