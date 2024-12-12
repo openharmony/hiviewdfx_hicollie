@@ -96,7 +96,7 @@ public:
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
     int32_t StartProfileMainThread(int32_t interval);
-    bool CollectStack(std::string& stack);
+    bool CollectStack(std::string& stack, std::string& heaviestStack);
     bool Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);

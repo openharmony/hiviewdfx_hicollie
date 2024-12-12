@@ -103,7 +103,7 @@ static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
 typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
-typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
+typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef int (*ThreadSamplerDeinitFunc)();
 
 namespace {
@@ -178,7 +178,8 @@ void WatchdogInner::SetForeground(const bool& isForeground)
 bool WatchdogInner::ReportMainThreadEvent(int64_t tid)
 {
     std::string stack = "";
-    CollectStack(stack);
+    std::string heaviestStack = "";
+    CollectStack(stack, heaviestStack);
 
     std::string path = "";
     std::string eventName = "MAIN_THREAD_JANK";
@@ -204,7 +205,7 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid)
         "FOREGROUND", isForeground_,
         "LOG_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC,
         "APP_START_JIFFIES_TIME", GetAppStartTime(pid, tid),
-        "HEAVIEST_STACK", "");
+        "HEAVIEST_STACK", heaviestStack);
     XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d", result);
     return result >= 0;
 #else
@@ -233,6 +234,7 @@ void WatchdogInner::ThreadSampleTask(int (*threadSamplerInitFunc)(int), int32_t 
             XCOLLIE_LOGE("Thread sampler init failed. ret %{public}d\n", initThreadSamplerRet);
             return;
         }
+        XCOLLIE_LOGI("Thread sampler initialized. ret %{public}d\n", initThreadSamplerRet);
     }
 
     if (stackContent_.collectCount > DumpStackState::DEFAULT &&
@@ -335,7 +337,7 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     return 0;
 }
 
-bool WatchdogInner::CollectStack(std::string& stack)
+bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack)
 {
     if (funcHandler_ == nullptr) {
         XCOLLIE_LOGE("open library failed.");
@@ -351,9 +353,12 @@ bool WatchdogInner::CollectStack(std::string& stack)
     }
     int treeFormat = 1;
     char* stk = new char[STACK_LENGTH];
-    int collectRet = threadSamplerCollectFunc(stk, STACK_LENGTH, treeFormat);
+    char* heaviest = new char[STACK_LENGTH];
+    int collectRet = threadSamplerCollectFunc(stk, heaviest, STACK_LENGTH, STACK_LENGTH, treeFormat);
     stack = stk;
+    heaviestStack = heaviest;
     delete[] stk;
+    delete[] heaviest;
     return collectRet == 0;
 }
 
