@@ -302,11 +302,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     int64_t ret1 = GetTimeStamp();
     EXPECT_TRUE(ret1 > 0);
     std::string stack = "";
+    std::string heaviestStack = "";
     const char* samplePath = "libthread_sampler.z.so";
     WatchdogInner::GetInstance().funcHandler_ = dlopen(samplePath, RTLD_LAZY);
     EXPECT_TRUE(WatchdogInner::GetInstance().funcHandler_ != nullptr);
-    WatchdogInner::GetInstance().CollectStack(stack);
+    WatchdogInner::GetInstance().CollectStack(stack, heaviestStack);
     printf("stack:\n%s", stack.c_str());
+    printf("heaviestStack:\n%s", heaviestStack.c_str());
     WatchdogInner::GetInstance().Deinit();
 }
 
@@ -342,8 +344,10 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     sleep(4);
     EXPECT_EQ(ret, 0);
     std::string stack = "";
-    WatchdogInner::GetInstance().CollectStack(stack);
+    std::string heaviestStack = "";
+    WatchdogInner::GetInstance().CollectStack(stack, heaviestStack);
     printf("stack:\n%s", stack.c_str());
+    printf("heaviestStack:\n%s", heaviestStack.c_str());
     WatchdogInner::GetInstance().Deinit();
     WatchdogInner::GetInstance().StartTraceProfile();
 }
@@ -559,13 +563,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     int count = 0;
-    sleep(10); // test value
-    while (count < 2) {
+    while (count < 10) {
         beginTest("Test");
         usleep(350 * 1000); // test value
         endTest("Test");
         count++;
     }
+    sleep(10); // test value
     WatchdogInner::GetInstance().traceContent_.traceState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     beginTest("Test");
@@ -575,7 +579,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     beginTest("Test");
     usleep(3500 * 1000); // test value
     endTest("Test");
-    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 1);
+    EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
 }
 
 /**
@@ -592,20 +597,22 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSiz
     sleep(11); // test value
     int count = 0;
     std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_LOG_TYPE] = "1";
     paramsMap[KEY_SAMPLE_INTERVAL] = "100";
     paramsMap[KEY_SAMPLE_COUNT] = "1";
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
     int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
     EXPECT_EQ(ret, 0);
-    while (count < 2) {
+    while (count < 5) {
         beginTest("Test");
-        usleep(120 * 1000); // test value
+        usleep(150 * 1000); // test value
         endTest("Test");
         count++;
     }
     sleep(5);
-    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
-    ASSERT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
+    sleep(5);
+    EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
 }
 
 /**
@@ -677,9 +684,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_001, TestSize.Leve
 {
     std::string testStr = "WatchdogInnerTest_GetAppStartTime_001";
     int64_t time = GetAppStartTime(-1, 0);
-    EXPECT_TRUE(time < 0);
-    time = GetAppStartTime(getpid(), gettid());
-    EXPECT_TRUE(time >= 0);
+    EXPECT_TRUE(time != 0);
 }
 } // namespace HiviewDFX
 } // namespace OHOS

@@ -76,6 +76,7 @@ public:
     // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
     bool CollectStack(std::string& stack, bool treeFormat = true);
     bool Deinit();  // Release sampler
+    std::string GetHeaviestStack() const;
 
 private:
     bool InitRecordBuffer();
@@ -115,6 +116,7 @@ private:
     uint32_t uniqueStackTableSize_ {DEFAULT_UNIQUE_STACK_TABLE_SIZE};
     // name of the mmap of uniqueStackTable
     std::string uniTableMMapName_ {"hicollie_buf"};
+    std::string heaviestStack_ {0};
 
     MAYBE_UNUSED uint64_t copyStackCount_ {0};
     MAYBE_UNUSED uint64_t copyStackTimeCost_ {0};

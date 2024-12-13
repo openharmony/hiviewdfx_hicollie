@@ -28,7 +28,7 @@ namespace HiviewDFX {
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
-typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
+typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef void (*ThreadSamplerDeinitFunc)();
 
 constexpr int SAMPLE_CNT = 10;
@@ -139,9 +139,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
     };
 
     char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* heaviestStack = new char[STACK_LENGTH];
+    auto collectHandler = [&stack, &heaviestStack, collectFunc]() {
         int treeFormat = 0;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        collectFunc(stack, heaviestStack, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -153,8 +154,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
     WaitSomeTime();
 
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
+    printf("stack:\n%s\n", stack);
+    printf("heaviestStack:\n%s", heaviestStack);
     delete[] stack;
+    delete[] heaviestStack;
     deinitFunc();
     dlclose(funcHandler);
 }
@@ -185,9 +188,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     };
 
     char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* heaviestStack = new char[STACK_LENGTH];
+    auto collectHandler = [&stack, &heaviestStack, collectFunc]() {
         int treeFormat = 1;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        collectFunc(stack, heaviestStack, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -199,7 +203,9 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     WaitSomeTime();
     ASSERT_NE(stack, "");
     printf("stack:\n%s", stack);
+    printf("heaviestStack:\n%s", heaviestStack);
     delete[] stack;
+    delete[] heaviestStack;
     deinitFunc();
     dlclose(funcHandler);
 }
@@ -215,9 +221,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     printf("ThreadSamplerTest_003\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);
     void* funcHandler = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (funcHandler == nullptr) {
-        printf("open library failed.");
-    }
+
     dlerror();
     auto initFunc = reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(funcHandler, "ThreadSamplerInit"));
     auto sampleFunc = reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(funcHandler, "ThreadSamplerSample"));
@@ -230,9 +234,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     };
 
     char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
+    char* heaviestStack = new char[STACK_LENGTH];
+    auto collectHandler = [&stack, &heaviestStack, collectFunc]() {
         int treeFormat = 1;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+        collectFunc(stack, heaviestStack, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -242,7 +247,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     WaitSomeTime();
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
+    printf("stack:\n%sheaviestStack:\n%s", stack, heaviestStack);
     deinitFunc();
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -252,7 +257,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     WaitSomeTime();
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
+    printf("stack:\n%sheaviestStack:\n%s", stack, heaviestStack);
 
     initFunc(SAMPLE_CNT);
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -262,8 +267,9 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     WaitSomeTime();
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack);
+    printf("stack:\n%sheaviestStack:\n%s", stack, heaviestStack);
     delete[] stack;
+    delete[] heaviestStack;
     deinitFunc();
     dlclose(funcHandler);
 }
@@ -293,9 +299,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     };
 
     char* stack = new char[STACK_LENGTH];
-    auto collectHandler = [&stack, collectFunc]() {
-        int treeFormat = 1;
-        collectFunc(stack, STACK_LENGTH, treeFormat);
+    char* heaviestStack = new char[STACK_LENGTH];
+    auto collectHandler = [&stack, &heaviestStack, collectFunc]() {
+        int treeFormat = 0;
+        collectFunc(stack, heaviestStack, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     sigset_t sigset;
@@ -310,11 +317,13 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
-    printf("stack:\n%s", stack);
+    printf("stack:\n%s\n", stack);
+    printf("heaviestStack:%s\n", heaviestStack);
     ASSERT_NE(stack, "");
     sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
     sigdelset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
     delete[] stack;
+    delete[] heaviestStack;
     deinitFunc();
     dlclose(funcHandler);
 }

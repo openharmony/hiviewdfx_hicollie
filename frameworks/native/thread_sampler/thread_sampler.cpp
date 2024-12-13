@@ -486,13 +486,14 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     }
 
     stack.clear();
+    heaviestStack_.clear();
     if (timeAndFrameList_.empty() && stackIdCount_.empty()) {
-        if (!LoadStringFromFile("/proc/self/wchan", stack)) {
+        stack += "/proc/self/wchan: \n";
+        std::string fileStr = "";
+        if (!LoadStringFromFile("/proc/self/wchan", fileStr)) {
             XCOLLIE_LOGE("read file failed.\n");
         }
-        if (stack.empty()) {
-            stack += "empty";
-        }
+        stack += fileStr;
         stack += "\n";
 #if defined(CONSUME_STATISTICS)
         ResetConsumeInfo();
@@ -507,11 +508,11 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     if (!treeFormat) {
         stack = printer->GetFullStack(timeAndFrameList_);
     } else {
-        stack = printer->GetTreeStack(stackIdCount_, uniqueStackTable_);
+        stack = printer->GetTreeStack(stackIdCount_, uniqueStackTable_, heaviestStack_);
     }
     timeAndFrameList_.clear();
     stackIdCount_.clear();
-    
+
 #if defined(CONSUME_STATISTICS)
     uint64_t collectEnd = GetCurrentTimeNanoseconds();
     uint64_t elapse = collectEnd - collectStart;
@@ -525,6 +526,11 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     ResetConsumeInfo();
 #endif
     return true;
+}
+
+std::string ThreadSampler::GetHeaviestStack() const
+{
+    return heaviestStack_;
 }
 
 bool ThreadSampler::Deinit()
