@@ -511,39 +511,39 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillPeerBinderProcess_001, TestSiz
 }
 
 /**
- * @tc.name: WatchdogInner SetEventParam test;
+ * @tc.name: WatchdogInner SetEventConfig test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventParam_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_001, TestSize.Level1)
 {
     std::map<std::string, std::string> paramsMap;
-    int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
 }
 
 /**
- * @tc.name: WatchdogInner SetEventParam test;
+ * @tc.name: WatchdogInner SetEventConfig test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventParam_002, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_002, TestSize.Level1)
 {
     std::map<std::string, std::string> paramsMap;
     paramsMap[KEY_SAMPLE_INTERVAL] = "ab0";
-    int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     paramsMap[KEY_SAMPLE_INTERVAL] = "10";
-    ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     paramsMap[KEY_SAMPLE_INTERVAL] = "150";
     paramsMap[KEY_SAMPLE_COUNT] = "200";
-    ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     paramsMap[KEY_SAMPLE_INTERVAL] = "150";
     paramsMap[KEY_SAMPLE_COUNT] = "10";
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "5";
-    ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
 }
 
@@ -595,7 +595,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSiz
     paramsMap[KEY_SAMPLE_INTERVAL] = "100";
     paramsMap[KEY_SAMPLE_COUNT] = "1";
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
-    int ret = WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, 0);
     while (count < 2) {
         beginTest("Test");
