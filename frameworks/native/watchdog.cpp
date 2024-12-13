@@ -93,9 +93,9 @@ bool Watchdog::GetAppDebug()
     return WatchdogInner::GetInstance().GetAppDebug();
 }
 
-int Watchdog::SetEventParam(std::map<std::string, std::string> paramsMap)
+int Watchdog::SetEventConfig(std::map<std::string, std::string> paramsMap)
 {
-    return WatchdogInner::GetInstance().SetEventParam(paramsMap);
+    return WatchdogInner::GetInstance().SetEventConfig(paramsMap);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

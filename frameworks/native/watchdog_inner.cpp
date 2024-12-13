@@ -1192,7 +1192,7 @@ int WatchdogInner::ConvertStrToNum(const std::string& str)
     return num;
 }
 
-int WatchdogInner::SetEventParam(std::map<std::string, std::string> paramsMap)
+int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
 {
     if (paramsMap.empty() || paramsMap.size() < SAMPLE_PARAMS_SIZE) {
         XCOLLIE_LOGE("Set the thread sampler param map size should be 3");

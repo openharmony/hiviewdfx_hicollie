@@ -104,7 +104,7 @@ public:
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
-    int SetEventParam(std::map<std::string, std::string> paramsMap);
+    int SetEventConfig(std::map<std::string, std::string> paramsMap);
     void SampleStackDetect(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
 
