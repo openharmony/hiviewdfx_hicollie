@@ -487,9 +487,6 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
-        if (IsEnableVersion()) {
-            return;
-        }
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
             DumpStackState::COMPLETE);
         WatchdogInner::GetInstance().lastStackTime_ = endTime;
@@ -500,7 +497,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
-        if (IsBetaVersion() || IsEnableVersion()) {
+        if (IsBetaVersion()) {
             return;
         }
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);

@@ -48,7 +48,6 @@ const uint64_t TIMES_AVE_PARAM = 2;
 const int32_t APP_MIN_UID = 20000;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
-constexpr const char* const KEY_ANCO_ENABLE_TYPE = "persist.hmos_fusion_mgr.ctl.support_hmos";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
@@ -429,12 +428,6 @@ int64_t GetTimeStamp()
     std::chrono::nanoseconds ms = std::chrono::duration_cast< std::chrono::nanoseconds >(
         std::chrono::system_clock::now().time_since_epoch());
     return ms.count();
-}
-
-bool IsEnableVersion()
-{
-    auto enableType = system::GetParameter(KEY_ANCO_ENABLE_TYPE, "");
-    return (enableType.find(ENABLE_VAULE) != std::string::npos);
 }
 
 void* FunctionOpen(void* funcHandler, const char* funcName)
