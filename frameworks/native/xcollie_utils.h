@@ -88,8 +88,6 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
 
 int64_t GetTimeStamp();
 
-bool IsEnableVersion();
-
 void* FunctionOpen(void* funcHandler, const char* funcName);
 
 int32_t GetUidByPid(const int32_t pid);

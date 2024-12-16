@@ -291,8 +291,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     std::string result = GetFormatDate();
     printf("GetFormatDate:%s\n", result.c_str());
     EXPECT_TRUE(!result.empty());
-    bool ret = IsEnableVersion();
-    printf("ret:%s\n", ret ? "true" : "false");
     bool devRet1 = IsDeveloperOpen();
     bool devRet2 = IsDeveloperOpen();
     bool betaRet1 = IsBetaVersion();
