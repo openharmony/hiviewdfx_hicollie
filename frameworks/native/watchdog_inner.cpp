@@ -246,14 +246,14 @@ void WatchdogInner::ThreadSampleTask()
 {
     if (sampleTaskState_ == DumpStackState::DEFAULT) {
         sampleTaskState_++;
-        XCOLLIE_LOGI("ThreadSampler 1st in ThreadSamplerTask.\n");
 
         if (!InitThreadSamplerFuncs()) {
-            XCOLLIE_LOGE("ThreadSampler initialize failed.\n");
+            isMainThreadProfileTaskEnabled_ = true;
             return;
         }
 
         if (!InstallThreadSamplerSignal()) {
+            isMainThreadProfileTaskEnabled_ = true;
             XCOLLIE_LOGE("ThreadSampler install signal failed.\n");
             return;
         }
@@ -266,9 +266,12 @@ void WatchdogInner::ThreadSampleTask()
         }
         XCOLLIE_LOGI("Thread sampler initialized. ret %{public}d\n", initThreadSamplerRet);
     }
+    if (threadSamplerSampleFunc_ == nullptr) {
+        isMainThreadProfileTaskEnabled_ = true;
+        return;
+    }
     int64_t currentTime = GetTimeStamp();
-    if (stackContent_.collectCount > DumpStackState::DEFAULT &&
-        stackContent_.collectCount < COLLECT_STACK_COUNT) {
+    if (stackContent_.collectCount > DumpStackState::DEFAULT && stackContent_.collectCount < COLLECT_STACK_COUNT) {
         XCOLLIE_LOGI("ThreadSampler in ThreadSamplerTask, %{public}d.\n", stackContent_.collectCount);
         threadSamplerSampleFunc_();
         stackContent_.collectCount++;
