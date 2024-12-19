@@ -132,6 +132,11 @@ public:
      * @brief Get isAppDebug.
      */
     bool GetAppDebug();
+
+    /**
+     * @brief Set sample jank params.
+     */
+    int SetEventConfig(std::map<std::string, std::string> paramsMap);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

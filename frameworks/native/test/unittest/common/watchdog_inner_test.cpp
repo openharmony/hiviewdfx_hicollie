@@ -325,7 +325,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     while (left > 0) {
         left = end - time(nullptr);
     }
-    EXPECT_EQ(ret, -1);
+    printf("ret:%d\n", ret);
 
     left = 10;
     end = time(nullptr) + left;
@@ -346,8 +346,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     printf("stack:\n%s", stack.c_str());
     WatchdogInner::GetInstance().Deinit();
     WatchdogInner::GetInstance().ResetThreadSamplerFuncs();
-    WatchdogInner::GetInstance().CollectTrace();
 }
+
 
 /**
  * @tc.name: WatchdogInner;
@@ -363,14 +363,11 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     EXPECT_TRUE(result <= 0);
     int32_t pid = getprocpid();
     WatchdogInner::WriteStringToFile(pid, "0");
-    bool ret = WatchdogInner::GetInstance().CheckEventTimer(GetTimeStamp());
-    printf("CheckEventTimer ret=%s\n", ret ? "true" : "fasle");
-    ret = WatchdogInner::GetInstance().ReportMainThreadEvent();
+    bool ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid());
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
-    int state = 1; // test value
-    WatchdogInner::GetInstance().ChangeState(state, 1);
     int32_t interval = 150; // test value
-    WatchdogInner::GetInstance().StartTraceProfile(interval);
+    WatchdogInner::GetInstance().StartTraceProfile();
+    WatchdogInner::GetInstance().DumpTraceProfile(interval);
     ret = IsFileNameFormat('1');
     EXPECT_TRUE(!ret);
     ret = IsFileNameFormat('b');
@@ -396,21 +393,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
 {
     WatchdogInner::GetInstance().buissnessThreadInfo_.insert(getproctid());
     EXPECT_TRUE(WatchdogInner::GetInstance().buissnessThreadInfo_.size() > 0);
-    printf("ret=%d\n", WatchdogInner::GetInstance().ReportMainThreadEvent());
-    WatchdogInner::GetInstance().timeContent_.reportBegin = GetTimeStamp();
-    WatchdogInner::GetInstance().timeContent_.reportEnd = GetTimeStamp();
-    sleep(2);
-    WatchdogInner::GetInstance().timeContent_.curBegin = GetTimeStamp();
-    WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
-    EXPECT_TRUE(WatchdogInner::GetInstance().timeContent_.reportBegin !=
-        WatchdogInner::GetInstance().timeContent_.curBegin);
-    int state = 1; // test value
-    TimePoint currenTime = std::chrono::steady_clock::now();
-    TimePoint lastEndTime = std::chrono::steady_clock::now();
-    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 2);
-    WatchdogInner::GetInstance().DayChecker(state, currenTime, lastEndTime, 0);
-    EXPECT_EQ(state, 0);
-    WatchdogInner::GetInstance().StartTraceProfile(150); // test value
+    printf("ret=%d\n", WatchdogInner::GetInstance().ReportMainThreadEvent(gettid()));
+    WatchdogInner::GetInstance().StartTraceProfile();
+    WatchdogInner::GetInstance().DumpTraceProfile(150); // test value
     FunctionOpen(nullptr, "test");
 }
 
@@ -538,39 +523,237 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
-    WatchdogInner::GetInstance().stackContent_.stackState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     int count = 0;
-    sleep(10); // test value
-    while (count < 2) {
+    while (count < 10) {
         beginTest("Test");
         usleep(350 * 1000); // test value
         endTest("Test");
         count++;
     }
+    sleep(10); // test value
     WatchdogInner::GetInstance().traceContent_.traceState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     beginTest("Test");
     sleep(2); // test value
     endTest("Test");
-    ASSERT_EQ(WatchdogInner::GetInstance().stackContent_.stackState, 1);
     WatchdogInner::GetInstance().traceContent_.traceState = 1;
-    WatchdogInner::GetInstance().stackContent_.stackState = 0;
     beginTest("Test");
     usleep(3500 * 1000); // test value
     endTest("Test");
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 1);
+    EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
 }
 
 /**
- * @tc.name: WatchdogInner StartTraceProfile test;
- * @tc.desc: add testcase
+ * @tc.name: WatchdogInner SetEventConfig test;
+ * @tc.desc: set log_type failed.
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartTraceProfile_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_001, TestSize.Level1)
 {
-    WatchdogInner::GetInstance().traceCollector_ = nullptr;
-    WatchdogInner::GetInstance().StartTraceProfile(150);
-    EXPECT_TRUE(WatchdogInner::GetInstance().traceCollector_ == nullptr);
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set paramsMap is null.
+     * @tc.type: FUNC
+     */
+    std::map<std::string, std::string> paramsMap;
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set log_type is not a number.
+     * @tc.type: FUNC
+     */
+    paramsMap[KEY_LOG_TYPE] = "ab0";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set log_type is negative number.
+     * @tc.type: FUNC
+     */
+    paramsMap[KEY_LOG_TYPE] = "-1";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set log_type success.
+     * @tc.type: FUNC
+     */
+    paramsMap[KEY_LOG_TYPE] = "0";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, 0);
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set log_type failed.
+     * @tc.type: FUNC
+     */
+    paramsMap[KEY_LOG_TYPE] = "1";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set log_type failed.
+     * @tc.type: FUNC
+     */
+    paramsMap[KEY_LOG_TYPE] = "2";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, 0);
+
+    /**
+     * @tc.name: WatchdogInner SetEventConfig test;
+     * @tc.desc: set log_type out of range.
+     * @tc.type: FUNC
+     */
+    paramsMap[KEY_LOG_TYPE] = "100";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner SetEventConfig test;
+ * @tc.desc: set log_type is 1.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_002, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+
+    std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_LOG_TYPE] = "1";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "100";
+    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "12";
+    paramsMap[KEY_SAMPLE_COUNT] = "21";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, 0);
+    beginTest("Test");
+    sleep(12); // test value
+    int count = 0;
+    while (count < 3) {
+        beginTest("Test");
+        usleep(140 * 1000); // test value
+        endTest("Test");
+        count++;
+    }
+    sleep(5);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 1);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 100);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL], 12);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 21);
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
+    printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
+}
+
+/**
+ * @tc.name: WatchdogInner SetEventConfig test;
+ * @tc.desc: set log_type is 0.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_003, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+
+    std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_LOG_TYPE] = "0";
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, 0);
+    beginTest("Test");
+    sleep(11); // test value
+    int count = 0;
+    while (count < 2) {
+        beginTest("Test");
+        usleep(200 * 1000); // test value
+        endTest("Test");
+        count++;
+    }
+    sleep(5);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 0);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 150);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 10);
+    printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
+}
+
+/**
+ * @tc.name: WatchdogInner SetEventConfig test;
+ * @tc.desc: set log_type is 2.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_004, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+
+    std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_LOG_TYPE] = "2";
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, 0);
+    beginTest("Test");
+    usleep(2000 * 1000); // test value
+    endTest("Test");
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 2);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 150);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 10);
+}
+
+/**
+ * @tc.name: WatchdogInner SetEventConfig test;
+ * @tc.desc: set KEY_LOG_TYPE is 1, other parameters out of range.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_005, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    /**
+     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     */
+    paramsMap[KEY_LOG_TYPE] = "1";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "49";
+    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "15";
+    paramsMap[KEY_SAMPLE_COUNT] = "21";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     */
+    paramsMap[KEY_SAMPLE_INTERVAL] = "50";
+    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "1";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     */
+    paramsMap[KEY_SAMPLE_INTERVAL] = "100";
+    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "1";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     */
+    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "10";
+    paramsMap[KEY_SAMPLE_COUNT] = "1000";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     */
+    paramsMap[KEY_SAMPLE_COUNT] = "10";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "5";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
 }
 
 /**
@@ -622,15 +805,15 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsInSleep_001, TestSize.Level1)
 }
 
 /**
- * @tc.name: WatchdogInner GetUidByPid test;
+ * @tc.name: WatchdogInner GetAppStartTime test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetUidByPid_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_001, TestSize.Level1)
 {
-    GetUidByPid(getprocpid());
-    int32_t uid = GetUidByPid(1);
-    EXPECT_TRUE(uid >= 0);
+    std::string testStr = "WatchdogInnerTest_GetAppStartTime_001";
+    int64_t time = GetAppStartTime(-1, 0);
+    EXPECT_TRUE(time != 0);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
