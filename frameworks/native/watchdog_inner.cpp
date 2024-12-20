@@ -291,6 +291,7 @@ void WatchdogInner::ThreadSampleTask(int sampleInterval, int sampleCount, int64_
     }
     if (stackContent_.collectCount > DumpStackState::DEFAULT &&
         stackContent_.collectCount < sampleCount) {
+        XCOLLIE_LOGI("ThreadSampler in ThreadSamplerTask, %{public}d.\n", stackContent_.collectCount);
         threadSamplerSampleFunc_();
         stackContent_.collectCount++;
     } else if (stackContent_.collectCount == sampleCount) {
