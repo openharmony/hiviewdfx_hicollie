@@ -630,7 +630,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_002, TestSize.Level
     std::map<std::string, std::string> paramsMap;
     paramsMap[KEY_LOG_TYPE] = "1";
     paramsMap[KEY_SAMPLE_INTERVAL] = "100";
-    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "12";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "12";
     paramsMap[KEY_SAMPLE_COUNT] = "21";
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
     int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
@@ -647,7 +647,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_002, TestSize.Level
     sleep(5);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 1);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 100);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL], 12);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 12);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 21);
     EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
     printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
@@ -681,7 +681,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_003, TestSize.Level
     sleep(5);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 0);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 150);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 10);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 10);
     printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
 }
@@ -707,7 +707,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_004, TestSize.Level
     endTest("Test");
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 2);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 150);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 10);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 10);
 }
 
@@ -724,7 +724,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_005, TestSize.Level
      */
     paramsMap[KEY_LOG_TYPE] = "1";
     paramsMap[KEY_SAMPLE_INTERVAL] = "49";
-    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "15";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "15";
     paramsMap[KEY_SAMPLE_COUNT] = "21";
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
     int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
@@ -733,20 +733,20 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_005, TestSize.Level
      * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
      */
     paramsMap[KEY_SAMPLE_INTERVAL] = "50";
-    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "1";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "1";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     /**
      * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
      */
     paramsMap[KEY_SAMPLE_INTERVAL] = "100";
-    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "1";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "1";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     /**
      * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
      */
-    paramsMap[KEY_IGNORE_STARTUP_INTERVAL] = "10";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "10";
     paramsMap[KEY_SAMPLE_COUNT] = "1000";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);

@@ -38,12 +38,12 @@ constexpr const char* const KEY_SAMPLE_COUNT = "sample_count";
 constexpr const char* const KEY_SAMPLE_REPORT_TIMES = "report_times_per_app";
 constexpr const char* const KEY_LOG_TYPE = "log_type";
 constexpr const char* const KEY_SET_TIMES_FLAG = "set_report_times_flag";
-constexpr const char* const KEY_IGNORE_STARTUP_INTERVAL = "ignore_startup_interval";
+constexpr const char* const KEY_IGNORE_STARTUP_TIME = "ignore_startup_time";
 const int SAMPLE_DEFULE_INTERVAL = 150;
 const int SAMPLE_DEFULE_COUNT = 10;
 const int SAMPLE_DEFULE_REPORT_TIMES = 1;
 const int SET_TIMES_FLAG = 1;
-const int IGNORE_STARTUP_INTERVAL = 10; // 10s
+const int DEFAULT_IGNORE_STARTUP_TIME = 10; // 10s
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 struct TimeContent {
@@ -126,7 +126,7 @@ public:
     StackContent stackContent_;
     TraceContent traceContent_;
     std::map<std::string, int> jankParamsMap = {
-        {KEY_SAMPLE_INTERVAL, SAMPLE_DEFULE_INTERVAL}, {KEY_IGNORE_STARTUP_INTERVAL, IGNORE_STARTUP_INTERVAL},
+        {KEY_SAMPLE_INTERVAL, SAMPLE_DEFULE_INTERVAL}, {KEY_IGNORE_STARTUP_TIME, DEFAULT_IGNORE_STARTUP_TIME},
         {KEY_SAMPLE_COUNT, SAMPLE_DEFULE_COUNT}, {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFULE_REPORT_TIMES},
         {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}
     };
@@ -154,7 +154,7 @@ private:
     bool InitThreadSamplerFuncs();
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
-    void UpdateJankParam(int sampleInterval, int startUpInterval, int sampleCount, int logType, int reportTimes);
+    void UpdateJankParam(int sampleInterval, int startUpTime, int sampleCount, int logType, int reportTimes);
     int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key);
     bool CheckSampleParam(std::map<std::string, std::string> paramsMap);
 
