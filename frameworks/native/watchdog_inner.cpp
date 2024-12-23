@@ -186,7 +186,8 @@ void WatchdogInner::SetForeground(const bool& isForeground)
 bool WatchdogInner::ReportMainThreadEvent(int64_t tid)
 {
     std::string stack = "";
-    CollectStack(stack);
+    std::string heaviestStack = "";
+    CollectStack(stack, heaviestStack);
 
     std::string path = "";
     std::string eventName = "MAIN_THREAD_JANK";
@@ -212,7 +213,7 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid)
         "FOREGROUND", isForeground_,
         "LOG_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC,
         "APP_START_JIFFIES_TIME", GetAppStartTime(pid, tid),
-        "HEAVIEST_STACK", "");
+        "HEAVIEST_STACK", heaviestStack);
     XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d", result);
     return result >= 0;
 #else
@@ -414,16 +415,19 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     return 0;
 }
 
-bool WatchdogInner::CollectStack(std::string& stack)
+bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack)
 {
     if (threadSamplerCollectFunc_ == nullptr) {
         return false;
     }
     int treeFormat = 1;
     char* stk = new char[STACK_LENGTH];
-    int collectRet = threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
+    char* heaviest = new char[STACK_LENGTH];
+    int collectRet = threadSamplerCollectFunc_(stk, heaviest, STACK_LENGTH, STACK_LENGTH, treeFormat);
     stack = stk;
+    heaviestStack = heaviest;
     delete[] stk;
+    delete[] heaviest;
     return collectRet == 0;
 }
 

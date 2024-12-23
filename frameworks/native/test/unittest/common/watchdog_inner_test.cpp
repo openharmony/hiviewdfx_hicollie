@@ -300,12 +300,14 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     int64_t ret1 = GetTimeStamp();
     EXPECT_TRUE(ret1 > 0);
     std::string stack = "";
+    std::string heaviestStack = "";
     const char* samplePath = "libthread_sampler.z.so";
     WatchdogInner::GetInstance().threadSamplerFuncHandler_ = dlopen(samplePath, RTLD_LAZY);
     EXPECT_TRUE(WatchdogInner::GetInstance().threadSamplerFuncHandler_ != nullptr);
     WatchdogInner::GetInstance().InitThreadSamplerFuncs();
-    WatchdogInner::GetInstance().CollectStack(stack);
+    WatchdogInner::GetInstance().CollectStack(stack, heaviestStack);
     printf("stack:\n%s", stack.c_str());
+    printf("heaviestStack:\n%s", heaviestStack.c_str());
     WatchdogInner::GetInstance().Deinit();
     WatchdogInner::GetInstance().ResetThreadSamplerFuncs();
 }
@@ -342,8 +344,10 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     sleep(4);
     EXPECT_EQ(ret, 0);
     std::string stack = "";
-    WatchdogInner::GetInstance().CollectStack(stack);
+    std::string heaviestStack = "";
+    WatchdogInner::GetInstance().CollectStack(stack, heaviestStack);
     printf("stack:\n%s", stack.c_str());
+    printf("heaviestStack:\n%s", heaviestStack.c_str());
     WatchdogInner::GetInstance().Deinit();
     WatchdogInner::GetInstance().ResetThreadSamplerFuncs();
 }

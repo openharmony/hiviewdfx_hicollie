@@ -31,8 +31,8 @@ struct SampleStackItem {
     int32_t count;
     uint64_t level;
     std::shared_ptr<DfxFrame> current;
-    SampleStackItem* child;
-    SampleStackItem* siblings;
+    std::shared_ptr<SampleStackItem> child;
+    std::shared_ptr<SampleStackItem> siblings;
 
     SampleStackItem() : pc(0),
         count(0),
@@ -52,22 +52,20 @@ public:
     SampleStackPrinter(const SampleStackPrinter& other) = delete;
     SampleStackPrinter& operator=(const SampleStackPrinter& other) = delete;
     ~SampleStackPrinter()
-    {
-        FreeNodes();
-    };
+    {};
 
     void Insert(std::vector<uintptr_t>& pcs, int32_t count);
     std::string GetFullStack(const std::vector<TimeAndFrames>& timeAndFrameList);
     std::string GetTreeStack(std::vector<StackIdAndCount>& stackIdCount,
-        std::unique_ptr<UniqueStackTable>& uniqueStackTable);
+        std::unique_ptr<UniqueStackTable>& uniqueStackTable, std::string& heaviestStack);
     std::string Print();
 
 private:
-    void FreeNodes();
-    SampleStackItem* Insert(SampleStackItem* curNode,
-        uintptr_t pc, int32_t count, uint64_t level, SampleStackItem* acientNode);
-    SampleStackItem* AdjustSiblings(SampleStackItem* acient, SampleStackItem* cur, SampleStackItem* node);
-    SampleStackItem* root_;
+    std::shared_ptr<SampleStackItem> Insert(std::shared_ptr<SampleStackItem> curNode,
+        uintptr_t pc, int32_t count, uint64_t level, std::shared_ptr<SampleStackItem> acientNode);
+    std::shared_ptr<SampleStackItem> AdjustSiblings(std::shared_ptr<SampleStackItem> acient,
+        std::shared_ptr<SampleStackItem> cur, std::shared_ptr<SampleStackItem> node);
+    std::shared_ptr<SampleStackItem> root_;
     std::shared_ptr<Unwinder> unwinder_;
     std::shared_ptr<DfxMaps> maps_;
 };
