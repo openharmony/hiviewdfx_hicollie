@@ -98,7 +98,7 @@ constexpr int SAMPLE_COUNT_MIN = 1;
 constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
 constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
 constexpr int SAMPLE_EXTRA_COUNT = 4;
-constexpr int IGNORE_STARTUP_INTERVAL_MIN = 3; // 3s
+constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 }
 
 std::mutex WatchdogInner::lockFfrt_;
@@ -364,8 +364,8 @@ void WatchdogInner::UpdateTime(int64_t& reportBegin, int64_t& reportEnd,
 
 void WatchdogInner::SampleStackDetect(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
 {
-    uint64_t startUpInterval = static_cast<uint64_t>(jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL]) * TIME_MS_TO_S;
-    if (GetCurrentTickMillseconds() - watchdogStartTime_ < startUpInterval) {
+    uint64_t startUpTime = static_cast<uint64_t>(jankParamsMap[KEY_IGNORE_STARTUP_TIME]) * TIME_MS_TO_S;
+    if (GetCurrentTickMillseconds() - watchdogStartTime_ < startUpTime) {
         XCOLLIE_LOGI("Application is in starting period.\n");
         return;
     }
@@ -1242,12 +1242,12 @@ bool WatchdogInner::GetAppDebug()
     return isAppDebug_;
 }
 
-void WatchdogInner::UpdateJankParam(int sampleInterval, int startUpInterval, int sampleCount,
+void WatchdogInner::UpdateJankParam(int sampleInterval, int startUpTime, int sampleCount,
     int logType, int reportTimes)
 {
     jankParamsMap[KEY_LOG_TYPE] = logType;
     jankParamsMap[KEY_SAMPLE_INTERVAL] = sampleInterval;
-    jankParamsMap[KEY_IGNORE_STARTUP_INTERVAL] = startUpInterval;
+    jankParamsMap[KEY_IGNORE_STARTUP_TIME] = startUpTime;
     jankParamsMap[KEY_SAMPLE_COUNT] = sampleCount;
     if (logType == CatchLogType::LOGTYPE_COLLECT_TRACE) {
         XCOLLIE_LOGI("Set thread only dump trace success.");
@@ -1260,7 +1260,7 @@ void WatchdogInner::UpdateJankParam(int sampleInterval, int startUpInterval, int
     }
     XCOLLIE_LOGI("Set thread sampler params success. logType: %{public}d, sample interval: %{public}d, "
         "ignore startUp interval: %{public}d, count: %{public}d, reportTimes: %{public}d.",
-        logType, sampleInterval, startUpInterval, sampleCount, stackContent_.reportTimes);
+        logType, sampleInterval, startUpTime, sampleCount, stackContent_.reportTimes);
 }
 
 int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key)
@@ -1297,12 +1297,12 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
         return false;
     }
 
-    int startUpInterval = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_INTERVAL);
-    if (startUpInterval < 0) {
+    int startUpTime = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_TIME);
+    if (startUpTime < 0) {
         return false;
-    } else if (startUpInterval < IGNORE_STARTUP_INTERVAL_MIN) {
+    } else if (startUpTime < IGNORE_STARTUP_TIME_MIN) {
         XCOLLIE_LOGE("Set the minimum of ignore startup interval is %{public}d s, "
-            "interval: %{public}d.", IGNORE_STARTUP_INTERVAL_MIN, startUpInterval);
+            "interval: %{public}d.", IGNORE_STARTUP_TIME_MIN, startUpTime);
         return false;
     }
 
@@ -1325,7 +1325,7 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
             "reportTimes: %{public}d", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, reportTimes);
         return false;
     }
-    UpdateJankParam(sampleInterval, startUpInterval, sampleCount, CatchLogType::LOGTYPE_SAMPLE_STACK, reportTimes);
+    UpdateJankParam(sampleInterval, startUpTime, sampleCount, CatchLogType::LOGTYPE_SAMPLE_STACK, reportTimes);
     return true;
 }
 
@@ -1347,7 +1347,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
                     "map size: %{public}zu", size);
                 return -1;
             }
-            UpdateJankParam(SAMPLE_DEFULE_INTERVAL, IGNORE_STARTUP_INTERVAL, SAMPLE_DEFULE_COUNT,
+            UpdateJankParam(SAMPLE_DEFULE_INTERVAL, DEFAULT_IGNORE_STARTUP_TIME, SAMPLE_DEFULE_COUNT,
                 logType, SAMPLE_REPORT_TIMES_MIN);
             break;
         }
