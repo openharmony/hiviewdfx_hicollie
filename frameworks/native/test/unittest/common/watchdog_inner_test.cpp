@@ -565,6 +565,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_001, TestSize.Level
      * @tc.desc: set log_type is not a number.
      * @tc.type: FUNC
      */
+    paramsMap[KEY_LOG_TYPE] = "";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
     paramsMap[KEY_LOG_TYPE] = "ab0";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);

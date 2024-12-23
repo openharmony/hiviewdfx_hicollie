@@ -89,10 +89,11 @@ const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
 constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
 constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
-constexpr uint64_t SAMPLE_PARAMS_SIZE = 5;
+constexpr uint64_t SAMPLE_PARAMS_MAX_SIZE = 5;
+constexpr uint64_t SAMPLE_PARAMS_MIN_SIZE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
-constexpr int SAMPLE_INTERVAL_MAX = 1000; // 1s
+constexpr int SAMPLE_INTERVAL_MAX = 500; // 500ms
 constexpr int SAMPLE_COUNT_MIN = 1;
 constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
 constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
@@ -1267,11 +1268,11 @@ int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap,
     int num = -1;
     auto it = paramsMap.find(key);
     if (it == paramsMap.end()) {
-        XCOLLIE_LOGE("Set the thread sampler param error, current %{public}s is not exist.", key.c_str());
+        XCOLLIE_LOGE("Set the thread sampler param error, %{public}s is not exist.", key.c_str());
         return num;
     }
     std::string str = it->second;
-    if (str.size() < std::to_string(INT32_MAX).length()) {
+    if (!str.empty() && str.size() < std::to_string(INT32_MAX).length()) {
         if (std::all_of(std::begin(str), std::end(str), [] (const char &c) {
             return isdigit(c);
         })) {
@@ -1279,7 +1280,7 @@ int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap,
         }
     }
     if (num < 0) {
-        XCOLLIE_LOGE("Set param error, current %{public}s: %{public}s should be a number and greater than 0.",
+        XCOLLIE_LOGE("Set param error, %{public}s: %{public}s should be a number and greater than 0.",
             key.c_str(), str.c_str());
     }
     return num;
@@ -1292,7 +1293,7 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
         return false;
     } else if (sampleInterval < SAMPLE_INTERVAL_MIN || sampleInterval > SAMPLE_INTERVAL_MAX) {
         XCOLLIE_LOGE("Set the range of sample stack is from %{public}d to %{public}d, "
-            "current interval: %{public}d.", SAMPLE_INTERVAL_MIN, SAMPLE_INTERVAL_MAX, sampleInterval);
+            "interval: %{public}d.", SAMPLE_INTERVAL_MIN, SAMPLE_INTERVAL_MAX, sampleInterval);
         return false;
     }
 
@@ -1301,7 +1302,7 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
         return false;
     } else if (startUpInterval < IGNORE_STARTUP_INTERVAL_MIN) {
         XCOLLIE_LOGE("Set the minimum of ignore startup interval is %{public}d s, "
-            "current interval: %{public}d.", IGNORE_STARTUP_INTERVAL_MIN, startUpInterval);
+            "interval: %{public}d.", IGNORE_STARTUP_INTERVAL_MIN, startUpInterval);
         return false;
     }
 
@@ -1311,8 +1312,8 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
     }
     int maxSampleCount = MAX_SAMPLE_STACK_TIMES / sampleInterval - SAMPLE_EXTRA_COUNT;
     if (sampleCount < SAMPLE_COUNT_MIN || sampleCount > maxSampleCount) {
-        XCOLLIE_LOGE("Set the range of sample count is from %{public}d to %{public}d, "
-            "current count: %{public}d.", SAMPLE_COUNT_MIN, maxSampleCount, sampleCount);
+        XCOLLIE_LOGE("Set the range of sample count, min value: %{public}d max value: %{public}d, count: %{public}d.",
+            SAMPLE_COUNT_MIN, maxSampleCount, sampleCount);
         return false;
     }
 
@@ -1321,7 +1322,7 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
         return false;
     } else if (reportTimes < SAMPLE_REPORT_TIMES_MIN || reportTimes > SAMPLE_REPORT_TIMES_MAX) {
         XCOLLIE_LOGE("Set the range of sample reportTimes is from %{public}d to %{public}d,"
-            "current reportTimes: %{public}d", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, reportTimes);
+            "reportTimes: %{public}d", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, reportTimes);
         return false;
     }
     UpdateJankParam(sampleInterval, startUpInterval, sampleCount, CatchLogType::LOGTYPE_SAMPLE_STACK, reportTimes);
@@ -1335,18 +1336,23 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
         return -1;
     }
     int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE);
+    size_t size = paramsMap.size();
     switch (logType) {
         case CatchLogType::LOGTYPE_DEFAULT:
             return -1;
         case CatchLogType::LOGTYPE_NONE:
         case CatchLogType::LOGTYPE_COLLECT_TRACE: {
+            if (size != SAMPLE_PARAMS_MIN_SIZE) {
+                XCOLLIE_LOGE("Set the thread sampler param map size error, can only set log_type. "
+                    "map size: %{public}zu", size);
+                return -1;
+            }
             UpdateJankParam(SAMPLE_DEFULE_INTERVAL, IGNORE_STARTUP_INTERVAL, SAMPLE_DEFULE_COUNT,
                 logType, SAMPLE_REPORT_TIMES_MIN);
             break;
         }
         case CatchLogType::LOGTYPE_SAMPLE_STACK: {
-            size_t size = paramsMap.size();
-            if (size != SAMPLE_PARAMS_SIZE) {
+            if (size != SAMPLE_PARAMS_MAX_SIZE) {
                 XCOLLIE_LOGE("Set the thread sampler param map size error, current map size: %{public}zu", size);
                 return -1;
             }
@@ -1356,7 +1362,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             break;
         }
         default: {
-            XCOLLIE_LOGE("Set the log_type can only be 0、1、2, current logType: %{public}d", logType);
+            XCOLLIE_LOGE("Set the log_type can only be 0、1、2, logType: %{public}d", logType);
             return -1;
         }
     };
