@@ -75,7 +75,7 @@ typedef void (*WatchdogInnerEndFunc)(const char* eventName);
 
 typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
-typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
+typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef int (*ThreadSamplerDeinitFunc)();
 typedef void (*SigActionType)(int, siginfo_t*, void*);
 
@@ -105,12 +105,10 @@ public:
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
     int32_t StartProfileMainThread(int32_t interval);
-    bool CollectStack(std::string& stack);
+    bool CollectStack(std::string& stack, std::string& heaviestStack);
     bool Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
-    void ChangeState(int& state, int targetState);
-    void DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime, int64_t checkTimer);
     void RemoveInnerTask(const std::string& name);
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     void SetAppDebug(bool isAppDebug);

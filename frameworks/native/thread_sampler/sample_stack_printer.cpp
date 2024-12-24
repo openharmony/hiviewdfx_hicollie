@@ -23,8 +23,8 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode,
-    uintptr_t pc, int32_t count, uint64_t level, SampleStackItem* acientNode)
+std::shared_ptr<SampleStackItem> SampleStackPrinter::Insert(std::shared_ptr<SampleStackItem> curNode,
+    uintptr_t pc, int32_t count, uint64_t level, std::shared_ptr<SampleStackItem> acientNode)
 {
     if (curNode == nullptr) {
         return nullptr;
@@ -38,10 +38,6 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode,
     if (curNode->pc == 0) {
         curNode->pc = pc;
         curNode->count += count;
-        curNode->current = std::make_shared<DfxFrame>();
-        curNode->current->index = curNode->level;
-        
-        unwinder_->GetFrameByPc(pc, maps_, *(curNode->current));
         return curNode;
     }
 
@@ -49,7 +45,7 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode,
         acientNode = curNode;
 
         if (curNode->child == nullptr) {
-            curNode->child = new SampleStackItem;
+            curNode->child = std::make_shared<SampleStackItem>();
             curNode->child->level = curNode->level + 1;
             return Insert(curNode->child, pc, count, level, acientNode);
         }
@@ -63,9 +59,9 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode,
     }
 
     if (curNode->siblings == nullptr) {
-        curNode->siblings = new SampleStackItem;
+        curNode->siblings = std::make_shared<SampleStackItem>();
         curNode->siblings->level = curNode->level;
-        SampleStackItem* node = Insert(curNode->siblings, pc, count, level, acientNode);
+        std::shared_ptr<SampleStackItem> node = Insert(curNode->siblings, pc, count, level, acientNode);
         curNode = AdjustSiblings(acientNode, curNode, node);
         return curNode;
     }
@@ -82,28 +78,27 @@ SampleStackItem* SampleStackPrinter::Insert(SampleStackItem* curNode,
 void SampleStackPrinter::Insert(std::vector<uintptr_t>& pcs, int32_t count)
 {
     if (root_ == nullptr) {
-        root_ = new SampleStackItem;
+        root_ = std::make_shared<SampleStackItem>();
         root_->level = 0;
     }
 
-    SampleStackItem* dummyNode = new SampleStackItem;
-    SampleStackItem* acientNode = dummyNode;
+    std::shared_ptr<SampleStackItem> dummyNode = std::make_shared<SampleStackItem>();
+    std::shared_ptr<SampleStackItem> acientNode = dummyNode;
     acientNode->child = root_;
-    SampleStackItem* curNode = root_;
+    std::shared_ptr<SampleStackItem> curNode = root_;
     uint64_t level = 0;
     for (auto iter = pcs.rbegin(); iter != pcs.rend(); ++iter) {
         curNode = Insert(curNode, *iter, count, level, acientNode);
         level++;
     }
-    delete dummyNode;
 }
 
-SampleStackItem* SampleStackPrinter::AdjustSiblings(SampleStackItem* acient,
-    SampleStackItem* cur, SampleStackItem* node)
+std::shared_ptr<SampleStackItem> SampleStackPrinter::AdjustSiblings(std::shared_ptr<SampleStackItem> acient,
+    std::shared_ptr<SampleStackItem> cur, std::shared_ptr<SampleStackItem> node)
 {
-    SampleStackItem* dummy = new SampleStackItem;
+    std::shared_ptr<SampleStackItem> dummy = std::make_shared<SampleStackItem>();
     dummy->siblings = acient->child;
-    SampleStackItem* p = dummy;
+    std::shared_ptr<SampleStackItem> p = dummy;
     while (p->siblings != node && p->siblings->count >= node->count) {
         p = p->siblings;
     }
@@ -115,7 +110,6 @@ SampleStackItem* SampleStackPrinter::AdjustSiblings(SampleStackItem* acient,
         }
         p->siblings = node;
     }
-    delete dummy;
     return node;
 }
 
@@ -141,11 +135,12 @@ std::string SampleStackPrinter::GetFullStack(const std::vector<TimeAndFrames>& t
 }
 
 std::string SampleStackPrinter::GetTreeStack(std::vector<StackIdAndCount>& stackIdCount,
-    std::unique_ptr<UniqueStackTable>& uniqueStackTable)
+    std::unique_ptr<UniqueStackTable>& uniqueStackTable, std::string& heaviestStack)
 {
     std::sort(stackIdCount.begin(), stackIdCount.end(), [](const auto& a, const auto& b) {
         return a.count > b.count;
     });
+    std::string stack("");
     for (auto it = stackIdCount.begin(); it != stackIdCount.end(); it++) {
         std::vector<uintptr_t> pcs;
         OHOS::HiviewDFX::StackId stackId;
@@ -153,8 +148,18 @@ std::string SampleStackPrinter::GetTreeStack(std::vector<StackIdAndCount>& stack
         if (uniqueStackTable->GetPcsByStackId(stackId, pcs)) {
             Insert(pcs, it->count);
         }
+        if (it == stackIdCount.begin()) {
+            heaviestStack = "heaviest stack: \nstack counts: " + std::to_string(it->count) + "\n";
+            for (auto i = pcs.size(); i > 0; i--) {
+                DfxFrame frame;
+                unwinder_->GetFrameByPc(pcs[i - 1], maps_, frame);
+                frame.index = pcs.size() - i;
+                auto frameStr = DfxFrameFormatter::GetFrameStr(frame);
+                heaviestStack += frameStr;
+            }
+        }
     }
-    std::string stack = Print();
+    stack += Print();
     return stack;
 }
 
@@ -165,13 +170,16 @@ std::string SampleStackPrinter::Print()
     }
 
     std::stringstream ret;
-    std::vector<SampleStackItem*> nodes;
+    std::vector<std::shared_ptr<SampleStackItem>> nodes;
     nodes.push_back(root_);
     const int indent = 2;
     while (!nodes.empty()) {
-        SampleStackItem* back = nodes.back();
-        SampleStackItem* sibling = back->siblings;
-        SampleStackItem* child = back->child;
+        std::shared_ptr<SampleStackItem> back = nodes.back();
+        back->current = std::make_shared<DfxFrame>();
+        back->current->index = back->level;
+        unwinder_->GetFrameByPc(back->pc, maps_, *(back->current));
+        std::shared_ptr<SampleStackItem> sibling = back->siblings;
+        std::shared_ptr<SampleStackItem> child = back->child;
         std::string space(indent * back->level, ' ');
         nodes.pop_back();
         
@@ -185,36 +193,6 @@ std::string SampleStackPrinter::Print()
         }
     }
     return ret.str();
-}
-
-void SampleStackPrinter::FreeNodes()
-{
-    if (root_ == nullptr) {
-        return;
-    }
-    std::vector<SampleStackItem*> stk;
-    stk.emplace_back(root_);
-
-    while (!stk.empty()) {
-        SampleStackItem* cur = stk.back();
-        stk.pop_back();
-        
-        if (cur != nullptr) {
-            // push siblings in stk and set siblings null
-            if (cur->siblings != nullptr) {
-                stk.emplace_back(cur->siblings);
-                cur->siblings = nullptr;
-            }
-            // push child in stk and set child null
-            if (cur->child != nullptr) {
-                stk.emplace_back(cur->child);
-                cur->child = nullptr;
-            }
-            // free cur and set null
-            delete cur;
-            cur = nullptr;
-        }
-    }
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
