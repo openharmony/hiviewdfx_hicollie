@@ -44,6 +44,11 @@ constexpr uint64_t MIN_APP_UID = 20000;
 #define HTRANSIO            0xAB
 #define LOGGER_GET_STACK    _IO(HTRANSIO, 9)
 
+constexpr OHOS::HiviewDFX::HiLogLabel KLOG_LABEL = {
+    LOG_KMSG,
+    LOG_DOMAIN,
+    LOG_TAG
+};
 #define XCOLLIE_KLOGI(...) \
     do { \
         (void)OHOS::HiviewDFX::HiLog::Info(KLOG_LABEL, __VA_ARGS__); \
