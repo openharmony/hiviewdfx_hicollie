@@ -44,8 +44,15 @@ constexpr uint64_t MIN_APP_UID = 20000;
 #define HTRANSIO            0xAB
 #define LOGGER_GET_STACK    _IO(HTRANSIO, 9)
 
-#define XCOLLIE_KLOGE(...) HILOG_ERROR(LOG_KMSG, ##__VA_ARGS__)
-#define XCOLLIE_KLOGI(...) HILOG_INFO(LOG_KMSG, ##__VA_ARGS__)
+#define XCOLLIE_KLOGI(...) \
+    do { \
+        (void)OHOS::HiviewDFX::HiLog::Info(KLOG_LABEL, __VA_ARGS__); \
+    } while (0)
+ 
+#define XCOLLIE_KLOGE(...) \
+    do { \
+        (void)OHOS::HiviewDFX::HiLog::Error(KLOG_LABEL, __VA_ARGS__); \
+    } while (0)
 
 uint64_t GetCurrentTickMillseconds();
 
