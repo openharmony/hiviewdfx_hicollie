@@ -188,7 +188,7 @@ HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id)
         return HICOLLIE_WRONG_PROCESS_CONTEXT;
     }
     if (timerId == 0) {
-        XCOLLIE_LOGE("timer name already exists or task quque size exceed max");
+        XCOLLIE_LOGE("task quque size exceed max");
         return HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM;
     }
 
