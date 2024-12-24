@@ -44,6 +44,9 @@ constexpr uint64_t MIN_APP_UID = 20000;
 #define HTRANSIO            0xAB
 #define LOGGER_GET_STACK    _IO(HTRANSIO, 9)
 
+#define XCOLLIE_KLOGE(...) HILOG_ERROR(LOG_KMSG, ##__VA_ARGS__)
+#define XCOLLIE_KLOGI(...) HILOG_INFO(LOG_KMSG, ##__VA_ARGS__)
+
 uint64_t GetCurrentTickMillseconds();
 
 uint64_t GetCurrentBootMillseconds();
