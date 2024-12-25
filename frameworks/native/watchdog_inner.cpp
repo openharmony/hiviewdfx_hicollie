@@ -930,25 +930,25 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
         if (g_fd < 0) {
             g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
             if (g_fd < 0) {
-                XCOLLIE_LOGE("can't open hungtask file");
+                XCOLLIE_KLOGE("can't open hungtask file");
                 g_existFile = false;
                 return false;
             }
-            XCOLLIE_LOGE("change to hmos kernel");
+            XCOLLIE_KLOGE("change to hmos kernel");
             isHmos = true;
         } else {
-            XCOLLIE_LOGE("change to linux kernel");
+            XCOLLIE_KLOGI("change to linux kernel");
         }
     }
 
     ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
     if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
-        XCOLLIE_LOGE("watchdogWrite msg failed");
+        XCOLLIE_KLOGE("watchdogWrite msg failed");
         close(g_fd);
         g_fd = NOT_OPEN;
         return false;
     }
-    XCOLLIE_LOGE("Send %{public}s to hungtask Successful\n", msg.c_str());
+    XCOLLIE_KLOGI("Send %{public}s to hungtask Successful\n", msg.c_str());
     return true;
 }
 
