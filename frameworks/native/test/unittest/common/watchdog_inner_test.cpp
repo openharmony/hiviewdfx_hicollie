@@ -684,9 +684,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_003, TestSize.Level
     }
     sleep(5);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 0);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 150);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 10);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], SAMPLE_DEFULE_INTERVAL);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], DEFAULT_IGNORE_STARTUP_TIME);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], SAMPLE_DEFULE_COUNT);
     printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
 }
 
@@ -710,9 +710,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_004, TestSize.Level
     usleep(2000 * 1000); // test value
     endTest("Test");
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 2);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 150);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 10);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], SAMPLE_DEFULE_INTERVAL);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], DEFAULT_IGNORE_STARTUP_TIME);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], SAMPLE_DEFULE_COUNT);
 }
 
 /**
