@@ -29,7 +29,7 @@
 
 #include <securec.h>
 #include <dlfcn.h>
-
+#include "musl_preinit_common.h"
 #include "backtrace_local.h"
 #ifdef HISYSEVENT_ENABLE
 #include "hisysevent.h"
@@ -900,6 +900,9 @@ bool WatchdogInner::Start()
         XCOLLIE_LOGD("Watchdog Set Thread Info Callback");
     }
     while (!isNeedStop_) {
+        if (__get_global_hook_flag() && __get_hook_flag()) {
+            __set_hook_flag(false);
+        }
         uint64_t now = GetCurrentTickMillseconds();
         WatchdogTask task;
         uint64_t leftTimeMill = FetchNextTask(now, task);
