@@ -35,6 +35,15 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+namespace {
+constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
+constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
+constexpr const char* const ENABLE_VAULE = "true";
+constexpr const char* const ENABLE_BETA_VAULE = "beta";
+static std::string g_curProcName;
+static int32_t g_lastPid;
+static std::mutex g_lock;
+}
 uint64_t GetCurrentTickMillseconds()
 {
     struct timespec t;
@@ -67,18 +76,7 @@ bool IsFileNameFormat(char c)
 
 std::string GetSelfProcName()
 {
-    constexpr uint16_t READ_SIZE = 128;
-    std::ifstream fin;
-    fin.open("/proc/self/comm", std::ifstream::in);
-    if (!fin.is_open()) {
-        XCOLLIE_LOGE("fin.is_open() false");
-        return "";
-    }
-    char readStr[READ_SIZE] = {'\0'};
-    fin.getline(readStr, READ_SIZE - 1);
-    fin.close();
-
-    std::string ret = std::string(readStr);
+    std::string ret = GetProcessNameFromProcCmdline();
     ret.erase(std::remove_if(ret.begin(), ret.end(), IsFileNameFormat), ret.end());
     return ret;
 }
@@ -101,11 +99,43 @@ std::string GetFirstLine(const std::string& path)
     return firstLine;
 }
 
+bool IsDeveloperOpen()
+{
+    static std::string isDeveloperOpen;
+    if (!isDeveloperOpen.empty()) {
+        return (isDeveloperOpen.find(ENABLE_VAULE) != std::string::npos);
+    }
+    isDeveloperOpen = system::GetParameter(KEY_DEVELOPER_MODE_STATE, "");
+    return (isDeveloperOpen.find(ENABLE_VAULE) != std::string::npos);
+}
+
+bool IsBetaVersion()
+{
+    static std::string isBetaVersion;
+    if (!isBetaVersion.empty()) {
+        return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
+    }
+    isBetaVersion = system::GetParameter(KEY_BETA_TYPE, "");
+    return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
+}
+
 std::string GetProcessNameFromProcCmdline(int32_t pid)
 {
-    std::string procCmdlinePath = "/proc/" + std::to_string(pid) + "/cmdline";
+    if (pid > 0) {
+        g_lock.lock();
+        if (!g_curProcName.empty() && g_lastPid == pid) {
+            g_lock.unlock();
+            return g_curProcName;
+        }
+    }
+
+    std::string pidStr = pid > 0 ? std::to_string(pid) : "self";
+    std::string procCmdlinePath = "/proc/" + pidStr + "/cmdline";
     std::string procCmdlineContent = GetFirstLine(procCmdlinePath);
     if (procCmdlineContent.empty()) {
+        if (pid > 0) {
+            g_lock.unlock();
+        }
         return "";
     }
 
@@ -120,7 +150,14 @@ std::string GetProcessNameFromProcCmdline(int32_t pid)
         }
     }
     size_t endPos = procNameEndPos - procNameStartPos;
-    return procCmdlineContent.substr(procNameStartPos, endPos);
+    if (pid <= 0) {
+        return procCmdlineContent.substr(procNameStartPos, endPos);
+    }
+    g_curProcName = procCmdlineContent.substr(procNameStartPos, endPos);
+    g_lastPid = pid;
+    g_lock.unlock();
+    XCOLLIE_LOGD("g_curProcName is empty, name %{public}s pid %{public}d", g_curProcName.c_str(), pid);
+    return g_curProcName;
 }
 
 std::string GetLimitedSizeName(std::string name)
@@ -284,12 +321,6 @@ bool KillProcessByPid(int32_t pid)
     return (ret >= 0);
 }
 
-bool IsBetaVersion()
-{
-    auto versionType = OHOS::system::GetParameter(KEY_HIVIEW_USER_TYPE, "unknown");
-    return (versionType.find("beta") != std::string::npos);
-}
-
 bool CreateWatchdogDir()
 {
     constexpr mode_t defaultLogDirMode = 0770;
@@ -355,24 +386,14 @@ int64_t GetTimeStamp()
     return ms.count();
 }
 
-bool IsEnableVersion(const std::string& key, const std::string& type)
-{
-    auto enableType = system::GetParameter(key, "");
-    return (enableType.find(type) != std::string::npos);
-}
-
 void* FunctionOpen(void* funcHandler, const char* funcName)
 {
-    if (funcHandler == nullptr) {
-        XCOLLIE_LOGE("funcHandler is nullptr.\n");
-        return nullptr;
-    }
     dlerror();
     char* err = nullptr;
     void* func = dlsym(funcHandler, funcName);
-    if ((err = dlerror()) != nullptr) {
+    err = dlerror();
+    if (err != nullptr) {
         XCOLLIE_LOGE("dlopen %{public}s failed. %{public}s\n", funcName, err);
-        dlclose(funcHandler);
         return nullptr;
     }
     return func;

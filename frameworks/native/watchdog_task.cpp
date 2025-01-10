@@ -35,7 +35,8 @@ namespace OHOS {
 namespace HiviewDFX {
 namespace {
 constexpr const char* CORE_PROCS[] = {
-    "anco_service_br", "aptouch_daemon", "foundation", "init", "multimodalinput", "ohos.sceneboard", "render_service"
+    "anco_service_br", "aptouch_daemon", "foundation", "init",
+    "multimodalinput", "com.ohos.sceneboard", "render_service"
 };
 }
 int64_t WatchdogTask::curId = 0;
@@ -193,7 +194,7 @@ void WatchdogTask::RunHandlerCheckerTask()
     }
 }
 
-void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName) const
+void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName)
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -207,9 +208,28 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
         "\n" + msg + "\n";
     sendMsg += checker->GetDumpInfo();
 
+    watchdogTid = pid;
+    std::string tidFrontStr = "Thread ID = ";
+    std::string tidRearStr = ") is running";
+    std::size_t frontPos = sendMsg.find(tidFrontStr);
+    std::size_t rearPos = sendMsg.find(tidRearStr);
+    std::size_t startPos = frontPos + tidFrontStr.length();
+    if (frontPos != std::string::npos && rearPos != std::string::npos && rearPos > startPos) {
+        size_t tidLength = rearPos - startPos;
+        if (tidLength < std::to_string(INT32_MAX).length()) {
+            std::string tidStr = sendMsg.substr(startPos, tidLength);
+            if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char &c) {
+                return isdigit(c);
+            })) {
+                watchdogTid = std::stoi(tidStr);
+            }
+        }
+    }
+
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid, "TID", watchdogTid < pid ? pid : watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
+        "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
         "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", GetProcessStacktrace());
+
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
         ret, eventName.c_str(), msg.c_str());
 }

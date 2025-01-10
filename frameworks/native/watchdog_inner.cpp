@@ -47,23 +47,28 @@ constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
-constexpr int32_t WATCHED_UID = 5523;
+constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
+constexpr uint32_t FOUNDATION_UID = 5523;
+constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
+constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const std::string ON_KICK_TIME = "on,72";
-const std::string ON_KICK_TIME_HMOS = "on,63,foundation";
+const std::string ON_KICK_TIME_HMOS = "on,10,foundation";
 const std::string KICK_TIME = "kick";
 const std::string KICK_TIME_HMOS = "kick,foundation";
 const int32_t NOT_OPEN = -1;
+constexpr uint64_t MAX_START_TIME = 10 * 1000;
+const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
+constexpr size_t STACK_LENGTH = 32 * 1024;
+constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
+
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
 
-constexpr uint64_t MAX_START_TIME = 10 * 1000;
-const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
-constexpr size_t STACK_LENGTH = 32 * 1024;
 typedef int (*ThreadSamplerInitFunc)(int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, size_t, int);
@@ -375,7 +380,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
     if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
         int64_t checkTimer = ONE_DAY_LIMIT;
-        if (IsEnableVersion(KEY_DEVELOPER_MODE_STATE, ENABLE_VAULE)) {
+        if (IsDeveloperOpen() || (IsBetaVersion() &&
+        GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
             checkTimer = ONE_HOUR_LIMIT;
         }
         WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
@@ -387,9 +393,6 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
-        if (IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
-            return;
-        }
         WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
             DumpStackState::COMPLETE);
         WatchdogInner::GetInstance().lastStackTime_ = endTime;
@@ -400,8 +403,7 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
     if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
         WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
-        if (!IsEnableVersion(KEY_HIVIEW_USER_TYPE, ENABLE_HIVIEW_USER_VAULE) ||
-            IsEnableVersion(KEY_ANCO_ENABLE_TYPE, ENABLE_VAULE)) {
+        if (IsBetaVersion()) {
             return;
         }
         XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
@@ -465,6 +467,7 @@ int64_t WatchdogInner::RunXCollieTask(const std::string& name, uint64_t timeout,
     }
 
     std::unique_lock<std::mutex> lock(lock_);
+    IpcCheck();
     std::string limitedName = GetLimitedSizeName(name);
     return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeout, func, arg, flag));
 }
@@ -788,7 +791,15 @@ bool WatchdogInner::KickWatchdog()
 
 void WatchdogInner::IpcCheck()
 {
-    if (getuid() == WATCHED_UID) {
+    static bool isIpcCheckInit = false;
+    if (isIpcCheckInit) {
+        return;
+    }
+
+    uint32_t uid = getuid();
+    bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
+        [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
+    if (isJoinIpcFullUid || GetSelfProcName() == KEY_SCB_STATE) {
         if (binderCheckHander_ == nullptr) {
             auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
             binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
@@ -798,6 +809,7 @@ void WatchdogInner::IpcCheck()
             }
         }
     }
+    isIpcCheckInit = true;
 }
 
 void WatchdogInner::WriteStringToFile(int32_t pid, const char *str)
@@ -823,6 +835,14 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     std::string description = "FfrtCallback: task(";
     description += taskInfo;
     description += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
+    std::string info(taskInfo);
+    if (info.find("Queue_Schedule_Timeout") != std::string::npos) {
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, false);
+        description += ", report twice instead of exiting process.";
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
+        WatchdogInner::KillPeerBinderProcess(description);
+        return;
+    }
     bool isExist = false;
     {
         std::unique_lock<std::mutex> lock(lockFfrt_);
@@ -854,7 +874,8 @@ void WatchdogInner::InitFfrtWatchdog()
     IpcCheck();
 }
 
-void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
+void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo,
+    const bool isDumpStack)
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -871,11 +892,53 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
     sendMsg += buffer;
     delete[] buffer;
-    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
-        "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg,
-        "STACK", GetProcessStacktrace());
+    int32_t tid = pid;
+    GetFfrtTaskTid(tid, sendMsg);
+    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+        "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg, "STACK", isDumpStack ? GetProcessStacktrace() : "");
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", ret, eventName.c_str(), msg.c_str());
+}
+
+void WatchdogInner::GetFfrtTaskTid(int32_t& tid, const std::string& msg)
+{
+    std::string queueNameFrontStr = "us. queue name [";
+    size_t queueNameFrontPos = msg.find(queueNameFrontStr);
+    if (queueNameFrontPos == std::string::npos) {
+        return;
+    }
+    size_t queueNameRearPos = msg.find("], remaining tasks count=");
+    size_t queueStartPos = queueNameFrontPos + queueNameFrontStr.length();
+    if (queueNameRearPos == std::string::npos || queueNameRearPos <= queueStartPos) {
+        return;
+    }
+    size_t queueNameLength = queueNameRearPos - queueStartPos;
+    std::string workerTidFrontStr = " worker tid ";
+    std::string taskIdFrontStr = " is running, task id ";
+    std::string queueNameStr = " name " + msg.substr(queueStartPos, queueNameLength);
+    std::istringstream issMsg(msg);
+    std::string line;
+    while (std::getline(issMsg, line, '\n')) {
+        size_t workerTidFrontPos = line.find(workerTidFrontStr);
+        size_t taskIdFrontPos = line.find(taskIdFrontStr);
+        size_t queueNamePos = line.find(queueNameStr);
+        size_t workerStartPos = workerTidFrontPos + workerTidFrontStr.length();
+        if (workerTidFrontPos == std::string::npos || taskIdFrontPos == std::string::npos ||
+            queueNamePos == std::string::npos || taskIdFrontPos <= workerStartPos) {
+            continue;
+        }
+        size_t tidLength = taskIdFrontPos - workerStartPos;
+        if (tidLength < std::to_string(INT32_MAX).length()) {
+            std::string tidStr = line.substr(workerStartPos, tidLength);
+            if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char& c) {
+                return isdigit(c);
+            })) {
+                tid = std::stoi(tidStr);
+                return;
+            }
+        }
+    }
 }
 
 void WatchdogInner::LeftTimeExitProcess(const std::string &description)
@@ -914,7 +977,7 @@ bool WatchdogInner::Stop()
 void WatchdogInner::KillPeerBinderProcess(const std::string &description)
 {
     bool result = false;
-    if (getuid() == WATCHED_UID) {
+    if (getuid() == FOUNDATION_UID) {
         result = KillProcessByPid(getprocpid());
     }
     if (!result) {

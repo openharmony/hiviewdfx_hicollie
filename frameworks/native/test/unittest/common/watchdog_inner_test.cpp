@@ -290,8 +290,12 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
     std::string result = GetFormatDate();
     printf("GetFormatDate:%s\n", result.c_str());
     EXPECT_TRUE(!result.empty());
-    bool ret = IsEnableVersion("test", "test");
-    printf("ret:%s\n", ret ? "true" : "false");
+    bool devRet1 = IsDeveloperOpen();
+    bool devRet2 = IsDeveloperOpen();
+    bool betaRet1 = IsBetaVersion();
+    bool betaRet2 = IsBetaVersion();
+    EXPECT_TRUE(devRet1 == devRet2);
+    EXPECT_TRUE(betaRet1 == betaRet2);
     int64_t ret1 = GetTimeStamp();
     EXPECT_TRUE(ret1 > 0);
     std::string stack = "";
@@ -404,6 +408,20 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
     EXPECT_EQ(state, 0);
     WatchdogInner::GetInstance().StartTraceProfile(150); // test value
     FunctionOpen(nullptr, "test");
+}
+
+/**
+ * @tc.name: WatchdogInner GetProcessNameFromProcCmdline test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcNameFromProcCmdline_001, TestSize.Level1)
+{
+    std::string procName1 = GetProcessNameFromProcCmdline(getpid());
+    std::string procName2 = GetProcessNameFromProcCmdline(25221); // test value
+    EXPECT_TRUE(procName1 != procName2);
+    std::string procName3 = GetProcessNameFromProcCmdline(getpid());
+    EXPECT_TRUE(procName1 == procName3);
 }
 
 /**
