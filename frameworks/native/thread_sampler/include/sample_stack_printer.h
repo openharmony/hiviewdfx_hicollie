@@ -49,6 +49,8 @@ public:
     {
         root_ = nullptr;
     };
+    SampleStackPrinter(const SampleStackPrinter& other) = delete;
+    SampleStackPrinter& operator=(const SampleStackPrinter& other) = delete;
     ~SampleStackPrinter()
     {
         FreeNodes();

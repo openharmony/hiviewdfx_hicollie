@@ -58,7 +58,7 @@ std::string TimeFormat(uint64_t time)
 
 void PutStackId(std::vector<StackIdAndCount>& stackIdCount, uint64_t stackId)
 {
-    auto it = std::find_if(stackIdCount.begin(), stackIdCount.end(), [&stackId](auto& stackIdCnt) {
+    auto it = std::find_if(stackIdCount.begin(), stackIdCount.end(), [&stackId](const auto& stackIdCnt) {
         return stackIdCnt.stackId == stackId;
     });
     if (it == stackIdCount.end()) {
@@ -72,14 +72,14 @@ void PutStackId(std::vector<StackIdAndCount>& stackIdCount, uint64_t stackId)
     }
 }
 
-void DoUnwind(ThreadUnwindContext* context, const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)
+void DoUnwind(const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)
 {
 #if defined(__aarch64__)
     static std::shared_ptr<DfxRegs> regs = std::make_shared<DfxRegsArm64>();
-    regs->SetSp(context->sp);
-    regs->SetPc(context->pc);
-    regs->SetFp(context->fp);
-    regs->SetReg(REG_LR, &(context->lr));
+    regs->SetSp(unwindInfo.context->sp);
+    regs->SetPc(unwindInfo.context->pc);
+    regs->SetFp(unwindInfo.context->fp);
+    regs->SetReg(REG_LR, &(unwindInfo.context->lr));
     unwinder->SetRegs(regs);
     unwinder->EnableFillFrames(false);
     unwinder->Unwind(&unwindInfo);
