@@ -35,13 +35,16 @@
 #include "thread_sampler_utils.h"
 #include "file_ex.h"
 
+#define NO_SANITIZER __attribute__((no_sanitize("address"), no_sanitize("hwaddress")))
+
 namespace OHOS {
 namespace HiviewDFX {
-
 void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context)
 {
 #if defined(__aarch64__)
+    int preErrno = errno;
     ThreadSampler::GetInstance().WriteContext(context);
+    errno = preErrno;
 #endif
 }
 
@@ -136,12 +139,6 @@ bool ThreadSampler::Init(int collectStackCount)
         return false;
     }
 
-    if (!InstallSignalHandler()) {
-        XCOLLIE_LOGE("Failed to InstallSignalHandler\n");
-        Deinit();
-        return false;
-    }
-
     if (collectStackCount <= 0) {
         XCOLLIE_LOGE("Invalid collectStackCount\n");
         Deinit();
@@ -229,26 +226,6 @@ void ThreadSampler::DestroyUnwinder()
     accessors_.reset();
 }
 
-bool ThreadSampler::InstallSignalHandler()
-{
-    struct sigaction action {};
-    sigfillset(&action.sa_mask);
-    action.sa_sigaction = ThreadSampler::ThreadSamplerSignalHandler;
-    action.sa_flags = SA_RESTART | SA_SIGINFO;
-    if (sigaction(MUSL_SIGNAL_SAMPLE_STACK, &action, nullptr) != 0) {
-        XCOLLIE_LOGE("Failed to register signal(%{public}d:%{public}d)", MUSL_SIGNAL_SAMPLE_STACK, errno);
-        return false;
-    }
-    return true;
-}
-
-void ThreadSampler::UninstallSignalHandler()
-{
-    if (signal(MUSL_SIGNAL_SAMPLE_STACK, SIG_IGN) == SIG_ERR) {
-        XCOLLIE_LOGE("Failed to unregister signal(%{public}d)", MUSL_SIGNAL_SAMPLE_STACK);
-    }
-}
-
 int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
 {
     std::shared_ptr<DfxMap> map;
@@ -270,6 +247,9 @@ int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
 
 ThreadUnwindContext* ThreadSampler::GetReadContext()
 {
+    if (mmapStart_ == MAP_FAILED) {
+        return nullptr;
+    }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = readIndex_;
     if (contextArray[index].requestTime == 0 || contextArray[index].snapshotTime == 0) {
@@ -283,6 +263,9 @@ ThreadUnwindContext* ThreadSampler::GetReadContext()
 
 ThreadUnwindContext* ThreadSampler::GetWriteContext()
 {
+    if (mmapStart_ == MAP_FAILED) {
+        return nullptr;
+    }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = writeIndex_;
     if (contextArray[index].requestTime > 0 &&
@@ -292,7 +275,7 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
     return &contextArray[index];
 }
 
-__attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSampler::WriteContext(void* context)
+NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 {
 #if defined(__aarch64__)
     if (!init_) {
@@ -301,6 +284,9 @@ __attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSam
 #if defined(CONSUME_STATISTICS)
     uint64_t begin = GetCurrentTimeNanoseconds();
 #endif
+    if (mmapStart_ == MAP_FAILED) {
+        return;
+    }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = writeIndex_;
 #if defined(CONSUME_STATISTICS)
@@ -329,10 +315,10 @@ __attribute__((no_sanitize("address"), no_sanitize("hwaddress"))) void ThreadSam
             reinterpret_cast<const char*>(contextArray[index].sp)[pos];
     }
 
-    uint64_t end = GetCurrentTimeNanoseconds();
-    contextArray[index].processTime = 0;
-    contextArray[index].snapshotTime = end;
     writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
+    uint64_t end = GetCurrentTimeNanoseconds();
+    contextArray[index].processTime.store(0, std::memory_order_relaxed);
+    contextArray[index].snapshotTime.store(end, std::memory_order_release);
 
 #if defined(CONSUME_STATISTICS)
     copyStackCount_++;
@@ -378,19 +364,19 @@ void ThreadSampler::ProcessStackBuffer()
             break;
         }
 
-        struct TimeAndFrames taf;
-        taf.requestTime = context->requestTime;
-        taf.snapshotTime = context->snapshotTime;
-
-#if defined(CONSUME_STATISTICS)
-        uint64_t unwindStart = GetCurrentTimeNanoseconds();
-#endif
         UnwindInfo unwindInfo = {
             .context = context,
             .maps = maps_.get(),
         };
 
-        DoUnwind(context, unwinder_, unwindInfo);
+        struct TimeAndFrames taf;
+        taf.requestTime = unwindInfo.context->requestTime;
+        taf.snapshotTime = unwindInfo.context->snapshotTime;
+
+#if defined(CONSUME_STATISTICS)
+        uint64_t unwindStart = GetCurrentTimeNanoseconds();
+#endif
+        DoUnwind(unwinder_, unwindInfo);
 #if defined(CONSUME_STATISTICS)
         uint64_t unwindEnd = GetCurrentTimeNanoseconds();
 #endif
@@ -413,9 +399,9 @@ void ThreadSampler::ProcessStackBuffer()
         unwindCount_++;
         unwindTimeCost_ += unwindEnd - unwindStart;
 #endif  //#if defined(CONSUME_STATISTICS)
-        context->requestTime = 0;
-        context->snapshotTime = 0;
-        context->processTime = ts;
+        context->requestTime.store(0, std::memory_order_release);
+        context->snapshotTime.store(0, std::memory_order_release);
+        context->processTime.store(ts, std::memory_order_release);
     }
 #endif  // #if defined(__aarch64__)
 }
@@ -499,15 +485,16 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     return true;
 }
 
-void ThreadSampler::Deinit()
+bool ThreadSampler::Deinit()
 {
+    if (!init_) {
+        return true;
+    }
     DeinitUniqueStackTable();
     DestroyUnwinder();
     ReleaseRecordBuffer();
-    UninstallSignalHandler();
-    uniqueStackTableSize_ = DEFAULT_UNIQUE_STACK_TABLE_SIZE;
-    uniTableMMapName_ = "hicollie_buf";
     init_ = false;
+    return !init_;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
