@@ -57,7 +57,6 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     nextTickTime = GetCurrentTickMillseconds();
     isTaskScheduled = false;
     isOneshotTask = false;
-    watchdogTid = getproctid();
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
