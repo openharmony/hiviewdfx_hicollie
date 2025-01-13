@@ -84,7 +84,8 @@ public:
     void InitFfrtWatchdog();
     static void WriteStringToFile(int32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
-    static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo);
+    static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo,
+        const bool isDumpStack = true);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
     int32_t StartProfileMainThread(int32_t interval);
