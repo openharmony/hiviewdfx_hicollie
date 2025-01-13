@@ -36,6 +36,7 @@ constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
 constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
 constexpr uint32_t NOTIFY_APP_FAULT = 38;
 constexpr uint32_t APP_MGR_SERVICE_ID = 501;
+
 static int32_t g_bussinessTid = 0;
 
 bool IsAppMainThread()
