@@ -254,11 +254,13 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogHandlerCheckerTest_006, TestSize.Level1)
     printf("WatchdogHandlerCheckerTest_007 begin\n");
     Watchdog::GetInstance().InitFfrtWatchdog();
     ffrt::queue* testQueue = new ffrt::queue("test_queue");
+    ASSERT_TRUE(testQueue != nullptr);
     auto t = testQueue->submit_h([] {
         ffrt::mutex lock;
         lock.lock();
         lock.unlock();
     }, {});
+    ASSERT_TRUE(t != nullptr);
     testQueue->wait(t);
     delete testQueue;
 }
