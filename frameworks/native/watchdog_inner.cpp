@@ -17,6 +17,7 @@
 
 #include <cerrno>
 #include <climits>
+#include <cstdio>
 #include <mutex>
 
 #include <sys/stat.h>
@@ -102,7 +103,7 @@ constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
-static int32_t g_fd = NOT_OPEN;
+static FILE* g_fp = nullptr;
 static bool g_existFile = true;
 
 SigActionType WatchdogInner::threadSamplerSigHandler_ = nullptr;
@@ -928,12 +929,12 @@ bool WatchdogInner::Start()
 
 bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 {
-    if (g_fd == NOT_OPEN) {
-        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
-        if (g_fd < 0) {
-            g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
-            if (g_fd < 0) {
-                XCOLLIE_KLOGE("can't open hungtask file");
+    if (g_fp == nullptr) {
+        g_fp = fopen(SYS_KERNEL_HUNGTASK_USERLIST, "w");
+        if (g_fp == nullptr) {
+            g_fp = fopen(HMOS_HUNGTASK_USERLIST, "w");
+            if (g_fp == nullptr) {
+                XCOLLIE_KLOGE("can't open hungtask file, errno: %{public}d", errno);
                 g_existFile = false;
                 return false;
             }
@@ -943,15 +944,16 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
             XCOLLIE_KLOGI("change to linux kernel");
         }
     }
-
-    ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
-    if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
+    size_t size = msg.size();
+    if (fwrite(msg.c_str(), sizeof(char), size, g_fp) != size) {
         XCOLLIE_KLOGE("watchdogWrite msg failed");
-        close(g_fd);
-        g_fd = NOT_OPEN;
+        if (fclose(g_fp)) {
+            XCOLLIE_KLOGE("fclose is failed");
+        }
+        g_fp = nullptr;
         return false;
     }
-    XCOLLIE_KLOGI("Send %{public}s to hungtask Successful\n", msg.c_str());
+    XCOLLIE_KLOGI("Send %{public}zu to hungtask Successful\n", size);
     return true;
 }
 
@@ -990,14 +992,18 @@ void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
     if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", newPid) == -1) {
         XCOLLIE_LOGI("failed to build path for %{public}d.", newPid);
     }
-    int fd = open(file, O_RDWR);
-    if (fd == -1) {
+    FILE* fp = fopen(file, "rb");
+    if (fp == nullptr) {
+        XCOLLIE_LOGI("failed to open file %{public}s, errno: %{public}d", file, errno);
         return;
     }
-    if (write(fd, str, strlen(str)) < 0) {
+    if (fwrite(str, sizeof(char), strlen(str), fp) != strlen(str)) {
         XCOLLIE_LOGI("failed to write 0 for %{public}s", file);
     }
-    close(fd);
+    if (fclose(fp)) {
+        XCOLLIE_LOGE("fclose is failed");
+    }
+    fp = nullptr;
     return;
 }
 
@@ -1149,9 +1155,9 @@ bool WatchdogInner::Stop()
         threadLoop_->join();
         threadLoop_ = nullptr;
     }
-    if (g_fd != NOT_OPEN) {
-        close(g_fd);
-        g_fd = NOT_OPEN;
+    if (g_fp != nullptr) {
+        (void)fclose(g_fp);
+        g_fp = nullptr;
     }
     return true;
 }
