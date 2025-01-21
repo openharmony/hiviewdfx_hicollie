@@ -985,26 +985,29 @@ void WatchdogInner::IpcCheck()
     isIpcCheckInit = true;
 }
 
-void WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
+bool WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
 {
     char file[PATH_LEN] = {0};
     int32_t newPid = static_cast<int32_t>(pid);
     if (snprintf_s(file, PATH_LEN, PATH_LEN - 1, "/proc/%d/unexpected_die_catch", newPid) == -1) {
         XCOLLIE_LOGI("failed to build path for %{public}d.", newPid);
+        return false;
     }
-    FILE* fp = fopen(file, "rb");
+    FILE* fp = fopen(file, "wb");
     if (fp == nullptr) {
         XCOLLIE_LOGI("failed to open file %{public}s, errno: %{public}d", file, errno);
-        return;
+        return false;
     }
+    bool writeResult = true;
     if (fwrite(str, sizeof(char), strlen(str), fp) != strlen(str)) {
-        XCOLLIE_LOGI("failed to write 0 for %{public}s", file);
+        XCOLLIE_LOGI("failed to write file %{public}s, errno: %{public}d", file, errno);
+        writeResult = false;
     }
     if (fclose(fp)) {
         XCOLLIE_LOGE("fclose is failed");
     }
     fp = nullptr;
-    return;
+    return writeResult;
 }
 
 void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount)
@@ -1137,8 +1140,9 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
         return;
     }
     DelayBeforeExit(10); // sleep 10s for hiview dump
-    XCOLLIE_LOGI("Process is going to exit, reason:%{public}s.", description.c_str());
-    WatchdogInner::WriteStringToFile(pid, "0");
+    bool result = WatchdogInner::WriteStringToFile(pid, "0");
+    XCOLLIE_LOGI("Process is going to exit, reason:%{public}s, write to file: %{public}d.",
+        description.c_str(), result);
 
     _exit(0);
 }
