@@ -38,7 +38,12 @@ constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
 constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
 constexpr uint32_t NOTIFY_APP_FAULT = 38;
 constexpr uint32_t APP_MGR_SERVICE_ID = 501;
+constexpr uint32_t TIME_S_TO_MS = 1000;
+constexpr uint32_t MAX_TIMEOUT = 15000;
+constexpr uint32_t RATIO = 2;
+
 static int32_t g_tid = -1;
+static uint32_t g_stuckTimeout = CHECK_INTERVAL_TIME;
 
 bool IsAppMainThread()
 {
@@ -90,31 +95,36 @@ int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
 int Report(bool* isSixSecond)
 {
     OHOS::HiviewDFX::ReportData reportData;
-    reportData.errorObject.message = "Bussiness thread is not response!";
     reportData.faultType = OHOS::HiviewDFX::FaultDataType::APP_FREEZE;
 
     if (*isSixSecond) {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
         reportData.forceExit = true;
         *isSixSecond = false;
+        g_stuckTimeout = g_stuckTimeout * RATIO;
     } else {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_3S";
         reportData.forceExit = false;
         *isSixSecond = true;
     }
+    std::string timeStamp = "\nFaultTime:" + FormatTime("%Y-%m-%d %H:%M:%S") + "\n";
+    reportData.errorObject.message = timeStamp +
+        "Bussiness thread is not response, timeout " + std::to_string(g_stuckTimeout) + "ms.\n";
     reportData.timeoutMarkers = "";
     reportData.errorObject.stack = "";
     reportData.notifyApp = false;
     reportData.waitSaveState = false;
+    reportData.stuckTimeout = g_stuckTimeout;
     reportData.tid = g_tid > 0 ? g_tid : getpid();
     auto result = NotifyAppFault(reportData);
-    XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d", result, reportData.tid);
+    XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
+        result, reportData.tid, reportData.stuckTimeout);
     return result;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 
-HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task)
+inline HiCollie_ErrorCode InitStuckDetection(OH_HiCollie_Task task, uint32_t timeout)
 {
     if (OHOS::HiviewDFX::IsAppMainThread()) {
         return HICOLLIE_WRONG_THREAD_CONTEXT;
@@ -123,11 +133,26 @@ HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task)
         OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("BussinessWatchdog");
     } else {
         OHOS::HiviewDFX::SetTid(syscall(SYS_gettid));
+        OHOS::HiviewDFX::g_stuckTimeout = timeout;
         OHOS::HiviewDFX::Watchdog::GetInstance().RunPeriodicalTask("BussinessWatchdog", task,
-            OHOS::HiviewDFX::CHECK_INTERVAL_TIME, OHOS::HiviewDFX::INI_TIMER_FIRST_SECOND);
+            timeout, OHOS::HiviewDFX::INI_TIMER_FIRST_SECOND);
         OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("AppkitWatchdog");
     }
     return HICOLLIE_SUCCESS;
+}
+
+HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task)
+{
+    return InitStuckDetection(task, OHOS::HiviewDFX::CHECK_INTERVAL_TIME);
+}
+
+HiCollie_ErrorCode OH_HiCollie_Init_StuckDetectionWithTimeout(OH_HiCollie_Task task, uint32_t timeout)
+{
+    timeout = timeout * OHOS::HiviewDFX::TIME_S_TO_MS;
+    if (timeout < OHOS::HiviewDFX::CHECK_INTERVAL_TIME || timeout > OHOS::HiviewDFX::MAX_TIMEOUT) {
+        return HICOLLIE_INVALID_ARGUMENT;
+    }
+    return InitStuckDetection(task, timeout);
 }
 
 HiCollie_ErrorCode OH_HiCollie_Init_JankDetection(OH_HiCollie_BeginFunc* beginFunc,

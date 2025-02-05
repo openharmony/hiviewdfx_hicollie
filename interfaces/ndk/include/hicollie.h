@@ -144,6 +144,19 @@ typedef struct HiCollie_DetectionParam {
 HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task);
 
 /**
+ * @brief Set up periodic tasks for stuck detection.
+ *
+ * @param task Periodic task executed every stuckTimeout seconds.
+ * @param stuckTimeout Stuck detection interval.
+ * @return {@link HICOLLIE_SUCCESS} 0 - Success.
+ *         {@link HICOLLIE_INVALID_ARGUMENT} 401 - stuckTimeout is less than 3 seconds and greater than 15 seconds.
+ *         {@link HICOLLIE_WRONG_THREAD_CONTEXT} 29800001 - Wrong thread context
+ *              The function can not be called from main thread.
+ * @since 16
+ */
+HiCollie_ErrorCode OH_HiCollie_Init_StuckDetectionWithTimeout(OH_HiCollie_Task task, uint32_t stuckTimeout);
+
+/**
  * @brief Set up stub functions for jank detection.
  *
  * @param beginFunc The stub function before each event processing.

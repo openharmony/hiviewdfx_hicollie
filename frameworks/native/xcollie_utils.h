@@ -96,6 +96,8 @@ bool IsBetaVersion();
 
 std::string GetFormatDate();
 
+std::string FormatTime(const std::string &format);
+
 bool CreateWatchdogDir();
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,

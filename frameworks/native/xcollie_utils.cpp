@@ -49,6 +49,8 @@ const uint64_t TIMES_AVE_PARAM = 2;
 const int32_t APP_MIN_UID = 20000;
 const uint64_t START_TIME_INDEX = 21;
 const int START_PATH_LEN = 128;
+constexpr int64_t MAX_TIME_BUFF = 64;
+constexpr int64_t SEC_TO_MILLISEC = 1000;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
@@ -425,6 +427,18 @@ std::string GetFormatDate()
     strftime(tmp, sizeof(tmp), "%Y%m%d%H%M%S", localtime(&t));
     std::string date(tmp);
     return date;
+}
+
+std::string FormatTime(const std::string &format)
+{
+    auto now = std::chrono::system_clock::now();
+    auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    auto timestamp = millisecs.count();
+    std::time_t tt = static_cast<std::time_t>(timestamp / SEC_TO_MILLISEC);
+    std::tm t = *std::localtime(&tt);
+    char buffer[MAX_TIME_BUFF] = {0};
+    std::strftime(buffer, sizeof(buffer), format.c_str(), &t);
+    return std::string(buffer);
 }
 
 int64_t GetTimeStamp()
