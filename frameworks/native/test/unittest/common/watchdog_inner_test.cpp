@@ -725,7 +725,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_005, TestSize.Level
 {
     std::map<std::string, std::string> paramsMap;
     /**
-     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     * @tc.desc: set sample interval out of range.
      */
     paramsMap[KEY_LOG_TYPE] = "1";
     paramsMap[KEY_SAMPLE_INTERVAL] = "49";
@@ -735,31 +735,75 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_005, TestSize.Level
     int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     /**
-     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     * @tc.desc: set ignore startup time out of range.
      */
     paramsMap[KEY_SAMPLE_INTERVAL] = "50";
     paramsMap[KEY_IGNORE_STARTUP_TIME] = "1";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     /**
-     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
-     */
-    paramsMap[KEY_SAMPLE_INTERVAL] = "100";
-    paramsMap[KEY_IGNORE_STARTUP_TIME] = "1";
-    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
-    EXPECT_EQ(ret, -1);
-    /**
-     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     * @tc.desc: set sample count out of range.
      */
     paramsMap[KEY_IGNORE_STARTUP_TIME] = "10";
     paramsMap[KEY_SAMPLE_COUNT] = "1000";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
     /**
-     * @tc.desc: set KEY_SAMPLE_INTERVAL out of range.
+     * @tc.desc: set report times out of range.
      */
     paramsMap[KEY_SAMPLE_COUNT] = "10";
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "5";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner SetEventConfig test;
+ * @tc.desc: set param is invalid.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_006, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    /**
+     * @tc.desc: set paramsMap's key is invalid.
+     */
+    paramsMap["ABC"] = "abc";
+    int ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set paramMap size out of range.
+     */
+    paramsMap[KEY_LOG_TYPE] = "0";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "49";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set report times is not a number.
+     */
+    paramsMap[KEY_LOG_TYPE] = "1";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "50";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "15";
+    paramsMap[KEY_SAMPLE_COUNT] = "21";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "abc";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set sample count is not a number.
+     */
+    paramsMap[KEY_SAMPLE_COUNT] = "abc";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set ignore startup time out of range.
+     */
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "abc";
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+    /**
+     * @tc.desc: set sample interval out of range.
+     */
+    paramsMap[KEY_SAMPLE_INTERVAL] = "abc";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
 }
