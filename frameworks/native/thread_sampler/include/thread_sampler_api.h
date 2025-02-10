@@ -39,7 +39,7 @@ int32_t ThreadSamplerSample();
  * treeFormat: collect stack infomation in tree format or not. 1 for tree format and 0 for not.
  * return 0 for success and -1 for fail.
  */
-int ThreadSamplerCollect(char* stack, size_t size, int treeFormat = 1);
+int ThreadSamplerCollect(char* stack, char* heaviestStack, size_t stackSize, size_t heaviestSize, int treeFormat = 1);
 
 /* To deinitial thread sampler and unload the resources. */
 int ThreadSamplerDeinit();
