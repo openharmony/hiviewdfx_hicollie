@@ -32,39 +32,9 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-enum DumpStackState {
-    DEFAULT = 0,
-    COMPLETE = 1,
-    SAMPLE_COMPLETE = 2
-};
-constexpr char WMS_FULL_NAME[] = "WindowManagerService";
 constexpr char IPC_FULL[] = "IPC_FULL";
-constexpr char IPC_CHECKER[] = "IpcChecker";
-constexpr char STACK_CHECKER[] = "ThreadSampler";
-constexpr char TRACE_CHECKER[] = "TraceCollector";
-constexpr int64_t SEC_TO_MANOSEC = 1000000000;
-constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr uint64_t MIN_APP_UID = 20000;
-constexpr int64_t ONE_DAY_LIMIT = 86400000;
-constexpr int64_t ONE_HOUR_LIMIT = 3600000;
-constexpr int64_t MILLISEC_TO_NANOSEC = 1000000;
-constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
 const int BUFF_STACK_SIZE = 20 * 1024;
-const int FFRT_BUFFER_SIZE = 512 * 1024;
-const int MAX_NAME_SIZE = 128;
-const int MIN_WAIT_NUM = 3;
-const int TIME_INDEX_MAX = 32;
-const int DETECT_STACK_COUNT = 2;
-const int COLLECT_STACK_COUNT = 10;
-const int COLLECT_TRACE_MIN = 1;
-const int COLLECT_TRACE_MAX = 20;
-const int TASK_INTERVAL = 155;
-const int DURATION_TIME = 150;
-const int INIT_PID = 1;
-const int DISTRIBUTE_TIME = 2000;
-const int DUMPTRACE_TIME = 450;
-const inline std::string LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
-const std::string WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
@@ -114,6 +84,8 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
 int64_t GetTimeStamp();
 
 void* FunctionOpen(void* funcHandler, const char* funcName);
+
+int64_t GetAppStartTime(int32_t pid, int64_t tid);
 } // end of HiviewDFX
 } // end of OHOS
 #endif

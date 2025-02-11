@@ -42,6 +42,34 @@ typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
 namespace OHOS {
 namespace HiviewDFX {
+namespace {
+enum DumpStackState {
+    DEFAULT = 0,
+    COMPLETE = 1,
+    SAMPLE_COMPLETE = 2
+};
+enum CatchLogType {
+    LOGTYPE_DEFAULT = -1,
+    LOGTYPE_NONE = 0,
+    LOGTYPE_SAMPLE_STACK = 1,
+    LOGTYPE_COLLECT_TRACE = 2
+};
+constexpr char IPC_CHECKER[] = "IpcChecker";
+constexpr char STACK_CHECKER[] = "ThreadSampler";
+constexpr char TRACE_CHECKER[] = "TraceCollector";
+constexpr int64_t ONE_DAY_LIMIT = 86400000;
+constexpr int64_t ONE_HOUR_LIMIT = 3600000;
+constexpr int MILLISEC_TO_NANOSEC = 1000000;
+const int FFRT_BUFFER_SIZE = 512 * 1024;
+const int DETECT_STACK_COUNT = 2;
+const int COLLECT_STACK_COUNT = 10;
+const int COLLECT_TRACE_MIN = 1;
+const int COLLECT_TRACE_MAX = 20;
+const int TASK_INTERVAL = 155;
+const int DURATION_TIME = 150;
+const int DISTRIBUTE_TIME = 2000;
+const int DUMPTRACE_TIME = 450;
+constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
@@ -51,7 +79,6 @@ constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
 constexpr uint32_t FOUNDATION_UID = 5523;
 constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
-constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const std::string ON_KICK_TIME = "on,72";
@@ -63,6 +90,17 @@ constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 32 * 1024;
 constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
+constexpr uint64_t SAMPLE_PARAMS_MAX_SIZE = 5;
+constexpr uint64_t SAMPLE_PARAMS_MIN_SIZE = 1;
+constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
+constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
+constexpr int SAMPLE_INTERVAL_MAX = 500; // 500ms
+constexpr int SAMPLE_COUNT_MIN = 1;
+constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
+constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
+constexpr int SAMPLE_EXTRA_COUNT = 4;
+constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
+}
 
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
@@ -112,7 +150,7 @@ static const int CRASH_SIGNAL_LIST[] = {
 }
 
 WatchdogInner::WatchdogInner()
-    : cntCallback_(0), timeCallback_(0), sampleTaskState_(0)
+    : cntCallback_(0), timeCallback_(0)
 {
     currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
 }
@@ -146,17 +184,19 @@ void WatchdogInner::SetForeground(const bool& isForeground)
     isForeground_ = isForeground;
 }
 
-bool WatchdogInner::ReportMainThreadEvent()
+bool WatchdogInner::ReportMainThreadEvent(int64_t tid)
 {
     std::string stack = "";
-    CollectStack(stack);
+    std::string heaviestStack = "";
+    CollectStack(stack, heaviestStack);
 
     std::string path = "";
     std::string eventName = "MAIN_THREAD_JANK";
     if (!buissnessThreadInfo_.empty()) {
         eventName = "BUSSINESS_THREAD_JANK";
     }
-    if (!WriteStackToFd(getprocpid(), path, stack, eventName)) {
+    int32_t pid = getprocpid();
+    if (!WriteStackToFd(pid, path, stack, eventName)) {
         XCOLLIE_LOGI("MainThread WriteStackToFd Failed");
         return false;
     }
@@ -164,27 +204,29 @@ bool WatchdogInner::ReportMainThreadEvent()
         HiSysEvent::EventType::FAULT,
         "BUNDLE_VERSION", bundleVersion_,
         "BUNDLE_NAME", bundleName_,
-        "BEGIN_TIME", timeContent_.reportBegin / MILLISEC_TO_NANOSEC,
-        "END_TIME", timeContent_.reportEnd / MILLISEC_TO_NANOSEC,
+        "BEGIN_TIME", stackContent_.reportBegin / MILLISEC_TO_NANOSEC,
+        "END_TIME", stackContent_.reportEnd / MILLISEC_TO_NANOSEC,
         "EXTERNAL_LOG", path,
         "STACK", stack,
         "JANK_LEVEL", 0,
         "THREAD_NAME", GetSelfProcName(),
         "FOREGROUND", isForeground_,
-        "LOG_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC);
+        "LOG_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC,
+        "APP_START_JIFFIES_TIME", GetAppStartTime(pid, tid),
+        "HEAVIEST_STACK", heaviestStack);
     XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d", result);
     return result >= 0;
 }
 
-bool WatchdogInner::CheckEventTimer(const int64_t& currentTime)
+bool WatchdogInner::CheckEventTimer(int64_t currentTime, int64_t reportBegin, int64_t reportEnd, int interval)
 {
-    if (timeContent_.reportBegin == timeContent_.curBegin &&
-        timeContent_.reportEnd == timeContent_.curEnd) {
+    if (reportBegin == timeContent_.curBegin &&
+        reportEnd == timeContent_.curEnd) {
         return false;
     }
     return (timeContent_.curEnd <= timeContent_.curBegin &&
-        (currentTime - timeContent_.curBegin >= DURATION_TIME * MILLISEC_TO_NANOSEC)) ||
-        (timeContent_.curEnd - timeContent_.curBegin > DURATION_TIME * MILLISEC_TO_NANOSEC);
+        (currentTime - timeContent_.curBegin >= interval * MILLISEC_TO_NANOSEC)) ||
+        (timeContent_.curEnd - timeContent_.curBegin > interval * MILLISEC_TO_NANOSEC);
 }
 
 void WatchdogInner::ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context)
@@ -218,47 +260,46 @@ void WatchdogInner::UninstallThreadSamplerSignal()
     threadSamplerSigHandler_ = nullptr;
 }
 
-void WatchdogInner::ThreadSampleTask()
+void WatchdogInner::ThreadSampleTask(int sampleInterval, int sampleCount, int64_t tid)
 {
-    if (sampleTaskState_ == DumpStackState::DEFAULT) {
-        sampleTaskState_++;
-
+    if (stackContent_.detectorCount == 0 && stackContent_.collectCount == 0) {
+        XCOLLIE_LOGI("ThreadSampler 1st in ThreadSamplerTask.\n");
         if (!InitThreadSamplerFuncs()) {
-            isMainThreadProfileTaskEnabled_ = true;
+            isMainThreadStackEnabled_ = true;
+            XCOLLIE_LOGE("ThreadSampler initialize failed.\n");
             return;
         }
 
         if (!InstallThreadSamplerSignal()) {
-            isMainThreadProfileTaskEnabled_ = true;
+            isMainThreadStackEnabled_ = true;
             XCOLLIE_LOGE("ThreadSampler install signal failed.\n");
             return;
         }
 
         int initThreadSamplerRet = threadSamplerInitFunc_(COLLECT_STACK_COUNT);
         if (initThreadSamplerRet != 0) {
-            isMainThreadProfileTaskEnabled_ = true;
+            isMainThreadStackEnabled_ = true;
             XCOLLIE_LOGE("Thread sampler init failed. ret %{public}d\n", initThreadSamplerRet);
             return;
         }
         XCOLLIE_LOGI("Thread sampler initialized. ret %{public}d\n", initThreadSamplerRet);
     }
     if (threadSamplerSampleFunc_ == nullptr) {
-        isMainThreadProfileTaskEnabled_ = true;
+        isMainThreadStackEnabled_ = true;
         return;
     }
-    int64_t currentTime = GetTimeStamp();
-    if (stackContent_.collectCount > DumpStackState::DEFAULT && stackContent_.collectCount < COLLECT_STACK_COUNT) {
+    if (stackContent_.collectCount > DumpStackState::DEFAULT && stackContent_.collectCount < sampleCount) {
         XCOLLIE_LOGI("ThreadSampler in ThreadSamplerTask, %{public}d.\n", stackContent_.collectCount);
         threadSamplerSampleFunc_();
         stackContent_.collectCount++;
-    } else if (stackContent_.collectCount == COLLECT_STACK_COUNT) {
-        XCOLLIE_LOGI("ThreadSampler complete ThreadSamplerTask.\n");
-        ReportMainThreadEvent();
-        isMainThreadProfileTaskEnabled_ = true;
+    } else if (stackContent_.collectCount == sampleCount) {
+        ReportMainThreadEvent(tid);
+        stackContent_.reportTimes--;
+        isMainThreadStackEnabled_ = true;
         return;
     } else {
-        if (CheckEventTimer(currentTime)) {
-            XCOLLIE_LOGI("ThreadSampler in ThreadSamplerTask, %{public}d.\n", stackContent_.collectCount);
+        if (CheckEventTimer(GetTimeStamp(), stackContent_.reportBegin,
+            stackContent_.reportEnd, sampleInterval)) {
             threadSamplerSampleFunc_();
             stackContent_.collectCount++;
         } else {
@@ -266,7 +307,7 @@ void WatchdogInner::ThreadSampleTask()
         }
     }
     if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
-        isMainThreadProfileTaskEnabled_ = true;
+        isMainThreadStackEnabled_ = true;
     }
 }
 
@@ -310,22 +351,59 @@ void WatchdogInner::ResetThreadSamplerFuncs()
     threadSamplerFuncHandler_ = nullptr;
 }
 
+void WatchdogInner::UpdateTime(int64_t& reportBegin, int64_t& reportEnd,
+    TimePoint& lastEndTime, const TimePoint& endTime)
+{
+    reportBegin = timeContent_.curBegin;
+    reportEnd = timeContent_.curEnd;
+    lastEndTime = endTime;
+}
+
+void WatchdogInner::SampleStackDetect(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
+{
+    uint64_t startUpTime = static_cast<uint64_t>(jankParamsMap[KEY_IGNORE_STARTUP_TIME]) * TIME_MS_TO_S;
+    if (GetCurrentTickMillseconds() - watchdogStartTime_ < startUpTime) {
+        XCOLLIE_LOGI("Application is in starting period.\n");
+        return;
+    }
+    if (!stackContent_.isStartSampleEnabled) {
+        XCOLLIE_LOGI("Current sample detection task is being executed.\n");
+        return;
+    }
+    if (stackContent_.reportTimes <= 0) {
+        int64_t checkTimer = ONE_DAY_LIMIT;
+        if (IsDeveloperOpen() || (IsBetaVersion() && GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
+            checkTimer = ONE_HOUR_LIMIT;
+        }
+        auto diff = endTime - stackContent_.lastEndTime;
+        int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+        if (intervalTime < checkTimer) {
+            return;
+        }
+        stackContent_.reportTimes = jankParamsMap[KEY_SAMPLE_REPORT_TIMES];
+        XCOLLIE_LOGI("The current thread has exceeded the event limit, reportTimes: %{public}d",
+            stackContent_.reportTimes);
+    }
+    stackContent_.isStartSampleEnabled = false;
+    UpdateTime(stackContent_.reportBegin, stackContent_.reportEnd, stackContent_.lastEndTime, endTime);
+    int32_t ret = StartProfileMainThread(sampleInterval);
+    if (ret == -1) {
+        stackContent_.isStartSampleEnabled = true;
+    }
+    XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d "
+        "durationTime: %{public}" PRId64 " ms sampleInterval: %{public}d", ret, durationTime, sampleInterval);
+}
+
+
 int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
 {
     std::unique_lock<std::mutex> lock(lock_);
-
-    uint64_t now = GetCurrentTickMillseconds();
-    if (now - watchdogStartTime_ < MAX_START_TIME) {
-        XCOLLIE_LOGI("application is in starting period.\n");
-        stackContent_.stackState = DumpStackState::DEFAULT;
-        return -1;
-    }
-
-    sampleTaskState_ = 0;
     stackContent_.detectorCount = 0;
     stackContent_.collectCount = 0;
-    auto sampleTask = [this]() {
-        ThreadSampleTask();
+    int sampleCount = jankParamsMap[KEY_SAMPLE_COUNT];
+    int64_t tid = getproctid();
+    auto sampleTask = [this, interval, sampleCount, tid]() {
+        ThreadSampleTask(interval, sampleCount, tid);
     };
 
     WatchdogTask task("ThreadSampler", sampleTask, 0, interval, true);
@@ -333,16 +411,19 @@ int32_t WatchdogInner::StartProfileMainThread(int32_t interval)
     return 0;
 }
 
-bool WatchdogInner::CollectStack(std::string& stack)
+bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack)
 {
     if (threadSamplerCollectFunc_ == nullptr) {
         return false;
     }
     int treeFormat = 1;
     char* stk = new char[STACK_LENGTH];
-    int collectRet = threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
+    char* heaviest = new char[STACK_LENGTH];
+    int collectRet = threadSamplerCollectFunc_(stk, heaviest, STACK_LENGTH, STACK_LENGTH, treeFormat);
     stack = stk;
+    heaviestStack = heaviest;
     delete[] stk;
+    delete[] heaviest;
     return collectRet == 0;
 }
 
@@ -356,38 +437,14 @@ bool WatchdogInner::Deinit()
     return ret == 0;
 }
 
-void WatchdogInner::ChangeState(int& state, int targetState)
+void WatchdogInner::DumpTraceProfile(int32_t interval)
 {
-    timeContent_.reportBegin = timeContent_.curBegin;
-    timeContent_.reportEnd = timeContent_.curEnd;
-    state = targetState;
-}
-
-void WatchdogInner::DayChecker(int& state, TimePoint currenTime, TimePoint lastEndTime,
-    int64_t checkTimer)
-{
-    auto diff = currenTime - lastEndTime;
-    int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>
-        (diff).count();
-    if (intervalTime >= checkTimer) {
-        XCOLLIE_LOGD("MainThread StartProfileMainThread Over checkTimer: "
-            "%{public}" PRId64 " ms", checkTimer);
-        state = DumpStackState::DEFAULT;
-    }
-}
-
-void WatchdogInner::StartTraceProfile(int32_t interval)
-{
-    if (traceCollector_ == nullptr) {
-        XCOLLIE_LOGI("MainThread TraceCollector Failed.");
-        return;
-    }
     traceContent_.dumpCount = 0;
     traceContent_.traceCount = 0;
-    auto traceTask = [this]() {
+    auto traceTask = [this, interval]() {
         traceContent_.traceCount++;
-        int64_t currentTime = GetTimeStamp();
-        if (CheckEventTimer(currentTime)) {
+        if (CheckEventTimer(GetTimeStamp(), traceContent_.reportBegin,
+            traceContent_.reportEnd, interval)) {
             traceContent_.dumpCount++;
         }
         if (traceContent_.traceCount >= COLLECT_TRACE_MAX) {
@@ -406,27 +463,48 @@ void WatchdogInner::StartTraceProfile(int32_t interval)
     InsertWatchdogTaskLocked("TraceCollector", std::move(task));
 }
 
-void WatchdogInner::CollectTrace()
+int32_t WatchdogInner::StartTraceProfile()
 {
     traceCollector_ = UCollectClient::TraceCollector::Create();
-    int32_t pid = getprocpid();
-    int32_t uid = static_cast<int64_t>(getuid());
+    if (traceCollector_ == nullptr) {
+        traceContent_.traceState = DumpStackState::DEFAULT;
+        XCOLLIE_LOGE("Create traceCollector failed.");
+        return -1;
+    }
     appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
     appCaller_.bundleName = bundleName_;
     appCaller_.bundleVersion = bundleVersion_;
-    appCaller_.uid = uid;
-    appCaller_.pid = pid;
+    appCaller_.uid = static_cast<int64_t>(getuid());
+    appCaller_.pid = getprocpid();
     appCaller_.threadName = GetSelfProcName();
     appCaller_.foreground = isForeground_;
     appCaller_.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
-    appCaller_.beginTime = timeContent_.reportBegin / MILLISEC_TO_NANOSEC;
-    appCaller_.endTime = timeContent_.reportEnd / MILLISEC_TO_NANOSEC;
+    appCaller_.beginTime = traceContent_.reportBegin / MILLISEC_TO_NANOSEC;
+    appCaller_.endTime = traceContent_.reportEnd / MILLISEC_TO_NANOSEC;
     auto result = traceCollector_->CaptureDurationTrace(appCaller_);
-    XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d", result.retCode);
-    if (result.retCode != 0) {
+    if (result.retCode == 0) {
+        DumpTraceProfile(DURATION_TIME);
+    }
+    return result.retCode;
+}
+
+void WatchdogInner::CollectTraceDetect(const TimePoint& endTime, int64_t durationTime)
+{
+    if (IsBetaVersion()) {
         return;
     }
-    StartTraceProfile(DURATION_TIME);
+    if (traceContent_.traceState == DumpStackState::COMPLETE) {
+        auto diff = endTime - stackContent_.lastEndTime;
+        int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+        if (intervalTime < ONE_DAY_LIMIT) {
+            return;
+        }
+    }
+    traceContent_.traceState = DumpStackState::COMPLETE;
+    UpdateTime(traceContent_.reportBegin, traceContent_.reportEnd, traceContent_.lastEndTime, endTime);
+    int32_t result = StartTraceProfile();
+    XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d, Duration Time: %{public}" PRId64 " ms",
+        result, durationTime);
 }
 
 static TimePoint DistributeStart(const std::string& name)
@@ -439,46 +517,37 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
 {
     TimePoint endTime = std::chrono::steady_clock::now();
     auto duration = endTime - startTime;
-    int64_t durationTime = std::chrono::duration_cast<std::chrono::milliseconds>
-        (duration).count();
+    int64_t durationTime = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    int sampleInterval = WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL];
+    WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
+    if (duration > std::chrono::milliseconds(sampleInterval)) {
+        int logType = WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE];
+        switch (logType) {
+            case CatchLogType::LOGTYPE_SAMPLE_STACK: {
+                WatchdogInner::GetInstance().SampleStackDetect(endTime, durationTime, sampleInterval);
+                break;
+            }
+            case CatchLogType::LOGTYPE_COLLECT_TRACE: {
+                if (duration > std::chrono::milliseconds(DUMPTRACE_TIME)) {
+                    WatchdogInner::GetInstance().CollectTraceDetect(endTime, durationTime);
+                }
+                break;
+            }
+            case CatchLogType::LOGTYPE_NONE: {
+                if (duration < std::chrono::milliseconds(DUMPTRACE_TIME)) {
+                    WatchdogInner::GetInstance().SampleStackDetect(endTime, durationTime, sampleInterval);
+                } else {
+                    WatchdogInner::GetInstance().CollectTraceDetect(endTime, durationTime);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
     if (duration > std::chrono::milliseconds(DISTRIBUTE_TIME)) {
         XCOLLIE_LOGI("BlockMonitor event name: %{public}s, Duration Time: %{public}" PRId64 " ms",
             name.c_str(), durationTime);
-    }
-    WatchdogInner::GetInstance().timeContent_.curEnd = GetTimeStamp();
-    if (WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::COMPLETE) {
-        int64_t checkTimer = ONE_DAY_LIMIT;
-        if (IsDeveloperOpen() || (IsBetaVersion() &&
-            GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
-            checkTimer = ONE_HOUR_LIMIT;
-        }
-        WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().stackContent_.stackState,
-            endTime, WatchdogInner::GetInstance().lastStackTime_, checkTimer);
-    }
-    if (WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::COMPLETE) {
-        WatchdogInner::GetInstance().DayChecker(WatchdogInner::GetInstance().traceContent_.traceState,
-            endTime, WatchdogInner::GetInstance().lastTraceTime_, ONE_DAY_LIMIT);
-    }
-    if (duration > std::chrono::milliseconds(DURATION_TIME) && duration < std::chrono::milliseconds(DUMPTRACE_TIME) &&
-        WatchdogInner::GetInstance().stackContent_.stackState == DumpStackState::DEFAULT) {
-        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().stackContent_.stackState,
-            DumpStackState::COMPLETE);
-        WatchdogInner::GetInstance().lastStackTime_ = endTime;
-
-        int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(TASK_INTERVAL);
-        XCOLLIE_LOGI("MainThread StartProfileMainThread ret: %{public}d  "
-            "Duration Time: %{public}" PRId64 " ms", ret, durationTime);
-    }
-    if (duration > std::chrono::milliseconds(DUMPTRACE_TIME) &&
-        WatchdogInner::GetInstance().traceContent_.traceState == DumpStackState::DEFAULT) {
-        if (IsBetaVersion()) {
-            return;
-        }
-        XCOLLIE_LOGI("MainThread TraceCollector Duration Time: %{public}" PRId64 " ms", durationTime);
-        WatchdogInner::GetInstance().ChangeState(WatchdogInner::GetInstance().traceContent_.traceState,
-            DumpStackState::COMPLETE);
-        WatchdogInner::GetInstance().lastTraceTime_ = endTime;
-        WatchdogInner::GetInstance().CollectTrace();
     }
 }
 
@@ -716,6 +785,34 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
     });
 }
 
+bool WatchdogInner::CheckCurrentTask(const WatchdogTask& queuedTaskCheck)
+{
+    if (queuedTaskCheck.name.empty()) {
+        checkerQueue_.pop();
+        XCOLLIE_LOGW("queuedTask name is empty.");
+    } else if (queuedTaskCheck.name == STACK_CHECKER && isMainThreadStackEnabled_) {
+        checkerQueue_.pop();
+        taskNameSet_.erase("ThreadSampler");
+        if (Deinit()) {
+            ResetThreadSamplerFuncs();
+        }
+        stackContent_.isStartSampleEnabled = true;
+        isMainThreadStackEnabled_ = false;
+        XCOLLIE_LOGI("Detect sample stack task complete.");
+    } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
+        checkerQueue_.pop();
+        taskNameSet_.erase("TraceCollector");
+        isMainThreadTraceEnabled_ = false;
+        if (traceContent_.dumpCount < COLLECT_TRACE_MIN) {
+            traceContent_.traceState = DumpStackState::DEFAULT;
+        }
+        XCOLLIE_LOGI("Detect collect trace task complete.");
+    } else {
+        return false;
+    }
+    return true;
+}
+
 uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
 {
     std::unique_lock<std::mutex> lock(lock_);
@@ -731,27 +828,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     }
 
     const WatchdogTask& queuedTaskCheck = checkerQueue_.top();
-    bool popCheck = true;
-    if (queuedTaskCheck.name.empty()) {
-        checkerQueue_.pop();
-        XCOLLIE_LOGW("queuedTask name is empty.");
-    } else if (queuedTaskCheck.name == STACK_CHECKER && isMainThreadProfileTaskEnabled_) {
-        checkerQueue_.pop();
-        taskNameSet_.erase("ThreadSampler");
-        isMainThreadProfileTaskEnabled_ = false;
-        if (Deinit()) {
-            ResetThreadSamplerFuncs();
-        }
-        XCOLLIE_LOGI("STACK_CHECKER Task pop");
-    } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
-        checkerQueue_.pop();
-        taskNameSet_.erase("TraceCollector");
-        isMainThreadTraceEnabled_ = false;
-        XCOLLIE_LOGI("TRACE_CHECKER Task pop");
-    } else {
-        popCheck = false;
-    }
-    if (popCheck && checkerQueue_.empty()) {
+    if (CheckCurrentTask(queuedTaskCheck) && checkerQueue_.empty()) {
         return DEFAULT_TIMEOUT;
     }
 
@@ -1133,6 +1210,133 @@ void WatchdogInner::SetAppDebug(bool isAppDebug)
 bool WatchdogInner::GetAppDebug()
 {
     return isAppDebug_;
+}
+
+void WatchdogInner::UpdateJankParam(int sampleInterval, int startUpTime, int sampleCount,
+    int logType, int reportTimes)
+{
+    jankParamsMap[KEY_LOG_TYPE] = logType;
+    jankParamsMap[KEY_SAMPLE_INTERVAL] = sampleInterval;
+    jankParamsMap[KEY_IGNORE_STARTUP_TIME] = startUpTime;
+    jankParamsMap[KEY_SAMPLE_COUNT] = sampleCount;
+    if (logType == CatchLogType::LOGTYPE_COLLECT_TRACE) {
+        XCOLLIE_LOGI("Set thread only dump trace success.");
+        return;
+    }
+    if (jankParamsMap[KEY_SET_TIMES_FLAG] == SET_TIMES_FLAG) {
+        jankParamsMap[KEY_SAMPLE_REPORT_TIMES] = reportTimes;
+        stackContent_.reportTimes = reportTimes;
+        jankParamsMap[KEY_SET_TIMES_FLAG] = 0;
+    }
+    XCOLLIE_LOGI("Set thread sampler params success. logType: %{public}d, sample interval: %{public}d, "
+        "ignore startUp interval: %{public}d, count: %{public}d, reportTimes: %{public}d.",
+        logType, sampleInterval, startUpTime, sampleCount, stackContent_.reportTimes);
+}
+
+int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key)
+{
+    int num = -1;
+    auto it = paramsMap.find(key);
+    if (it == paramsMap.end()) {
+        XCOLLIE_LOGE("Set the thread sampler param error, %{public}s is not exist.", key.c_str());
+        return num;
+    }
+    std::string str = it->second;
+    if (!str.empty() && str.size() < std::to_string(INT32_MAX).length()) {
+        if (std::all_of(std::begin(str), std::end(str), [] (const char &c) {
+            return isdigit(c);
+        })) {
+            num = std::stoi(str);
+        }
+    }
+    if (num < 0) {
+        XCOLLIE_LOGE("Set param error, %{public}s: %{public}s should be a number and greater than 0.",
+            key.c_str(), str.c_str());
+    }
+    return num;
+}
+
+bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMap)
+{
+    int sampleInterval = ConvertStrToNum(paramsMap, KEY_SAMPLE_INTERVAL);
+    if (sampleInterval < 0) {
+        return false;
+    } else if (sampleInterval < SAMPLE_INTERVAL_MIN || sampleInterval > SAMPLE_INTERVAL_MAX) {
+        XCOLLIE_LOGE("Set the range of sample stack is from %{public}d to %{public}d, "
+            "interval: %{public}d.", SAMPLE_INTERVAL_MIN, SAMPLE_INTERVAL_MAX, sampleInterval);
+        return false;
+    }
+
+    int startUpTime = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_TIME);
+    if (startUpTime < 0) {
+        return false;
+    } else if (startUpTime < IGNORE_STARTUP_TIME_MIN) {
+        XCOLLIE_LOGE("Set the minimum of ignore startup interval is %{public}d s, "
+            "interval: %{public}d.", IGNORE_STARTUP_TIME_MIN, startUpTime);
+        return false;
+    }
+
+    int sampleCount = ConvertStrToNum(paramsMap, KEY_SAMPLE_COUNT);
+    if (sampleCount < 0) {
+        return false;
+    }
+    int maxSampleCount = MAX_SAMPLE_STACK_TIMES / sampleInterval - SAMPLE_EXTRA_COUNT;
+    if (sampleCount < SAMPLE_COUNT_MIN || sampleCount > maxSampleCount) {
+        XCOLLIE_LOGE("Set the range of sample count, min value: %{public}d max value: %{public}d, count: %{public}d.",
+            SAMPLE_COUNT_MIN, maxSampleCount, sampleCount);
+        return false;
+    }
+
+    int reportTimes = ConvertStrToNum(paramsMap, KEY_SAMPLE_REPORT_TIMES);
+    if (reportTimes < 0) {
+        return false;
+    } else if (reportTimes < SAMPLE_REPORT_TIMES_MIN || reportTimes > SAMPLE_REPORT_TIMES_MAX) {
+        XCOLLIE_LOGE("Set the range of sample reportTimes is from %{public}d to %{public}d,"
+            "reportTimes: %{public}d", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, reportTimes);
+        return false;
+    }
+    UpdateJankParam(sampleInterval, startUpTime, sampleCount, CatchLogType::LOGTYPE_SAMPLE_STACK, reportTimes);
+    return true;
+}
+
+int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
+{
+    if (paramsMap.empty()) {
+        XCOLLIE_LOGE("Set the thread sampler param map is null.");
+        return -1;
+    }
+    int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE);
+    size_t size = paramsMap.size();
+    switch (logType) {
+        case CatchLogType::LOGTYPE_DEFAULT:
+            return -1;
+        case CatchLogType::LOGTYPE_NONE:
+        case CatchLogType::LOGTYPE_COLLECT_TRACE: {
+            if (size != SAMPLE_PARAMS_MIN_SIZE) {
+                XCOLLIE_LOGE("Set the thread sampler param map size error, can only set log_type. "
+                    "map size: %{public}zu", size);
+                return -1;
+            }
+            UpdateJankParam(SAMPLE_DEFULE_INTERVAL, DEFAULT_IGNORE_STARTUP_TIME, SAMPLE_DEFULE_COUNT,
+                logType, SAMPLE_REPORT_TIMES_MIN);
+            break;
+        }
+        case CatchLogType::LOGTYPE_SAMPLE_STACK: {
+            if (size != SAMPLE_PARAMS_MAX_SIZE) {
+                XCOLLIE_LOGE("Set the thread sampler param map size error, current map size: %{public}zu", size);
+                return -1;
+            }
+            if (!CheckSampleParam(paramsMap)) {
+                return -1;
+            }
+            break;
+        }
+        default: {
+            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}d", logType);
+            return -1;
+        }
+    };
+    return 0;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

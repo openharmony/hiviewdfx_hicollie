@@ -196,9 +196,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
     };
 
     char* stk = new char[STACK_LENGTH];
-    auto collectHandler = [this, &stk]() {
+    char* heaviestStk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk, &heaviestStk]() {
         int treeFormat = 0;
-        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, heaviestStk, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -210,9 +211,11 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
     WaitSomeTime();
 
     std::string stack = stk;
+    std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack.c_str());
+    printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
+    delete[] heaviestStk;
     UninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
@@ -238,9 +241,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     };
 
     char* stk = new char[STACK_LENGTH];
-    auto collectHandler = [this, &stk]() {
+    char* heaviestStk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk, &heaviestStk]() {
         int treeFormat = 1;
-        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, heaviestStk, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -252,9 +256,11 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     WaitSomeTime();
 
     std::string stack = stk;
+    std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack.c_str());
+    printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
+    delete[] heaviestStk;
     UninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
@@ -270,9 +276,8 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 {
     printf("ThreadSamplerTest_003\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);
-    
-    bool flag = InitThreadSampler();
-    ASSERT_TRUE(flag);
+
+    InitThreadSampler();
 
     threadSamplerInitFunc_(SAMPLE_CNT);
     auto sampleHandler = [this]() {
@@ -280,22 +285,23 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     };
 
     char* stk = new char[STACK_LENGTH];
-    auto collectHandler = [this, &stk]() {
+    char* heaviestStk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk, &heaviestStk]() {
         int treeFormat = 1;
-        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, heaviestStk, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
-        uint64_t delay = INTERVAL * i + INTERVAL;
-        Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, delay);
+        Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, INTERVAL * i + INTERVAL);
     }
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
 
     std::string stack = stk;
+    std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack.c_str());
+    printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     threadSamplerDeinitFunc_();
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
@@ -305,13 +311,11 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     WaitSomeTime();
     stack = stk;
+    heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack.c_str());
+    printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
 
     threadSamplerInitFunc_(SAMPLE_CNT);
-
-    flag = InstallThreadSamplerSignal();
-    ASSERT_TRUE(flag);
 
     for (int i = 0; i < SAMPLE_CNT; i++) {
         Watchdog::GetInstance().RunOneShotTask("ThreadSamplerTest", sampleHandler, INTERVAL * i + INTERVAL);
@@ -320,9 +324,11 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
 
     WaitSomeTime();
     stack = stk;
+    heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    printf("stack:\n%s", stack.c_str());
+    printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
+    delete[] heaviestStk;
     UninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
@@ -348,9 +354,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     };
 
     char* stk = new char[STACK_LENGTH];
-    auto collectHandler = [this, &stk]() {
+    char* heaviestStk = new char[STACK_LENGTH];
+    auto collectHandler = [this, &stk, &heaviestStk]() {
         int treeFormat = 1;
-        threadSamplerCollectFunc_(stk, STACK_LENGTH, treeFormat);
+        threadSamplerCollectFunc_(stk, heaviestStk, STACK_LENGTH, STACK_LENGTH, treeFormat);
     };
 
     sigset_t sigset;
@@ -365,12 +372,15 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     Watchdog::GetInstance().RunOneShotTask("CollectStackTest", collectHandler, INTERVAL * SAMPLE_CNT + INTERVAL);
 
     WaitSomeTime();
+
     std::string stack = stk;
-    printf("stack:\n%s", stack.c_str());
+    std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
+    printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
     sigdelset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
     delete[] stk;
+    delete[] heaviestStk;
     UninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);

@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <sstream>
+#include <securec.h>
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
@@ -36,10 +37,25 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
+constexpr int64_t SEC_TO_MANOSEC = 1000000000;
+constexpr int64_t SEC_TO_MICROSEC = 1000000;
+constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
+const int MAX_NAME_SIZE = 128;
+const int MIN_WAIT_NUM = 3;
+const int TIME_INDEX_MAX = 32;
+const int INIT_PID = 1;
+const int TIMES_ARR_SIZE = 6;
+const uint64_t TIMES_AVE_PARAM = 2;
+const int32_t APP_MIN_UID = 20000;
+const uint64_t START_TIME_INDEX = 21;
+const int START_PATH_LEN = 128;
+constexpr const char* const LOGGER_BINDER_PROC_PATH = "/proc/transaction_proc";
+constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_BETA_VAULE = "beta";
+
 static std::string g_curProcName;
 static int32_t g_lastPid;
 static std::mutex g_lock;
@@ -397,6 +413,42 @@ void* FunctionOpen(void* funcHandler, const char* funcName)
         return nullptr;
     }
     return func;
+}
+
+int64_t GetAppStartTime(int32_t pid, int64_t tid)
+{
+    static int32_t startTime = -1;
+    static int32_t lastTid = -1;
+    if (startTime > 0 && lastTid == tid) {
+        return startTime;
+    }
+    char filePath[START_PATH_LEN] = {0};
+    if (snprintf_s(filePath, START_PATH_LEN, START_PATH_LEN - 1, "/proc/%d/task/%d/stat", pid, tid) < 0) {
+        XCOLLIE_LOGE("failed to build path, tid=%{public}" PRId64, tid);
+    }
+    std::string realPath = "";
+    if (!OHOS::PathToRealPath(filePath, realPath)) {
+        XCOLLIE_LOGE("Path to realPath failed.");
+        return startTime;
+    }
+    std::string content = "";
+    OHOS::LoadStringFromFile(realPath, content);
+    if (!content.empty()) {
+        std::vector<std::string> strings;
+        SplitStr(content, " ", strings);
+        if (strings.size() <= START_TIME_INDEX) {
+            XCOLLIE_LOGE("get startTime failed.");
+            return startTime;
+        }
+        content = strings[START_TIME_INDEX];
+        if (std::all_of(std::begin(content), std::end(content), [] (const char &c) {
+            return isdigit(c);
+        })) {
+            startTime = std::stoi(content);
+            lastTid = tid;
+        }
+    }
+    return startTime;
 }
 } // end of HiviewDFX
 } // end of OHOS
