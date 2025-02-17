@@ -84,6 +84,16 @@ void DoUnwind(const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)
     unwinder->EnableFillFrames(false);
     unwinder->Unwind(&unwindInfo);
 #endif  // #if defined(__aarch64__)
+#if defined(__loongarch_lp64)
+    static std::shared_ptr<DfxRegs> regs = std::make_shared<DfxRegsLoongArch64>();
+    regs->SetSp(unwindInfo.context->sp);
+    regs->SetPc(unwindInfo.context->pc);
+    regs->SetReg(REG_LOONGARCH64_R22, &(unwindInfo.context->fp));
+    regs->SetReg(REG_LOONGARCH64_R1, &(unwindInfo.context->lr));
+    unwinder->SetRegs(regs);
+    unwinder->EnableFillFrames(false);
+    unwinder->Unwind(&unwindInfo);
+#endif  // #if defined(__loongarch_lp64)
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
