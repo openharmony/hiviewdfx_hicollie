@@ -50,6 +50,7 @@ struct ReportData : public Parcelable {
     uint32_t state = 0;
     int32_t eventId = -1;
     int32_t tid = -1;
+    uint32_t stuckTimeout = 0;
     sptr<IRemoteObject> token = nullptr;
 };
 } // end of HiviewDFX
