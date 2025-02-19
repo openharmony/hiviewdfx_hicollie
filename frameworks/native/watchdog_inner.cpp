@@ -86,7 +86,7 @@ const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const int32_t NOT_OPEN = -1;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
-constexpr size_t STACK_LENGTH = 32 * 1024;
+constexpr size_t STACK_LENGTH = 128 * 1024;
 constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
 constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
 constexpr uint64_t SAMPLE_PARAMS_MAX_SIZE = 5;
@@ -187,7 +187,10 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid)
 {
     std::string stack = "";
     std::string heaviestStack = "";
-    CollectStack(stack, heaviestStack);
+    if (!CollectStack(stack, heaviestStack)) {
+        stack = "";
+        heaviestStack = "";
+    }
 
     std::string path = "";
     std::string eventName = "MAIN_THREAD_JANK";
@@ -285,7 +288,6 @@ void WatchdogInner::ThreadSampleTask(int sampleInterval, int sampleCount, int64_
             XCOLLIE_LOGE("Thread sampler init failed. ret %{public}d\n", initThreadSamplerRet);
             return;
         }
-        XCOLLIE_LOGI("Thread sampler initialized. ret %{public}d\n", initThreadSamplerRet);
     }
     if (threadSamplerSampleFunc_ == nullptr) {
         isMainThreadStackEnabled_ = true;
@@ -293,7 +295,6 @@ void WatchdogInner::ThreadSampleTask(int sampleInterval, int sampleCount, int64_
     }
     if (stackContent_.collectCount > DumpStackState::DEFAULT &&
         stackContent_.collectCount < sampleCount) {
-        XCOLLIE_LOGI("ThreadSampler in ThreadSamplerTask, %{public}d.\n", stackContent_.collectCount);
         threadSamplerSampleFunc_();
         stackContent_.collectCount++;
     } else if (stackContent_.collectCount == sampleCount) {
@@ -421,14 +422,20 @@ bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack)
         return false;
     }
     int treeFormat = 1;
-    char* stk = new char[STACK_LENGTH];
-    char* heaviest = new char[STACK_LENGTH];
+    char* stk = new char[STACK_LENGTH]();
+    char* heaviest = new char[STACK_LENGTH]();
     int collectRet = threadSamplerCollectFunc_(stk, heaviest, STACK_LENGTH, STACK_LENGTH, treeFormat);
+    if (collectRet != 0) {
+        XCOLLIE_LOGE("threadSampler collect stack failed.");
+        delete[] stk;
+        delete[] heaviest;
+        return false;
+    }
     stack = stk;
     heaviestStack = heaviest;
     delete[] stk;
     delete[] heaviest;
-    return collectRet == 0;
+    return true;
 }
 
 bool WatchdogInner::Deinit()
