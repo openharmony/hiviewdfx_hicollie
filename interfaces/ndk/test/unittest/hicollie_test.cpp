@@ -72,6 +72,41 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetection_2, TestSize.Level1)
 }
 
 /**
+ * @tc.name: OH_HiCollie_Init_StuckDetectionWithTimeout
+ * @tc.desc: test OH_HiCollie_Init_StuckDetectionWithTimeout
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetectionWithTimeout_1, TestSize.Level1)
+{
+    int result = OH_HiCollie_Init_StuckDetectionWithTimeout(&TaskTest, 5);
+    EXPECT_EQ(result, HICOLLIE_SUCCESS);
+}
+
+/**
+ * @tc.name: OH_HiCollie_Init_StuckDetectionWithTimeout
+ * @tc.desc: test OH_HiCollie_Init_StuckDetectionWithTimeout
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetectionWithTimeout_2, TestSize.Level1)
+{
+    int result = OH_HiCollie_Init_StuckDetectionWithTimeout(nullptr, 10);
+    EXPECT_EQ(result, HICOLLIE_SUCCESS);
+}
+
+/**
+ * @tc.name: OH_HiCollie_Init_StuckDetectionWithTimeout
+ * @tc.desc: test OH_HiCollie_Init_StuckDetectionWithTimeout
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetectionWithTimeout_3, TestSize.Level1)
+{
+    int result = OH_HiCollie_Init_StuckDetectionWithTimeout(&TaskTest, 1);
+    EXPECT_EQ(result, HICOLLIE_INVALID_ARGUMENT);
+    result = OH_HiCollie_Init_StuckDetectionWithTimeout(&TaskTest, 16);
+    EXPECT_EQ(result, HICOLLIE_INVALID_ARGUMENT);
+}
+
+/**
  * @tc.name: OH_HiCollie_Init_JankDetection
  * @tc.desc: test OH_HiCollie_Init_JankDetection
  * @tc.type: FUNC
