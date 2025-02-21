@@ -145,4 +145,32 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Report_1, TestSize.Level1)
     result = OH_HiCollie_Report(&isSixSecond);
     EXPECT_EQ(result, HICOLLIE_SUCCESS);
 }
+
+/**
+ * @tc.name: OH_HiCollie_SetTimer
+ * @tc.desc: test OH_HiCollie_SetTimer
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_SetTimer_1, TestSize.Level1)
+{
+    int id;
+    HiCollie_SetTimerParam param = {"testSetTimer", 1, nullptr, nullptr, HiCollie_Flag::HICOLLIE_FLAG_NOOP};
+    HiCollie_ErrorCode errCode = OH_HiCollie_SetTimer(param, &id);
+    EXPECT_EQ(errCode, HICOLLIE_SUCCESS);
+    printf("OH_HiCollie_SetTimer id: %d\n", id);
+    EXPECT_TRUE(id > 0);
+}
+ 
+/**
+ * @tc.name: OH_HiCollie_CancelTimer
+ * @tc.desc: test OH_HiCollie_CancelTimer
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_CancelTimer_1, TestSize.Level1)
+{
+    bool flag = true;
+    int id = 2025;
+    OH_HiCollie_CancelTimer(id);
+    EXPECT_TRUE(flag);
+}
 } // namespace
