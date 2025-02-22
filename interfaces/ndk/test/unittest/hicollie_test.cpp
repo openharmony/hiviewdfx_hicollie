@@ -154,8 +154,18 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Report_1, TestSize.Level1)
 HWTEST_F(HiCollieTest, Test_OH_HiCollie_SetTimer_1, TestSize.Level1)
 {
     int id;
-    HiCollie_SetTimerParam param = {"testSetTimer", 1, nullptr, nullptr, HiCollie_Flag::HICOLLIE_FLAG_NOOP};
+    HiCollie_SetTimerParam param = {nullptr, 1, nullptr, nullptr, HiCollie_Flag::HICOLLIE_FLAG_NOOP};
     HiCollie_ErrorCode errCode = OH_HiCollie_SetTimer(param, &id);
+    EXPECT_EQ(errCode, HICOLLIE_INVALID_TIMER_NAME);
+    param = {"testSetTimer", 0, nullptr, nullptr, HiCollie_Flag::HICOLLIE_FLAG_NOOP};
+    errCode = OH_HiCollie_SetTimer(param, &id);
+    EXPECT_EQ(errCode, HICOLLIE_INVALID_TIMEOUT_VALUE);
+    param = {"testSetTimer", 1, nullptr, nullptr, HiCollie_Flag::HICOLLIE_FLAG_NOOP};
+    errCode = OH_HiCollie_SetTimer(param, nullptr);
+    EXPECT_EQ(errCode, HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM);
+    param = {"testSetTimer", 1, nullptr, nullptr, HiCollie_Flag::HICOLLIE_FLAG_NOOP};
+    errCode = OH_HiCollie_SetTimer(param, &id);
+    EXPECT_FALSE(errCode == HICOLLIE_WRONG_PROCESS_CONTEXT);
     EXPECT_EQ(errCode, HICOLLIE_SUCCESS);
     printf("OH_HiCollie_SetTimer id: %d\n", id);
     EXPECT_TRUE(id > 0);
