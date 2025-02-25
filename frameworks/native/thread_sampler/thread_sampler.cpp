@@ -41,7 +41,7 @@ namespace OHOS {
 namespace HiviewDFX {
 void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__loongarch_lp64)
     int preErrno = errno;
     ThreadSampler::GetInstance().WriteContext(context);
     errno = preErrno;
@@ -277,7 +277,7 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
 
 NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__loongarch_lp64)
     if (!init_) {
         return;
     }
@@ -292,39 +292,40 @@ NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 #if defined(CONSUME_STATISTICS)
     signalTimeCost_ += begin - contextArray[index].requestTime;
 #endif
-
     // current buffer has not been processed, stop copy
     if (contextArray[index].snapshotTime > 0 && contextArray[index].processTime == 0) {
         return;
     }
-
+#if defined(__aarch64__)
     contextArray[index].fp = static_cast<ucontext_t*>(context)->uc_mcontext.regs[RegsEnumArm64::REG_FP];
     contextArray[index].lr = static_cast<ucontext_t*>(context)->uc_mcontext.regs[RegsEnumArm64::REG_LR];
     contextArray[index].sp = static_cast<ucontext_t*>(context)->uc_mcontext.sp;
     contextArray[index].pc = static_cast<ucontext_t*>(context)->uc_mcontext.pc;
-    if (contextArray[index].sp < stackBegin_ ||
-        contextArray[index].sp >= stackEnd_) {
+#elif defined(__loongarch_lp64)
+    contextArray[index].fp = static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_FP];
+    contextArray[index].lr =
+	static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_LOONGARCH64_R1];
+    contextArray[index].sp = static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_SP];
+    contextArray[index].pc = static_cast<ucontext_t*>(context)->uc_mcontext.__pc;
+#endif
+    if (contextArray[index].sp < stackBegin_ || contextArray[index].sp >= stackEnd_) {
         return;
     }
-
     uintptr_t curStackSz = stackEnd_ - contextArray[index].sp;
     uintptr_t cpySz = curStackSz  > STACK_BUFFER_SIZE ? STACK_BUFFER_SIZE : curStackSz;
-
     for (uintptr_t pos = 0; pos < cpySz; pos++) {
         reinterpret_cast<char*>(contextArray[index].buffer)[pos] =
             reinterpret_cast<const char*>(contextArray[index].sp)[pos];
     }
-
     writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
     uint64_t end = GetCurrentTimeNanoseconds();
     contextArray[index].processTime.store(0, std::memory_order_relaxed);
     contextArray[index].snapshotTime.store(end, std::memory_order_release);
-
 #if defined(CONSUME_STATISTICS)
     copyStackCount_++;
     copyStackTimeCost_ += end - begin;
 #endif
-#endif  // #if defined(__aarch64__)
+#endif  // #if defined(__aarch64__) || defined(__loongarch_lp64)
 }
 
 void ThreadSampler::SendSampleRequest()
@@ -353,7 +354,7 @@ void ThreadSampler::SendSampleRequest()
 
 void ThreadSampler::ProcessStackBuffer()
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__loongarch_lp64)
     if (!init_) {
         XCOLLIE_LOGE("sampler has not initialized.\n");
         return;
@@ -403,7 +404,7 @@ void ThreadSampler::ProcessStackBuffer()
         context->snapshotTime.store(0, std::memory_order_release);
         context->processTime.store(ts, std::memory_order_release);
     }
-#endif  // #if defined(__aarch64__)
+#endif  // #if defined(__aarch64__) || defined(__loongarch_lp64)
 }
 
 int32_t ThreadSampler::Sample()
