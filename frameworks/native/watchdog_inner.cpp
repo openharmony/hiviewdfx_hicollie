@@ -825,7 +825,7 @@ void WatchdogInner::CheckIpcFull(uint64_t now, const WatchdogTask& queuedTask)
     }
 }
 
-bool WatchdogInner::CheckCurrentTask(const WatchdogTask& queuedTaskCheck)
+bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
 {
     if (queuedTaskCheck.name.empty()) {
         checkerQueue_.pop();
@@ -868,7 +868,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     }
 
     const WatchdogTask& queuedTaskCheck = checkerQueue_.top();
-    if (CheckCurrentTask(queuedTaskCheck) && checkerQueue_.empty()) {
+    if (CheckCurrentTaskLocked(queuedTaskCheck) && checkerQueue_.empty()) {
         return DEFAULT_TIMEOUT;
     }
 
