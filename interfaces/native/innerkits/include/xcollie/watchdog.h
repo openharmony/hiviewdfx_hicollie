@@ -137,6 +137,11 @@ public:
      * @brief Set sample jank params.
      */
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
+
+    /**
+     * @brief Set specified process name.
+     */
+    void SetSpecifiedProcessName(const std::string& name);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

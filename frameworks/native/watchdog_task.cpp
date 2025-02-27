@@ -291,7 +291,8 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 #ifdef HISYSEVENT_ENABLE
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", processName,
-        "MSG", sendMsg, "STACK", stack + "\n"+ userStack);
+        "MSG", sendMsg, "STACK", stack + "\n"+ userStack, "SPECIFICSTACK_NAME",
+            WatchdogInner::GetInstance().GetSpecifiedProcessName());
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
 #else
