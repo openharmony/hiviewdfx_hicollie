@@ -116,6 +116,8 @@ public:
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
     void SampleStackDetect(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
+    void SetSpecifiedProcessName(const std::string& name);
+    std::string GetSpecifiedProcessName();
 
 public:
     std::string currentScene_;
@@ -202,6 +204,7 @@ private:
         .endTime = 0,
         .isBusinessJank = false,
     };
+    std::string specifiedProcessName_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -375,5 +375,17 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_AddTreadTest_001, TestSize.Level1)
 
     Sleep(blockTime);
 }
+
+/**
+ * @tc.name: Watchdog SetSpecifiedProcessName test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_SetSpecifiedProcessNameTest_001, TestSize.Level1)
+{
+    std::string testStr = "Watchdog_SetSpecifiedProcessNameTest_001";
+    Watchdog::GetInstance().SetSpecifiedProcessName(testStr);
+    EXPECT_TRUE(!testStr.empty());
+}
 } // namespace HiviewDFX
 } // namespace OHOS

@@ -1391,5 +1391,15 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
     };
     return 0;
 }
+
+void WatchdogInner::SetSpecifiedProcessName(const std::string& name)
+{
+    specifiedProcessName_ = name;
+}
+
+std::string WatchdogInner::GetSpecifiedProcessName()
+{
+    return specifiedProcessName_;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

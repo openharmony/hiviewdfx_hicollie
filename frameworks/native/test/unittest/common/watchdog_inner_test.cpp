@@ -867,5 +867,17 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_001, TestSize.Leve
     int64_t time = GetAppStartTime(-1, 0);
     EXPECT_TRUE(time != 0);
 }
+
+/**
+ * @tc.name: WatchdogInner SetSpecifiedProcessName test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetSpecifiedProcessName_001, TestSize.Level1)
+{
+    std::string testStr = "WatchdogInnerTest_SetSpecifiedProcessName_001";
+    WatchdogInner::GetInstance().SetSpecifiedProcessName(testStr);
+    EXPECT_EQ(WatchdogInner::GetInstance().GetSpecifiedProcessName(), testStr);
+}
 } // namespace HiviewDFX
 } // namespace OHOS
