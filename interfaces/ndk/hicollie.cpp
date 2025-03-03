@@ -42,8 +42,8 @@ constexpr uint32_t TIME_S_TO_MS = 1000;
 constexpr uint32_t MAX_TIMEOUT = 15000;
 constexpr uint32_t RATIO = 2;
 
-static int32_t g_tid = -1;
-static uint32_t g_stuckTimeout = CHECK_INTERVAL_TIME;
+static int32_t g_bussinessTid = 0;
+static uint32_t g_stuckTimeout = 0;
 
 bool IsAppMainThread()
 {
@@ -53,11 +53,6 @@ bool IsAppMainThread()
         return true;
     }
     return false;
-}
-
-void SetTid(int32_t tid)
-{
-    g_tid = tid;
 }
 
 int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
@@ -115,7 +110,7 @@ int Report(bool* isSixSecond)
     reportData.notifyApp = false;
     reportData.waitSaveState = false;
     reportData.stuckTimeout = g_stuckTimeout;
-    reportData.tid = g_tid > 0 ? g_tid : getpid();
+    reportData.tid = g_bussinessTid > 0 ? g_bussinessTid : getpid();
     auto result = NotifyAppFault(reportData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
         result, reportData.tid, reportData.stuckTimeout);
@@ -130,10 +125,15 @@ inline HiCollie_ErrorCode InitStuckDetection(OH_HiCollie_Task task, uint32_t tim
         return HICOLLIE_WRONG_THREAD_CONTEXT;
     }
     if (!task) {
+        OHOS::HiviewDFX::g_stuckTimeout = 0;
+        OHOS::HiviewDFX::g_bussinessTid = 0;
         OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("BussinessWatchdog");
     } else {
-        OHOS::HiviewDFX::SetTid(syscall(SYS_gettid));
+        if (OHOS::HiviewDFX::g_stuckTimeout != 0) {
+            OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("BussinessWatchdog");
+        }
         OHOS::HiviewDFX::g_stuckTimeout = timeout;
+        OHOS::HiviewDFX::g_bussinessTid = syscall(SYS_gettid);
         OHOS::HiviewDFX::Watchdog::GetInstance().RunPeriodicalTask("BussinessWatchdog", task,
             timeout, OHOS::HiviewDFX::INI_TIMER_FIRST_SECOND);
         OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("AppkitWatchdog");
