@@ -19,6 +19,7 @@
 #include <string>
 
 #include "xcollie.h"
+#include "watchdog.h"
 
 using namespace testing::ext;
 
@@ -85,6 +86,7 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
  */
 HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
 {
+    Watchdog::GetInstance().SetSpecifiedProcessName("foundation");
     /**
      * @tc.steps: step5. multiple timer
      * @tc.expected: step5. cancel timer successfully;

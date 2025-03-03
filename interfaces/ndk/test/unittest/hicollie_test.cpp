@@ -80,6 +80,8 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetectionWithTimeout_1, TestSi
 {
     int result = OH_HiCollie_Init_StuckDetectionWithTimeout(&TaskTest, 5);
     EXPECT_EQ(result, HICOLLIE_SUCCESS);
+    result = OH_HiCollie_Init_StuckDetection(&TaskTest);
+    EXPECT_EQ(result, HICOLLIE_SUCCESS);
 }
 
 /**
