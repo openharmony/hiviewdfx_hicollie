@@ -64,22 +64,22 @@ typedef enum HiCollie_ErrorCode {
     HICOLLIE_REMOTE_FAILED = 29800002,
     /**
      * Invalid timer name
-     * @since 16
+     * @since 18
      */
     HICOLLIE_INVALID_TIMER_NAME = 29800003,
     /**
      * Invalid timeout value
-     * @since 16
+     * @since 18
      */
     HICOLLIE_INVALID_TIMEOUT_VALUE = 29800004,
     /**
      * Wrong process context
-     * @since 16
+     * @since 18
      */
     HICOLLIE_WRONG_PROCESS_CONTEXT = 29800005,
     /**
      * The pointer used to save returned timer id should not be NULL
-     * @since 16
+     * @since 18
      */
     HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM = 29800006,
 } HiCollie_ErrorCode;
@@ -152,7 +152,7 @@ HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task);
  *         {@link HICOLLIE_INVALID_ARGUMENT} 401 - stuckTimeout is less than 3 seconds and greater than 15 seconds.
  *         {@link HICOLLIE_WRONG_THREAD_CONTEXT} 29800001 - Wrong thread context
  *              The function can not be called from main thread.
- * @since 16
+ * @since 18
  */
 HiCollie_ErrorCode OH_HiCollie_Init_StuckDetectionWithTimeout(OH_HiCollie_Task task, uint32_t stuckTimeout);
 
@@ -191,14 +191,14 @@ HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond);
  * @brief When user call {@link OH_HiCollie_SetTimer} and do not call {@link OH_HiCollie_CancelTimer}
  * in specific time, the callback function will be executed.
  *
- * @since 16
+ * @since 18
  */
 typedef void (*OH_HiCollie_Callback)(void*);
 
 /**
  * @brief Defines the actions that will be executed when timeout happens.
  *
- * @since 16
+ * @since 18
  */
 typedef enum HiCollie_Flag {
     /** Default action is generate log file and do recovery */
@@ -214,7 +214,7 @@ typedef enum HiCollie_Flag {
 /**
 * @brief Defines the input parameter for {@link OH_HiCollie_SetTimer}
 *
-* @since 16
+* @since 18
 */
 typedef struct HiCollie_SetTimerParam {
     /** The timer name */
@@ -241,7 +241,7 @@ typedef struct HiCollie_SetTimerParam {
  *              from appspawn and native process.
  *         {@link HICOLLIE_WRONG_TIMER_ID_OUTPUT_PARAM} 29800006 - The pointer used to save returned timer id
  *              should not be NULL.
- * @since 16
+ * @since 18
  */
 HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id);
 
@@ -249,7 +249,7 @@ HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id);
  * @brief Cancel the timer right after calling the time-consuming function.
  *
  * @param id The timer id that is return from {@link OH_HiCollie_SetTimer}.
- * @since 16
+ * @since 18
  */
 void OH_HiCollie_CancelTimer(int id);
 
