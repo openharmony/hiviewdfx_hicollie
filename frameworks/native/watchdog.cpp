@@ -102,5 +102,10 @@ void Watchdog::SetSpecifiedProcessName(const std::string& name)
 {
     WatchdogInner::GetInstance().SetSpecifiedProcessName(name);
 }
+
+void Watchdog::SetScrollParam(bool isScroll)
+{
+    WatchdogInner::GetInstance().SetScrollParam(isScroll);
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -118,6 +118,7 @@ public:
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
+    void SetScrollParam(bool isScroll);
 
 public:
     std::string currentScene_;
@@ -130,6 +131,7 @@ public:
         {KEY_SAMPLE_COUNT, SAMPLE_DEFULE_COUNT}, {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFULE_REPORT_TIMES},
         {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}
     };
+    bool isScroll_ {false};
 
 private:
     bool Start();

@@ -879,5 +879,17 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetSpecifiedProcessName_001, TestS
     WatchdogInner::GetInstance().SetSpecifiedProcessName(testStr);
     EXPECT_EQ(WatchdogInner::GetInstance().GetSpecifiedProcessName(), testStr);
 }
+
+/**
+ * @tc.name: WatchdogInner SetScrollParam test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetScrollParam_001, TestSize.Level1)
+{
+    EXPECT_EQ(WatchdogInner::GetInstance().isScroll_, false);
+    WatchdogInner::GetInstance().SetScrollParam(true);
+    EXPECT_EQ(WatchdogInner::GetInstance().isScroll_, true);
+}
 } // namespace HiviewDFX
 } // namespace OHOS
