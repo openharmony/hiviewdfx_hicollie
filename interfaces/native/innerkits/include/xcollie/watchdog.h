@@ -142,6 +142,11 @@ public:
      * @brief Set specified process name.
      */
     void SetSpecifiedProcessName(const std::string& name);
+
+    /**
+     * @brief Set scroll param.
+     */
+    void SetScrollParam(bool isScroll);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

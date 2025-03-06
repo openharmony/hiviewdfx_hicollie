@@ -1401,5 +1401,10 @@ std::string WatchdogInner::GetSpecifiedProcessName()
 {
     return specifiedProcessName_;
 }
+
+void WatchdogInner::SetScrollParam(bool isScroll)
+{
+    isScroll_ = isScroll;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

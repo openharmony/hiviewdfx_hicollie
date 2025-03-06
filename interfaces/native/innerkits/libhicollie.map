@@ -35,6 +35,7 @@
         "OHOS::HiviewDFX::GetCurrentTickMillseconds()";
         "OHOS::HiviewDFX::FormatTime(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
         "OHOS::HiviewDFX::Watchdog::SetSpecifiedProcessName(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
+        "OHOS::HiviewDFX::Watchdog::SetScrollParam(bool)";
     };
   local:
     *;
