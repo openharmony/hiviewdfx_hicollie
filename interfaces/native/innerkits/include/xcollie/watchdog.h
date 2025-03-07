@@ -146,7 +146,7 @@ public:
     /**
      * @brief Set scroll param.
      */
-    void SetScrollParam(bool isScroll);
+    void SetScrollState(bool isScroll);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

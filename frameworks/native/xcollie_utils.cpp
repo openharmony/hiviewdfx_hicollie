@@ -385,7 +385,8 @@ bool CreateWatchdogDir()
     return true;
 }
 
-bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const std::string& eventName)
+bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const std::string& eventName,
+    bool& isOverLimit)
 {
     if (!CreateWatchdogDir()) {
         return false;
@@ -401,9 +402,10 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
     uint64_t stackSize = stack.size();
     uint64_t fileSize = OHOS::GetFolderSize(realPath) + stackSize;
     if (fileSize > MAX_FILE_SIZE) {
-        XCOLLIE_LOGE("CurrentDir already over limit. Will not write to stack file."
+        isOverLimit = true;
+        XCOLLIE_LOGE("CurrentDir is over limit: %{public}d. Will not write to stack file."
             "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
-            fileSize, MAX_FILE_SIZE);
+            isOverLimit, fileSize, MAX_FILE_SIZE);
         return true;
     }
     constexpr mode_t defaultLogFileMode = 0644;

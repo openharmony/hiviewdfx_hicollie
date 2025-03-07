@@ -101,7 +101,7 @@ std::string FormatTime(const std::string &format);
 bool CreateWatchdogDir();
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
-    const std::string& eventName);
+    const std::string& eventName, bool& isOverLimit);
 
 int64_t GetTimeStamp();
 
