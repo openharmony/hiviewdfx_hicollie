@@ -389,14 +389,14 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_SetSpecifiedProcessNameTest_001, TestSi
 }
 
 /**
- * @tc.name: Watchdog SetScrollParam test;
+ * @tc.name: Watchdog SetScrollState test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInterfaceTest, Watchdog_SetScrollParam_001, TestSize.Level1)
+HWTEST_F(WatchdogInterfaceTest, Watchdog_SetScrollState_001, TestSize.Level1)
 {
     bool isScroll = true;
-    Watchdog::GetInstance().SetScrollParam(isScroll);
+    Watchdog::GetInstance().SetScrollState(isScroll);
     EXPECT_EQ(isScroll, true);
 }
 } // namespace HiviewDFX

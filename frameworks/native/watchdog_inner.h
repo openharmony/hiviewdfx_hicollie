@@ -56,6 +56,7 @@ struct StackContent {
     int detectorCount {0};
     int collectCount {0};
     int reportTimes {SAMPLE_DEFULE_REPORT_TIMES};
+    int scrollTimes {SAMPLE_DEFULE_REPORT_TIMES};
     int64_t reportBegin {0};
     int64_t reportEnd {0};
     TimePoint lastEndTime;
@@ -104,7 +105,8 @@ public:
     static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
-    int32_t StartProfileMainThread(int32_t interval);
+    bool StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
+    void StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
     bool CollectStack(std::string& stack, std::string& heaviestStack);
     bool Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
@@ -114,11 +116,12 @@ public:
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
-    void SampleStackDetect(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
+    bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes,
+        int ignoreTime = DEFAULT_IGNORE_STARTUP_TIME);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
-    void SetScrollParam(bool isScroll);
+    void SetScrollState(bool isScroll);
 
 public:
     std::string currentScene_;
@@ -147,12 +150,12 @@ private:
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
-    bool ReportMainThreadEvent(int64_t tid);
+    bool ReportMainThreadEvent(int64_t tid, bool isScroll = false);
     bool CheckEventTimer(int64_t currentTime, int64_t reportBegin, int64_t reportEnd, int interval);
     void DumpTraceProfile(int32_t interval);
     int32_t StartTraceProfile();
     void UpdateTime(int64_t& reportBegin, int64_t& reportEnd, TimePoint& lastEndTime, const TimePoint& endTime);
-    void ThreadSampleTask(int sampleInterval, int sampleCount, int64_t tid);
+    bool CheckThreadSampler();
     bool InitThreadSamplerFuncs();
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);

@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <chrono>
+#include <cstdio>
 #include "watchdog_inner_test.h"
 
 #define private public
@@ -319,15 +320,14 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_001, TestSize.Level1)
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
 {
-    int testValue = 150; // test value
-
-    int32_t ret = WatchdogInner::GetInstance().StartProfileMainThread(testValue);
+    TimePoint endTime = std::chrono::steady_clock::now();
+    int sampleInterval = SAMPLE_DEFULE_INTERVAL;
+    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, sampleInterval);
     int32_t left = 4;
     int32_t end = time(nullptr) + left;
     while (left > 0) {
         left = end - time(nullptr);
     }
-    printf("ret:%d\n", ret);
 
     left = 10;
     end = time(nullptr) + left;
@@ -335,14 +335,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
         left = end - time(nullptr);
     }
 
-    ret = WatchdogInner::GetInstance().StartProfileMainThread(testValue);
+    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, sampleInterval);
     left = 5;
     end = time(nullptr) + left;
     while (left > 0) {
         left = end - time(nullptr);
     }
     sleep(4);
-    EXPECT_EQ(ret, 0);
     std::string stack = "";
     std::string heaviestStack = "";
     WatchdogInner::GetInstance().CollectStack(stack, heaviestStack);
@@ -350,6 +349,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     printf("heaviestStack:\n%s", heaviestStack.c_str());
     WatchdogInner::GetInstance().Deinit();
     WatchdogInner::GetInstance().ResetThreadSamplerFuncs();
+    EXPECT_TRUE(stack.size() >= heaviestStack.size());
 }
 
 
@@ -385,7 +385,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     EXPECT_TRUE(ret);
     std::string path = "";
     std::string stack = "STACK";
-    ret = WriteStackToFd(getprocpid(), path, stack, "test");
+    bool isOverLimit = false;
+    ret = WriteStackToFd(getprocpid(), path, stack, "test", isOverLimit);
     EXPECT_TRUE(ret);
 }
 
@@ -536,7 +537,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
         endTest("Test");
         count++;
     }
-    sleep(10); // test value
     WatchdogInner::GetInstance().traceContent_.traceState = 0;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     beginTest("Test");
@@ -547,6 +547,30 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     usleep(3500 * 1000); // test value
     endTest("Test");
     EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 1);
+    EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
+}
+
+/**
+ * @tc.name: WatchdogInner InitMainLooperWatcher Test
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+    WatchdogInner::GetInstance().SetScrollState(true);
+    int count = 0;
+    while (count < 4) {
+        beginTest("Test");
+        usleep(50 * 1000); // test value
+        endTest("Test");
+        count++;
+    }
+    sleep(2); // test value
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.scrollTimes < 1);
     EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
 }
 
@@ -881,14 +905,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetSpecifiedProcessName_001, TestS
 }
 
 /**
- * @tc.name: WatchdogInner SetScrollParam test;
+ * @tc.name: WatchdogInner SetScrollState test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetScrollParam_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetScrollState_001, TestSize.Level1)
 {
-    EXPECT_EQ(WatchdogInner::GetInstance().isScroll_, false);
-    WatchdogInner::GetInstance().SetScrollParam(true);
+    WatchdogInner::GetInstance().SetScrollState(true);
     EXPECT_EQ(WatchdogInner::GetInstance().isScroll_, true);
 }
 } // namespace HiviewDFX
