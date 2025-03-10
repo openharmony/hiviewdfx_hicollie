@@ -224,7 +224,7 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid, bool isScroll)
             "HAPPENTIME_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC, "VERSION", bundleVersion_);
     }
 
-    XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d", result);
+    XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d, isScroll=%{public}d", result, isScroll);
     return result >= 0;
 #else
     XCOLLIE_LOGI("hisysevent not exists");
@@ -388,7 +388,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
             return;
         }
         threadSamplerSampleFunc_();
-        ReportMainThreadEvent(tid);
+        ReportMainThreadEvent(tid, true);
         stackContent_.scrollTimes--;
         isMainThreadStackEnabled_ = true;
     };
