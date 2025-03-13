@@ -219,9 +219,9 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid, bool isScroll)
             "APP_START_JIFFIES_TIME", GetAppStartTime(pid, tid), "HEAVIEST_STACK", heaviestStack,
             "LOG_OVER_LIMIT", isOverLimit);
     } else {
-        result = HiSysEventWrite(EXEC_DOMAIN, "JANK_FRAME", HiSysEvent::EventType::FAULT,
-            "SUMMARY", isOverLimit ? "1" : "0", "DETAILED_PATH", path, "PNAME", GetSelfProcName(),
-            "HAPPENTIME_TIME", GetTimeStamp() / MILLISEC_TO_NANOSEC, "VERSION", bundleVersion_);
+        result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, "SCROLL_TIMEOUT",
+            HiSysEvent::EventType::FAULT, "PROCESS_NAME", GetSelfProcName(),
+            "EXTERNAL_LOG", path, "LOG_OVER_LIMIT", isOverLimit);
     }
 
     XCOLLIE_LOGI("MainThread HiSysEventWrite result=%{public}d, isScroll=%{public}d", result, isScroll);
