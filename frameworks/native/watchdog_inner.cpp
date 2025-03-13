@@ -84,6 +84,10 @@ constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
+const char* ON_KICK_TIME = "on,72";
+const char* ON_KICK_TIME_HMOS = "on,10,foundation";
+const char* KICK_TIME = "kick";
+const char* KICK_TIME_HMOS = "kick,foundation";
 const int32_t NOT_OPEN = -1;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
@@ -104,8 +108,8 @@ constexpr char EXEC_DOMAIN[] = "PERFORMANCE";
 }
 
 std::mutex WatchdogInner::lockFfrt_;
-static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
-static FILE* g_fp = nullptr;
+static uint64_t g_lastKickTime = GetCurrentTickMillseconds();
+static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
 
 SigActionType WatchdogInner::threadSamplerSigHandler_ = nullptr;
@@ -847,11 +851,12 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
     return false;
 }
 
-void WatchdogInner::CheckIpcFull(uint64_t now, const WatchdogTask& queuedTask)
+void WatchdogInner::CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask)
 {
-    if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
+    if (g_existFile && queuedTask.name == IPC_FULL && getuid() == FOUNDATION_UID &&
+        now - g_lastKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
-            g_nextKickTime = now;
+            g_lastKickTime = now;
         }
     }
 }
@@ -904,7 +909,7 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     }
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
-    CheckIpcFull(now, queuedTask);
+    CheckKickWatchdog(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
         return queuedTask.nextTickTime - now;
     }
@@ -967,12 +972,29 @@ bool WatchdogInner::Start()
 
 bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 {
-    if (g_fp == nullptr) {
-        g_fp = fopen(SYS_KERNEL_HUNGTASK_USERLIST, "w");
-        if (g_fp == nullptr) {
-            g_fp = fopen(HMOS_HUNGTASK_USERLIST, "w");
-            if (g_fp == nullptr) {
-                XCOLLIE_KLOGE("can't open hungtask file, errno: %{public}d", errno);
+    if (g_fd == NOT_OPEN) {
+        return false;
+    }
+
+    ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
+    if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
+        XCOLLIE_KLOGE("watchdog write msg failed");
+        close(g_fd);
+        g_fd = NOT_OPEN;
+        return false;
+    }
+    XCOLLIE_KLOGI("Send %{public}s to hungtask Successful\n", msg.c_str());
+    return true;
+}
+
+bool WatchdogInner::KickWatchdog()
+{
+    if (g_fd == NOT_OPEN) {
+        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
+        if (g_fd < 0) {
+            g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
+            if (g_fd < 0) {
+                XCOLLIE_KLOGE("can't open hungtask file");
                 g_existFile = false;
                 return false;
             }
@@ -981,23 +1003,13 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
         } else {
             XCOLLIE_KLOGI("change to linux kernel");
         }
-    }
-    size_t size = msg.size();
-    if (fwrite(msg.c_str(), sizeof(char), size, g_fp) != size) {
-        XCOLLIE_KLOGE("watchdogWrite msg failed");
-        if (fclose(g_fp)) {
-            XCOLLIE_KLOGE("fclose is failed");
-        }
-        g_fp = nullptr;
-        return false;
-    }
-    XCOLLIE_KLOGI("Send %{public}zu to hungtask Successful\n", size);
-    return true;
-}
 
-bool WatchdogInner::KickWatchdog()
-{
-    return true;
+        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_HMOS : ON_KICK_TIME)) {
+            XCOLLIE_KLOGI("kick watchdog send msg to hungtask fail");
+            return false;
+        }
+    }
+    return SendMsgToHungtask(isHmos ? KICK_TIME_HMOS : KICK_TIME);
 }
 
 void WatchdogInner::IpcCheck()
@@ -1197,9 +1209,9 @@ bool WatchdogInner::Stop()
         threadLoop_->join();
         threadLoop_ = nullptr;
     }
-    if (g_fp != nullptr) {
-        (void)fclose(g_fp);
-        g_fp = nullptr;
+    if (g_fd != NOT_OPEN) {
+        close(g_fd);
+        g_fd = NOT_OPEN;
     }
     return true;
 }
