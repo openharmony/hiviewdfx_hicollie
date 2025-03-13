@@ -34,7 +34,7 @@ void HandlerChecker::ScheduleCheck()
     }
 
     isCompleted_.store(false);
-    taskSlow = false;
+    taskSlow_ = false;
     auto weak = weak_from_this();
     auto f = [weak] () {
         auto self = weak.lock();
@@ -50,11 +50,11 @@ void HandlerChecker::ScheduleCheck()
 int HandlerChecker::GetCheckState()
 {
     if (isCompleted_) {
-        taskSlow = false;
+        taskSlow_ = false;
         return CheckStatus::COMPLETED;
     } else {
-        if (!taskSlow) {
-            taskSlow = true;
+        if (!taskSlow_) {
+            taskSlow_ = true;
             return CheckStatus::WAITED_HALF;
         } else {
             return CheckStatus::WAITING;
