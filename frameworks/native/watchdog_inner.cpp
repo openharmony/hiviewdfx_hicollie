@@ -104,7 +104,6 @@ constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
 constexpr int SAMPLE_EXTRA_COUNT = 4;
 constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 constexpr int SCROLL_INTERVAL = 50; // 50ms
-constexpr char EXEC_DOMAIN[] = "PERFORMANCE";
 }
 
 std::mutex WatchdogInner::lockFfrt_;
@@ -347,7 +346,7 @@ void WatchdogInner::UpdateTime(int64_t& reportBegin, int64_t& reportEnd,
 }
 
 bool WatchdogInner::SampleStackDetect(const TimePoint& endTime, int& reportTimes,
-    int updateTimes, int ignoreTime)
+    int updateTimes, int ignoreTime, bool isScroll)
 {
     uint64_t startUpTime = static_cast<uint64_t>(ignoreTime) * TIME_MS_TO_S;
     if (GetCurrentTickMillseconds() - watchdogStartTime_ < startUpTime) {
@@ -360,7 +359,7 @@ bool WatchdogInner::SampleStackDetect(const TimePoint& endTime, int& reportTimes
     }
     if (reportTimes <= 0) {
         int64_t checkTimer = ONE_DAY_LIMIT;
-        if (!isScroll_ && (IsDeveloperOpen() ||
+        if (!isScroll && (IsDeveloperOpen() ||
             (IsBetaVersion() && GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE))) {
             checkTimer = ONE_HOUR_LIMIT;
         }
@@ -380,19 +379,21 @@ bool WatchdogInner::SampleStackDetect(const TimePoint& endTime, int& reportTimes
 bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
 {
     std::unique_lock<std::mutex> lock(lock_);
-    if (!isScroll_ || !SampleStackDetect(endTime, stackContent_.scrollTimes, SAMPLE_DEFULE_REPORT_TIMES)) {
+    bool isScroll = isScroll_;
+    if (!isScroll || !SampleStackDetect(endTime, stackContent_.scrollTimes,
+        SAMPLE_DEFULE_REPORT_TIMES, isScroll)) {
         return false;
     }
-    XCOLLIE_LOGI("StartScrollProfile durationTime: %{public}" PRId64 " ms, sampleInterval: %{public}d.",
-        durationTime, sampleInterval);
+    XCOLLIE_LOGI("StartScrollProfile durationTime: %{public}" PRId64 " ms, sampleInterval: %{public}d "
+        "isScroll: %{public}d.", durationTime, sampleInterval, isScroll);
     int64_t tid = getproctid();
-    auto sampleTask = [this, sampleInterval, tid]() {
+    auto sampleTask = [this, sampleInterval, tid, isScroll]() {
         if (!CheckThreadSampler() || threadSamplerSampleFunc_ == nullptr) {
             isMainThreadStackEnabled_ = true;
             return;
         }
         threadSamplerSampleFunc_();
-        ReportMainThreadEvent(tid, true);
+        ReportMainThreadEvent(tid, isScroll);
         stackContent_.scrollTimes--;
         isMainThreadStackEnabled_ = true;
     };
