@@ -117,7 +117,7 @@ public:
     bool GetAppDebug();
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
     bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes,
-        int ignoreTime = DEFAULT_IGNORE_STARTUP_TIME);
+        int ignoreTime = DEFAULT_IGNORE_STARTUP_TIME, bool isScroll = false);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
