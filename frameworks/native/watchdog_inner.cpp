@@ -104,6 +104,9 @@ constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
 constexpr int SAMPLE_EXTRA_COUNT = 4;
 constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 constexpr int SCROLL_INTERVAL = 50; // 50ms
+constexpr const char* const SCROLL_JANK = "SCROLL_JANK";
+constexpr const char* const MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
+constexpr const char* const BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
 }
 
 std::mutex WatchdogInner::lockFfrt_;
@@ -188,7 +191,7 @@ void WatchdogInner::SetForeground(const bool& isForeground)
     isForeground_ = isForeground;
 }
 
-bool WatchdogInner::ReportMainThreadEvent(int64_t tid, bool isScroll)
+bool WatchdogInner::ReportMainThreadEvent(int64_t tid, std::string eventName, bool isScroll)
 {
     std::string stack = "";
     std::string heaviestStack = "";
@@ -198,10 +201,6 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid, bool isScroll)
     }
 
     std::string path = "";
-    std::string eventName = "MAIN_THREAD_JANK";
-    if (!buissnessThreadInfo_.empty()) {
-        eventName = "BUSSINESS_THREAD_JANK";
-    }
     int32_t pid = getprocpid();
     bool isOverLimit = false;
     if (!WriteStackToFd(pid, path, stack, eventName, isOverLimit)) {
@@ -393,7 +392,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
             return;
         }
         threadSamplerSampleFunc_();
-        ReportMainThreadEvent(tid, isScroll);
+        ReportMainThreadEvent(tid, SCROLL_JANK, isScroll);
         stackContent_.scrollTimes--;
         isMainThreadStackEnabled_ = true;
     };
@@ -427,7 +426,8 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
             threadSamplerSampleFunc_();
             stackContent_.collectCount++;
         } else if (stackContent_.collectCount == sampleCount) {
-            ReportMainThreadEvent(tid);
+            std::string eventName = buissnessThreadInfo_.empty() ? MAIN_THREAD_JANK : BUSSINESS_THREAD_JANK;
+            ReportMainThreadEvent(tid, eventName);
             stackContent_.reportTimes--;
             isMainThreadStackEnabled_ = true;
             return;
@@ -537,7 +537,7 @@ void WatchdogInner::CollectTraceDetect(const TimePoint& endTime, int64_t duratio
         return;
     }
     if (traceContent_.traceState == DumpStackState::COMPLETE) {
-        auto diff = endTime - stackContent_.lastEndTime;
+        auto diff = endTime - traceContent_.lastEndTime;
         int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
         if (intervalTime < ONE_DAY_LIMIT) {
             return;

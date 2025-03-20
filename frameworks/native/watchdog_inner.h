@@ -150,7 +150,7 @@ private:
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
-    bool ReportMainThreadEvent(int64_t tid, bool isScroll = false);
+    bool ReportMainThreadEvent(int64_t tid, std::string eventName, bool isScroll = false);
     bool CheckEventTimer(int64_t currentTime, int64_t reportBegin, int64_t reportEnd, int interval);
     void DumpTraceProfile(int32_t interval);
     int32_t StartTraceProfile();
