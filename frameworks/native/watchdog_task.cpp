@@ -266,8 +266,8 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
-    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n"+
-        "timeout timer: " + timerName + "\n" +keyMsg;
+    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
+        "timeout timer: " + timerName + "\n" + keyMsg;
 
     std::string userStack = "";
     if (uid == SAMGR_INIT_UID) {
