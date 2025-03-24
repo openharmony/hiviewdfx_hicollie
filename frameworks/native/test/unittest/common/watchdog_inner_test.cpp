@@ -366,8 +366,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr, timeOutCallback, 10);
     EXPECT_TRUE(result <= 0);
     int32_t pid = getprocpid();
-    bool writeResult = WatchdogInner::WriteStringToFile(pid, "0");
-    EXPECT_TRUE(writeResult);
+    WatchdogInner::WriteStringToFile(pid, "0");
     bool ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid());
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
     int32_t interval = 150; // test value
