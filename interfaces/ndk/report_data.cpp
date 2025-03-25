@@ -21,6 +21,11 @@ namespace OHOS {
 namespace HiviewDFX {
 bool ReportData::WriteContent(Parcel &parcel) const
 {
+    if (!parcel.WriteInt32(tid)) {
+        XCOLLIE_LOGE("Tid [%{public}u] write int32 failed.", tid);
+        return false;
+    }
+
     if (!parcel.WriteUint32(stuckTimeout)) {
         XCOLLIE_LOGE("StuckTimeout [%{public}u] write uint32 failed.", stuckTimeout);
         return false;
@@ -82,6 +87,11 @@ bool ReportData::Marshalling(Parcel &parcel) const
         return false;
     }
 
+    if (!parcel.WriteBool(needKillProcess)) {
+        XCOLLIE_LOGE("needKillProcess [%{public}s] write bool failed.", needKillProcess ? "true" : "false");
+        return false;
+    }
+
     if (!parcel.WriteUint32(state)) {
         XCOLLIE_LOGE("State [%{public}u] write uint32 failed.", state);
         return false;
@@ -89,11 +99,6 @@ bool ReportData::Marshalling(Parcel &parcel) const
 
     if (!parcel.WriteInt32(eventId)) {
         XCOLLIE_LOGE("EventId [%{public}u] write int32 failed.", eventId);
-        return false;
-    }
-
-    if (!parcel.WriteInt32(tid)) {
-        XCOLLIE_LOGE("Tid [%{public}u] write int32 failed.", tid);
         return false;
     }
 
