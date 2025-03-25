@@ -979,7 +979,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 
     ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
     if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
-        XCOLLIE_KLOGE("watchdog write msg failed");
+        XCOLLIE_KLOGE("watchdog write msg failed, errno:%{public}d", errno);
         close(g_fd);
         g_fd = NOT_OPEN;
         return false;
@@ -995,7 +995,7 @@ bool WatchdogInner::KickWatchdog()
         if (g_fd < 0) {
             g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
             if (g_fd < 0) {
-                XCOLLIE_KLOGE("can't open hungtask file");
+                XCOLLIE_KLOGE("can't open hungtask file, errno:%{public}d", errno);
                 g_existFile = false;
                 return false;
             }
