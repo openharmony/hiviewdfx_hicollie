@@ -47,6 +47,7 @@ struct ReportData : public Parcelable {
     bool waitSaveState = false;
     bool notifyApp = false;
     bool forceExit = false;
+    bool needKillProcess = true;
     uint32_t state = 0;
     int32_t eventId = -1;
     int32_t tid = -1;
