@@ -78,6 +78,7 @@ constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
+constexpr uint32_t AUDIO_SERVER_UID = 1041;
 constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
 constexpr uint32_t FOUNDATION_UID = 5523;
 constexpr uint32_t RENDER_SERVICE_UID = 1003;
@@ -92,7 +93,10 @@ const int32_t NOT_OPEN = -1;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
 constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
-constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
+constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {
+    AUDIO_SERVER_UID, DATA_MANAGE_SERVICE_UID,
+    FOUNDATION_UID, RENDER_SERVICE_UID
+};
 constexpr uint64_t SAMPLE_PARAMS_MAX_SIZE = 5;
 constexpr uint64_t SAMPLE_PARAMS_MIN_SIZE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
