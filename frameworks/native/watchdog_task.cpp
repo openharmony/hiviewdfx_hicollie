@@ -108,6 +108,10 @@ void WatchdogTask::DoCallback()
     if (flag & XCOLLIE_FLAG_LOG) {
         /* send to freezedetetor */
         std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
+        int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
+            HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_BLOCK");
+        XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_TIMEOUT, "
+            "ret=%{public}d", getprocpid(), ret);
         SendXCollieEvent(name, msg);
     }
     if (getuid() > UID_TYPE_THRESHOLD) {
@@ -329,8 +333,16 @@ int WatchdogTask::EvaluateCheckerState()
                 return waitState;
             }
             if (name.compare(IPC_FULL) == 0) {
+                int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
+                    HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_BLOCK");
+                XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, "
+                    "MSG=IPC_FULL, ret=%{public}d", getprocpid(), ret);
                 SendEvent(description, IPC_FULL);
             } else {
+                int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
+                    HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_BLOCK");
+                XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, "
+                    "MSG=SERVICE_BLOCK, ret=%{public}d", getprocpid(), ret);
                 SendEvent(description, "SERVICE_BLOCK");
             }
             // peer binder log is collected in hiview asynchronously
