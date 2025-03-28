@@ -91,7 +91,7 @@ void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart)
         if (i <= 1) {
             continue;
         }
-        uint64_t tmpDiff = GetNumsDiffAbs(timesArr[i], timesArr[i-2]);
+        uint64_t tmpDiff = GetNumsDiffAbs(timesArr[i], timesArr[i - 2]);
         if (tmpDiff < minTimeDiff) {
             minTimeDiff = tmpDiff;
             index = i - 1;
