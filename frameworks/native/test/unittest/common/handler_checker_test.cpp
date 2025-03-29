@@ -59,7 +59,7 @@ void HandlerCheckerTest::TearDown(void)
  * @tc.type: FUNC
  * @tc.require: SR000CPN2F AR000CTAMB
  */
-HWTEST_F(HandlerCheckerTest, HandlerCheckerTest_001, TestSize.Level3)
+HWTEST_F(HandlerCheckerTest, HandlerCheckerTest_001, TestSize.Level0)
 {
     std::atomic<bool> flage = false;
     auto blockFunc = [&flage]() {

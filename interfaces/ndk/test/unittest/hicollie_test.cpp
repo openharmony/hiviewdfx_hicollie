@@ -76,7 +76,7 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetection_2, TestSize.Level1)
  * @tc.desc: test OH_HiCollie_Init_StuckDetectionWithTimeout
  * @tc.type: FUNC
  */
-HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetectionWithTimeout_1, TestSize.Level1)
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_StuckDetectionWithTimeout_1, TestSize.Level0)
 {
     int result = OH_HiCollie_Init_StuckDetectionWithTimeout(&TaskTest, 5);
     EXPECT_EQ(result, HICOLLIE_SUCCESS);

@@ -84,7 +84,7 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
  * @tc.require: SR000CPN2F AR000CTAMB
  * @tc.author: yangjing
  */
-HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level1)
+HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_002, TestSize.Level0)
 {
     Watchdog::GetInstance().SetSpecifiedProcessName("foundation");
     /**
