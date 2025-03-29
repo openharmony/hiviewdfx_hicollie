@@ -182,7 +182,7 @@ bool ThreadSamplerTest::InitThreadSampler()
  * @tc.type: FUNC
  * @tc.require
  */
-HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level3)
+HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level0)
 {
     printf("ThreadSamplerTest_001\n");
     printf("Total:%dMS Sample:%dMS \n", INTERVAL * SAMPLE_CNT + INTERVAL, INTERVAL);

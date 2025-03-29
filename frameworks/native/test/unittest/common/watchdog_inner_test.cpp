@@ -527,7 +527,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillPeerBinderProcess_001, TestSiz
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSize.Level0)
 {
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
@@ -558,7 +558,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSize.Level0)
 {
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
