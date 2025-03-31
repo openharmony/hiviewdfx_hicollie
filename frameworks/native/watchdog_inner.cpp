@@ -390,15 +390,20 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
     XCOLLIE_LOGI("StartScrollProfile durationTime: %{public}" PRId64 " ms, sampleInterval: %{public}d "
         "isScroll: %{public}d.", durationTime, sampleInterval, isScroll);
     int64_t tid = getproctid();
+    stackContent_.collectCount = 0;
     auto sampleTask = [this, sampleInterval, tid, isScroll]() {
         if (!CheckThreadSampler() || threadSamplerSampleFunc_ == nullptr) {
             isMainThreadStackEnabled_ = true;
             return;
         }
-        threadSamplerSampleFunc_();
-        ReportMainThreadEvent(tid, SCROLL_JANK, isScroll);
-        stackContent_.scrollTimes--;
-        isMainThreadStackEnabled_ = true;
+        if (stackContent_.collectCount == 0) {
+            threadSamplerSampleFunc_();
+            stackContent_.collectCount++;
+        } else {
+            ReportMainThreadEvent(tid, SCROLL_JANK, isScroll);
+            stackContent_.scrollTimes--;
+            isMainThreadStackEnabled_ = true;
+        }
     };
     WatchdogTask task("ThreadSampler", sampleTask, 0, sampleInterval, true);
     InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
