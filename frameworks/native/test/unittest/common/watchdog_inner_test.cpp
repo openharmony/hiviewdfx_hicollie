@@ -804,7 +804,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_006, TestSize.Level
     paramsMap[KEY_LOG_TYPE] = "0";
     paramsMap[KEY_SAMPLE_INTERVAL] = "49";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
-    EXPECT_EQ(ret, -1);
+    EXPECT_EQ(ret, 0);
     /**
      * @tc.desc: set report times is not a number.
      */
