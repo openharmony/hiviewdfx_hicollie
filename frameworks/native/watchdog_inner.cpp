@@ -97,8 +97,8 @@ constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {
     AUDIO_SERVER_UID, DATA_MANAGE_SERVICE_UID,
     FOUNDATION_UID, RENDER_SERVICE_UID
 };
-constexpr uint64_t SAMPLE_PARAMS_MAX_SIZE = 5;
-constexpr uint64_t SAMPLE_PARAMS_MIN_SIZE = 1;
+constexpr uint64_t SAMPLE_STACK_MAP_SIZE = 5;
+constexpr uint64_t SAMPLE_TRACE_MAP_SIZE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
 constexpr int SAMPLE_INTERVAL_MAX = 500; // 500ms
@@ -1426,7 +1426,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             return -1;
         case CatchLogType::LOGTYPE_NONE:
         case CatchLogType::LOGTYPE_COLLECT_TRACE: {
-            if (size != SAMPLE_PARAMS_MIN_SIZE) {
+            if (size >= SAMPLE_TRACE_MAP_SIZE) {
                 XCOLLIE_LOGE("Set the thread sampler param map size error, can only set log_type. "
                     "map size: %{public}zu", size);
                 return -1;
@@ -1436,7 +1436,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             break;
         }
         case CatchLogType::LOGTYPE_SAMPLE_STACK: {
-            if (size != SAMPLE_PARAMS_MAX_SIZE) {
+            if (size >= SAMPLE_STACK_MAP_SIZE) {
                 XCOLLIE_LOGE("Set the thread sampler param map size error, current map size: %{public}zu", size);
                 return -1;
             }
