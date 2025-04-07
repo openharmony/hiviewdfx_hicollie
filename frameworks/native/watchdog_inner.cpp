@@ -1426,7 +1426,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             return -1;
         case CatchLogType::LOGTYPE_NONE:
         case CatchLogType::LOGTYPE_COLLECT_TRACE: {
-            if (size >= SAMPLE_TRACE_MAP_SIZE) {
+            if (size < SAMPLE_TRACE_MAP_SIZE) {
                 XCOLLIE_LOGE("Set the thread sampler param map size error, can only set log_type. "
                     "map size: %{public}zu", size);
                 return -1;
@@ -1436,7 +1436,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             break;
         }
         case CatchLogType::LOGTYPE_SAMPLE_STACK: {
-            if (size >= SAMPLE_STACK_MAP_SIZE) {
+            if (size < SAMPLE_STACK_MAP_SIZE) {
                 XCOLLIE_LOGE("Set the thread sampler param map size error, current map size: %{public}zu", size);
                 return -1;
             }
