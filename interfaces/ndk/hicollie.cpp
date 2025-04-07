@@ -92,11 +92,12 @@ int Report(bool* isSixSecond)
     OHOS::HiviewDFX::ReportData reportData;
     reportData.faultType = OHOS::HiviewDFX::FaultDataType::APP_FREEZE;
 
+    int stuckTimeout = g_stuckTimeout;
     if (*isSixSecond) {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
         reportData.forceExit = true;
         *isSixSecond = false;
-        g_stuckTimeout = g_stuckTimeout * RATIO;
+        stuckTimeout = g_stuckTimeout * RATIO;
     } else {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_3S";
         reportData.forceExit = false;
@@ -104,7 +105,7 @@ int Report(bool* isSixSecond)
     }
     std::string timeStamp = "\nFaultTime:" + FormatTime("%Y-%m-%d %H:%M:%S") + "\n";
     reportData.errorObject.message = timeStamp +
-        "Bussiness thread is not response, timeout " + std::to_string(g_stuckTimeout) + "ms.\n";
+        "Bussiness thread is not response, timeout " + std::to_string(stuckTimeout) + "ms.\n";
     reportData.timeoutMarkers = "";
     reportData.errorObject.stack = "";
     reportData.notifyApp = false;
