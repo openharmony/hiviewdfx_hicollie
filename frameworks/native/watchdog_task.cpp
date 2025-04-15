@@ -68,6 +68,18 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     isOneshotTask = false;
 }
 
+WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag)
+    : name(IPC_FULL_TASK), task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
+      flag(flag), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
+{
+    id = ++curId;
+    checker = std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
+    checkInterval = interval;
+    nextTickTime = GetCurrentTickMillseconds();
+    isTaskScheduled = false;
+    isOneshotTask = false;
+}
+
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
       arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
@@ -128,7 +140,7 @@ void WatchdogTask::DoCallback()
     if (flag & XCOLLIE_FLAG_RECOVERY) {
         XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(),
             static_cast<long long>(timeout));
-        std::thread exitFunc([]() {
+        std::thread exitFunc([] {
             std::string description = "timeout, exit...";
             WatchdogInner::LeftTimeExitProcess(description);
         });
@@ -331,45 +343,48 @@ int WatchdogTask::EvaluateCheckerState()
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
         return waitState;
-    } else if (waitState == CheckStatus::WAITED_HALF) {
-        XCOLLIE_LOGI("Watchdog half-block happened, send event");
-        std::string description = GetBlockDescription(checkInterval / 1000); // 1s = 1000ms
-        if (timeOutCallback != nullptr) {
-            timeOutCallback(name, waitState);
-        } else {
-            if (IsMemHookOn()) {
-                return waitState;
-            }
-            if (name.compare(IPC_FULL) != 0) {
-                int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-                    HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_WARNING");
-                XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, "
-                    "MSG=SERVICE_WARNING, ret=%{public}d", getprocpid(), ret);
-                SendEvent(description, "SERVICE_WARNING");
-            }
+    }
+    if (func) { // only ipc full exec func
+        func(arg);
+        flag = (flag & XCOLLIE_FLAG_LOG) ? XCOLLIE_FLAG_LOG : XCOLLIE_FLAG_NOOP;
+    }
+
+    if (timeOutCallback != nullptr) {
+        timeOutCallback(name, waitState);
+        return waitState;
+    }
+    if (IsMemHookOn()) {
+        return waitState;
+    }
+    std::string description = GetBlockDescription(checkInterval / 1000); // 1s = 1000ms
+    bool ipcTask = (name == IPC_FULL_TASK);
+    if (waitState == CheckStatus::WAITED_HALF) {
+        XCOLLIE_LOGI("Watchdog half-block happened, send event.");
+        if (!ipcTask) {
+            int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
+                HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_WARNING");
+            XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_WARNING, ret=%{public}d",
+                getprocpid(), ret);
+            SendEvent(description, "SERVICE_WARNING");
+        } else if (flag & XCOLLIE_FLAG_LOG) {
+            SendEvent(description, "IPC_FULL_WARNING");
         }
     } else {
         XCOLLIE_LOGI("Watchdog happened, send event twice.");
-        std::string description = GetBlockDescription(checkInterval / 1000) +
-            ", report twice instead of exiting process."; // 1s = 1000ms
-        if (timeOutCallback != nullptr) {
-            timeOutCallback(name, waitState);
-        } else {
-            if (IsMemHookOn()) {
-                return waitState;
-            }
-            if (name.compare(IPC_FULL) == 0) {
-                int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-                    HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "IPC_FULL");
-                XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, "
-                    "MSG=IPC_FULL, ret=%{public}d", getprocpid(), ret);
-                SendEvent(description, IPC_FULL);
-            } else {
-                SendEvent(description, "SERVICE_BLOCK");
-            }
-            // peer binder log is collected in hiview asynchronously
-            // if blocked process exit early, binder blocked state will change
-            // thus delay exit and let hiview have time to collect log.
+        description += ", report twice instead of exiting process.";
+        if (!ipcTask) {
+            SendEvent(description, "SERVICE_BLOCK");
+        } else if (flag & XCOLLIE_FLAG_LOG) {
+            int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
+                HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "IPC_FULL");
+            XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=IPC_FULL, ret=%{public}d",
+                getprocpid(), ret);
+            SendEvent(description, "IPC_FULL");
+        }
+        // peer binder log is collected in hiview asynchronously
+        // if blocked process exit early, binder blocked state will change
+        // thus delay exit and let hiview have time to collect log.
+        if (!ipcTask || (flag & XCOLLIE_FLAG_RECOVERY)) {
             WatchdogInner::KillPeerBinderProcess(description);
         }
     }

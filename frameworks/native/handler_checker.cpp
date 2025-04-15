@@ -24,7 +24,7 @@ void HandlerChecker::ScheduleCheck()
     if (!isCompleted_ || handler_ == nullptr) {
         return;
     }
-    if (name_.compare(IPC_FULL) == 0) {
+    if (name_.compare(IPC_FULL_TASK) == 0) {
         auto fb = [] {
             IPCDfx::BlockUntilThreadAvailable();
         };
