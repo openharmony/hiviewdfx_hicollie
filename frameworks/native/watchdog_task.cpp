@@ -58,7 +58,7 @@ struct HstackVal {
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
+      timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler);
@@ -70,7 +70,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 
 WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag)
     : name(IPC_FULL_TASK), task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
-      flag(flag), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
+      flag(flag), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
@@ -82,7 +82,8 @@ WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, u
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
-      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0)
+      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0),
+      reportCount(0)
 {
     id = ++curId;
     checkInterval = interval;
@@ -93,7 +94,7 @@ WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag)
     : name(name), task(nullptr), timeOutCallback(nullptr), checker(nullptr), timeout(timeout), func(std::move(func)),
-      arg(arg), flag(flag), timeLimit(0), countLimit(0)
+      arg(arg), flag(flag), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
     checkInterval = 0;
@@ -107,7 +108,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
       isTaskScheduled(false), isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit),
-      bootTimeStart(0), monoTimeStart(0)
+      bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;
@@ -342,6 +343,7 @@ int WatchdogTask::EvaluateCheckerState()
 {
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
+        reportCount = 0;
         return waitState;
     }
     if (func) { // only ipc full exec func
@@ -349,6 +351,7 @@ int WatchdogTask::EvaluateCheckerState()
         flag = (flag & XCOLLIE_FLAG_LOG) ? XCOLLIE_FLAG_LOG : XCOLLIE_FLAG_NOOP;
     }
 
+    XCOLLIE_LOGI("%{public}s block happened, waitState = %{public}d", name.c_str(), waitState);
     if (timeOutCallback != nullptr) {
         timeOutCallback(name, waitState);
         return waitState;
@@ -356,11 +359,10 @@ int WatchdogTask::EvaluateCheckerState()
     if (IsMemHookOn()) {
         return waitState;
     }
-    std::string description = GetBlockDescription(checkInterval / 1000); // 1s = 1000ms
-    bool ipcTask = (name == IPC_FULL_TASK);
+    std::string description = GetBlockDescription(checkInterval / 1000);
     if (waitState == CheckStatus::WAITED_HALF) {
-        XCOLLIE_LOGI("Watchdog half-block happened, send event.");
-        if (!ipcTask) {
+        description += "\nReportCount = " + std::to_string(++reportCount);
+        if (name != IPC_FULL_TASK) {
             int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
                 HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_WARNING");
             XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_WARNING, ret=%{public}d",
@@ -370,9 +372,8 @@ int WatchdogTask::EvaluateCheckerState()
             SendEvent(description, "IPC_FULL_WARNING");
         }
     } else {
-        XCOLLIE_LOGI("Watchdog happened, send event twice.");
-        description += ", report twice instead of exiting process.";
-        if (!ipcTask) {
+        description += ", report twice instead of exiting process.\nReportCount = " + std::to_string(++reportCount);
+        if (name != IPC_FULL_TASK) {
             SendEvent(description, "SERVICE_BLOCK");
         } else if (flag & XCOLLIE_FLAG_LOG) {
             int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
@@ -384,7 +385,7 @@ int WatchdogTask::EvaluateCheckerState()
         // peer binder log is collected in hiview asynchronously
         // if blocked process exit early, binder blocked state will change
         // thus delay exit and let hiview have time to collect log.
-        if (!ipcTask || (flag & XCOLLIE_FLAG_RECOVERY)) {
+        if ((name != IPC_FULL_TASK) || (flag & XCOLLIE_FLAG_RECOVERY)) {
             WatchdogInner::KillPeerBinderProcess(description);
         }
     }
