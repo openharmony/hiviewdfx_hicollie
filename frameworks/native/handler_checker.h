@@ -21,6 +21,7 @@
 
 #include "dumper.h"
 #include "event_handler.h"
+#include "xcollie_define.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -33,7 +34,13 @@ enum CheckStatus {
 class HandlerChecker : public std::enable_shared_from_this<HandlerChecker> {
 public:
     HandlerChecker(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler)
-        : name_(name), handler_(handler) {};
+        : name_(name), handler_(handler)
+    {
+        if (name == IPC_FULL_TASK && handler == nullptr) {
+            auto runner = AppExecFwk::EventRunner::Create(name);
+            handler_ = std::make_shared<AppExecFwk::EventHandler>(runner);
+        }
+    };
     ~HandlerChecker() {};
 
 public:

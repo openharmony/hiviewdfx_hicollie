@@ -27,6 +27,7 @@ ohos_source_set("libhicollie_source") {
   branch_protector_ret = "pac_ret"
   sources = [
     "handler_checker.cpp",
+    "ipc_full.cpp",
     "watchdog.cpp",
     "watchdog_inner.cpp",
     "watchdog_task.cpp",

@@ -32,8 +32,8 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr char IPC_FULL[] = "IPC_FULL";
 constexpr uint64_t MIN_APP_UID = 20000;
+constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)

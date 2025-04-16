@@ -30,6 +30,7 @@
 #include "c/ffrt_dump.h"
 #include "singleton.h"
 #include "client/trace_collector_client.h"
+#include "xcollie_define.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -94,11 +95,13 @@ public:
     int64_t RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func, void *arg,
         unsigned int flag);
     void RemoveXCollieTask(int64_t id);
+    bool AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg);
     int64_t SetTimerCountTask(const std::string &name, uint64_t timeLimit, int countLimit);
     void TriggerTimerCountTask(const std::string &name, bool bTrigger, const std::string &message);
     void StopWatchdog();
     bool IsCallbackLimit(unsigned int flag);
-    void IpcCheck();
+    bool IpcCheck(uint64_t interval = IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
+        IpcFullCallback func = nullptr, void *arg = nullptr, bool defaultType = true);
     void InitFfrtWatchdog();
     static bool WriteStringToFile(uint32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
@@ -180,7 +183,6 @@ private:
     std::set<std::string> taskNameSet_;
     std::set<int64_t> buissnessThreadInfo_;
     std::shared_ptr<AppExecFwk::EventRunner> mainRunner_;
-    std::shared_ptr<AppExecFwk::EventHandler> binderCheckHander_;
     int cntCallback_;
     time_t timeCallback_;
     bool isHmos = false;

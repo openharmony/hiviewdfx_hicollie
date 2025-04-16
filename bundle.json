@@ -57,7 +57,8 @@
                         "header_files": [
                             "xcollie/xcollie.h",
                             "xcollie/xcollie_define.h",
-                            "xcollie/watchdog.h"
+                            "xcollie/watchdog.h",
+                            "xcollie/ipc_full.h"
                         ]
                     }
                 },
