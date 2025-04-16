@@ -37,7 +37,6 @@
 #endif
 #include "ipc_skeleton.h"
 #include "xcollie_utils.h"
-#include "xcollie_define.h"
 #include "dfx_define.h"
 #include "parameter.h"
 
@@ -57,7 +56,6 @@ enum CatchLogType {
     LOGTYPE_SAMPLE_STACK = 1,
     LOGTYPE_COLLECT_TRACE = 2
 };
-constexpr char IPC_CHECKER[] = "IpcChecker";
 constexpr char STACK_CHECKER[] = "ThreadSampler";
 constexpr char TRACE_CHECKER[] = "TraceCollector";
 constexpr int64_t ONE_DAY_LIMIT = 86400000;
@@ -93,6 +91,8 @@ const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
 constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
 constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {DATA_MANAGE_SERVICE_UID, FOUNDATION_UID, RENDER_SERVICE_UID};
+constexpr uint64_t MIN_IPC_CHECK_INTERVAL = 10;
+constexpr uint64_t MAX_IPC_CHECK_INTERVAL = 30;
 constexpr uint64_t SAMPLE_PARAMS_MAX_SIZE = 5;
 constexpr uint64_t SAMPLE_PARAMS_MIN_SIZE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
@@ -854,7 +854,7 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 
 void WatchdogInner::CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask)
 {
-    if (g_existFile && queuedTask.name == IPC_FULL && getuid() == FOUNDATION_UID &&
+    if (g_existFile && queuedTask.name == IPC_FULL_TASK && getuid() == FOUNDATION_UID &&
         now - g_lastKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
             g_lastKickTime = now;
@@ -1013,27 +1013,49 @@ bool WatchdogInner::KickWatchdog()
     return SendMsgToHungtask(isHmos ? KICK_TIME_HMOS : KICK_TIME);
 }
 
-void WatchdogInner::IpcCheck()
+bool WatchdogInner::AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg)
 {
-    static bool isIpcCheckInit = false;
-    if (isIpcCheckInit) {
-        return;
+    if (interval < MIN_IPC_CHECK_INTERVAL || interval > MAX_IPC_CHECK_INTERVAL) {
+        XCOLLIE_KLOGE("add ipc full failed, interval is invalid");
+        return false;
+    }
+    if (IsInAppspwan()) {
+        return false;
     }
 
-    uint32_t uid = getuid();
-    bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
-        [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
-    if (isJoinIpcFullUid || GetSelfProcName() == KEY_SCB_STATE) {
-        if (binderCheckHander_ == nullptr) {
-            auto runner = AppExecFwk::EventRunner::Create(IPC_CHECKER);
-            binderCheckHander_ = std::make_shared<AppExecFwk::EventHandler>(runner);
-            if (!InsertWatchdogTaskLocked(IPC_CHECKER, WatchdogTask(IPC_FULL, binderCheckHander_,
-                nullptr, IPC_CHECKER_TIME))) {
-                XCOLLIE_LOGE("Add %{public}s thread fail", IPC_CHECKER);
-            }
+    std::unique_lock<std::mutex> lock(lock_);
+    return IpcCheck(interval, flag, func, arg, false);
+}
+
+bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg, bool defaultType)
+{
+    if (defaultType) {
+        static bool ipcCheckInit = false;
+        if (ipcCheckInit) {
+            return false;
+        }
+        ipcCheckInit = true;
+        uint32_t uid = getuid();
+        bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
+            [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
+        if (!isJoinIpcFullUid && GetSelfProcName() != KEY_SCB_STATE) {
+            return false;
         }
     }
-    isIpcCheckInit = true;
+
+    if (IsTaskExistLocked(IPC_FULL_TASK)) {
+        XCOLLIE_LOGE("ipc full task aleady exists");
+        return false;
+    }
+
+    bool result = InsertWatchdogTaskLocked(IPC_FULL_TASK, WatchdogTask(interval * TO_MILLISECOND_MULTPLE, func, arg,
+        flag)) > 0;
+    if (result) {
+        XCOLLIE_LOGI("add ipc full task success");
+    } else {
+        XCOLLIE_LOGE("add ipc full task falied");
+    }
+    return result;
 }
 
 bool WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)

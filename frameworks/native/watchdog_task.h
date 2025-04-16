@@ -26,6 +26,7 @@
 using Task = std::function<void()>;
 using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;
 using XCollieCallback = std::function<void (void *)>;
+using IpcFullCallback = std::function<void (void *)>;
 namespace OHOS {
 namespace HiviewDFX {
 class WatchdogTask {
@@ -33,6 +34,7 @@ class WatchdogTask {
 public:
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
+    WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag);
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot);
     WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag);
     WatchdogTask(std::string name, unsigned int timeLimit, int countLimit);

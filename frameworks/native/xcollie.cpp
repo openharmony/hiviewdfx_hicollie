@@ -22,7 +22,6 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
 XCollie::XCollie()
 {
 }
