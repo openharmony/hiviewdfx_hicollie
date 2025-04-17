@@ -16,8 +16,8 @@
 #ifndef RELIABILITY_WATCHDOG_H
 #define RELIABILITY_WATCHDOG_H
 
+#include <map>
 #include <string>
-#include "event_handler.h"
 #include "singleton.h"
 
 using Task = std::function<void()>;
@@ -27,6 +27,10 @@ typedef void (*WatchdogBeginFunc)(const char* eventName);
 typedef void (*WatchdogEndFunc)(const char* eventName);
 
 namespace OHOS {
+namespace AppExecFwk {
+    class EventHandler;
+}
+
 namespace HiviewDFX {
 class Watchdog : public Singleton<Watchdog> {
     DECLARE_SINGLETON(Watchdog);
