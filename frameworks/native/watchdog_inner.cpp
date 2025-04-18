@@ -81,10 +81,10 @@ constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
-const std::string ON_KICK_TIME = "on,72";
-const std::string ON_KICK_TIME_HMOS = "on,10,foundation";
-const std::string KICK_TIME = "kick";
-const std::string KICK_TIME_HMOS = "kick,foundation";
+const char* ON_KICK_TIME = "on,72";
+const char* ON_KICK_TIME_HMOS = "on,10,foundation";
+const char* KICK_TIME = "kick";
+const char* KICK_TIME_HMOS = "kick,foundation";
 const int32_t NOT_OPEN = -1;
 constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
@@ -103,7 +103,7 @@ constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 }
 
 std::mutex WatchdogInner::lockFfrt_;
-static uint64_t g_nextKickTime = GetCurrentTickMillseconds();
+static uint64_t g_lastKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
 
@@ -833,9 +833,10 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     }
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
-    if (g_existFile && queuedTask.name == IPC_FULL && now - g_nextKickTime > INTERVAL_KICK_TIME) {
+    if (g_existFile && queuedTask.name == IPC_FULL && getuid() == FOUNDATION_UID &&
+        now - g_lastKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
-            g_nextKickTime = now;
+            g_lastKickTime = now;
         }
     }
     if (queuedTask.nextTickTime > now) {
@@ -901,7 +902,7 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
 
     ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
     if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
-        XCOLLIE_LOGE("watchdogWrite msg failed");
+        XCOLLIE_LOGE("watchdog write msg failed, errno:%{public}d", errno);
         close(g_fd);
         g_fd = NOT_OPEN;
         return false;
@@ -917,7 +918,7 @@ bool WatchdogInner::KickWatchdog()
         if (g_fd < 0) {
             g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
             if (g_fd < 0) {
-                XCOLLIE_LOGE("can't open hungtask file");
+                XCOLLIE_LOGE("can't open hungtask file, errno:%{public}d", errno);
                 g_existFile = false;
                 return false;
             }
@@ -928,7 +929,7 @@ bool WatchdogInner::KickWatchdog()
         }
 
         if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_HMOS : ON_KICK_TIME)) {
-            XCOLLIE_LOGE("KickWatchdog SendMsgToHungtask false");
+            XCOLLIE_LOGE("kick watchdog send msg to hungtask fail");
             return false;
         }
     }
