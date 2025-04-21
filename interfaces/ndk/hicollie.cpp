@@ -15,6 +15,7 @@
 
 #include "hicollie.h"
 
+#include <atomic>
 #include <unistd.h>
 #include <string>
 #include <sys/syscall.h>
@@ -28,22 +29,25 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+namespace {
 DECLARE_INTERFACE_DESCRIPTOR(u"ohos.appexecfwk.AppMgr");
-
 #ifdef SUPPORT_ASAN
-constexpr uint32_t CHECK_INTERVAL_TIME = 45000;
+    constexpr uint32_t CHECK_INTERVAL_TIME = 45000;
 #else
-constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
+    constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
 #endif
-constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
-constexpr uint32_t NOTIFY_APP_FAULT = 38;
-constexpr uint32_t APP_MGR_SERVICE_ID = 501;
-constexpr uint32_t TIME_S_TO_MS = 1000;
-constexpr uint32_t MAX_TIMEOUT = 15000;
-constexpr uint32_t RATIO = 2;
-
+    constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
+    constexpr uint32_t NOTIFY_APP_FAULT = 38;
+    constexpr uint32_t APP_MGR_SERVICE_ID = 501;
+    constexpr uint32_t TIME_S_TO_MS = 1000;
+    constexpr uint32_t MAX_TIMEOUT = 15000;
+    constexpr uint32_t RATIO = 2;
+    constexpr int32_t BACKGROUND_REPORT_COUNT_MAX = 5;
+}
 static int32_t g_bussinessTid = 0;
 static uint32_t g_stuckTimeout = 0;
+static int64_t g_lastWatchTime = 0;
+static std::atomic_int g_backgroundReportCount = 0;
 
 bool IsAppMainThread()
 {
@@ -87,11 +91,40 @@ int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
     return reply.ReadInt32();
 }
 
+bool CheckBackGroundStatus(bool* isSixSecond, int stuckTimeout)
+{
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
+        system_clock::now().time_since_epoch()).count();
+    if ((now - g_lastWatchTime) > (RATIO * stuckTimeout) ||
+        (now - g_lastWatchTime) < (stuckTimeout / RATIO)) {
+        XCOLLIE_LOGI("No need to report this time, currTime: %{public}llu, lastTime: %{public}llu",
+            static_cast<unsigned long long>(now), static_cast<unsigned long long>(g_lastWatchTime));
+        g_backgroundReportCount.store(0);
+        return true;
+    }
+    bool background = !OHOS::HiviewDFX::Watchdog::GetInstance().GetForeground();
+    XCOLLIE_LOGD("In Background, thread is background: %{public}d", background);
+    if (background && g_backgroundReportCount.load() < BACKGROUND_REPORT_COUNT_MAX) {
+        XCOLLIE_LOGI("In Background, thread may be blocked in, not report time"
+            "currTime: %{public}llu, lastTime: %{public}llu",
+            static_cast<uint64_t>(now), static_cast<uint64_t>(g_lastWatchTime));
+        g_backgroundReportCount++;
+        return true;
+    }
+    g_lastWatchTime = now;
+    *isSixSecond = false;
+    return false;
+}
+
 int Report(bool* isSixSecond)
 {
+    if (CheckBackGroundStatus(isSixSecond, g_stuckTimeout)) {
+        return 0;
+    }
+    g_backgroundReportCount++;
+
     OHOS::HiviewDFX::ReportData reportData;
     reportData.faultType = OHOS::HiviewDFX::FaultDataType::APP_FREEZE;
-
     int stuckTimeout = g_stuckTimeout;
     if (*isSixSecond) {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
@@ -115,6 +148,8 @@ int Report(bool* isSixSecond)
     auto result = NotifyAppFault(reportData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
         result, reportData.tid, reportData.stuckTimeout);
+    g_lastWatchTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
+        system_clock::now().time_since_epoch()).count();
     return result;
 }
 } // end of namespace HiviewDFX
@@ -149,10 +184,14 @@ HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task)
 
 HiCollie_ErrorCode OH_HiCollie_Init_StuckDetectionWithTimeout(OH_HiCollie_Task task, uint32_t timeout)
 {
+#ifdef SUPPORT_ASAN
+    timeout = OHOS::HiviewDFX::CHECK_INTERVAL_TIME;
+#else
     timeout = timeout * OHOS::HiviewDFX::TIME_S_TO_MS;
     if (timeout < OHOS::HiviewDFX::CHECK_INTERVAL_TIME || timeout > OHOS::HiviewDFX::MAX_TIMEOUT) {
         return HICOLLIE_INVALID_ARGUMENT;
     }
+#endif
     return InitStuckDetection(task, timeout);
 }
 
