@@ -34,12 +34,11 @@ ohos_unittest("XCollieUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
   external_deps = [
     "c_utils:utils",
+    "googletest:gtest_main",
     "hilog:libhilog",
   ]
   defines = []
@@ -55,13 +54,12 @@ ohos_unittest("WatchdogUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
+    "googletest:gtest_main",
     "hilog:libhilog",
   ]
 
@@ -86,13 +84,12 @@ ohos_unittest("WatchdogInnerUnitTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
+    "googletest:gtest_main",
     "hilog:libhilog",
     "init:libbegetutil",
   ]
@@ -119,13 +116,12 @@ ohos_unittest("HandlerCheckerTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
+    "googletest:gtest_main",
     "hilog:libhilog",
   ]
 
@@ -146,13 +142,12 @@ ohos_unittest("WatchdogTaskTest") {
 
   configs = [ ":module_private_config" ]
 
-  deps = [
-    "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source",
-    "//third_party/googletest:gtest_main",
-  ]
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
   external_deps = [
     "c_utils:utils",
     "ffrt:libffrt",
+    "googletest:gtest_main",
     "hilog:libhilog",
   ]
 
@@ -171,12 +166,13 @@ ohos_unittest("ThreadSamplerTest") {
   module_out_path = module_output_path
   sources = [ "thread_sampler_test.cpp" ]
   configs = [ ":module_private_config" ]
-  deps = [ "//third_party/googletest:gtest_main" ]
+  deps = []
   external_deps = [
     "c_utils:utils",
     "faultloggerd:libasync_stack",
     "faultloggerd:libunwinder",
     "ffrt:libffrt",
+    "googletest:gtest_main",
     "hicollie:libhicollie",
     "hilog:libhilog",
   ]
