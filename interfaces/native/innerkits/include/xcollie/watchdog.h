@@ -109,6 +109,13 @@ public:
     void SetForeground(const bool& isForeground);
 
     /**
+     *
+     * @brief Get foreground.
+     *
+     */
+    bool GetForeground();
+
+    /**
      * @brief Remove a periodical task by name.
      *
      * @param name, task name
