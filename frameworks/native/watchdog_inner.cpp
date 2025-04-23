@@ -195,11 +195,6 @@ void WatchdogInner::SetForeground(const bool& isForeground)
     isForeground_ = isForeground;
 }
 
-bool WatchdogInner::GetForeground()
-{
-    return isForeground_;
-}
-
 bool WatchdogInner::ReportMainThreadEvent(int64_t tid, std::string eventName, bool isScroll)
 {
     std::string stack = "";

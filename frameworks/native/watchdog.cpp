@@ -68,11 +68,6 @@ void Watchdog::SetForeground(const bool& isForeground)
     return WatchdogInner::GetInstance().SetForeground(isForeground);
 }
 
-bool Watchdog::GetForeground()
-{
-    return WatchdogInner::GetInstance().GetForeground();
-}
-
 void Watchdog::RemovePeriodicalTask(const std::string& name)
 {
     WatchdogInner::GetInstance().RemoveInnerTask(name);

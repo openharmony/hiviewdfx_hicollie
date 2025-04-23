@@ -37,11 +37,6 @@ ohos_shared_library("ohhicollie") {
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
   }
-
-  if (is_asan || asan_detector) {
-    defines += [ "SUPPORT_ASAN" ]
-  }
-
   innerapi_tags = [ "ndk" ]
   output_extension = "so"
   part_name = "hicollie"
