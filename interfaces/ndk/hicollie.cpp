@@ -35,12 +35,12 @@ DECLARE_INTERFACE_DESCRIPTOR(u"ohos.appexecfwk.AppMgr");
     constexpr uint32_t CHECK_INTERVAL_TIME = 45000;
 #else
     constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
+    constexpr uint32_t TIME_S_TO_MS = 1000;
+    constexpr uint32_t MAX_TIMEOUT = 15000;
 #endif
     constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
     constexpr uint32_t NOTIFY_APP_FAULT = 38;
     constexpr uint32_t APP_MGR_SERVICE_ID = 501;
-    constexpr uint32_t TIME_S_TO_MS = 1000;
-    constexpr uint32_t MAX_TIMEOUT = 15000;
     constexpr uint32_t RATIO = 2;
     constexpr int32_t BACKGROUND_REPORT_COUNT_MAX = 5;
 }
