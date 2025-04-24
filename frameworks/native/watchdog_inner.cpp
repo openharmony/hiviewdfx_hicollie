@@ -499,6 +499,15 @@ void WatchdogInner::DumpTraceProfile(int32_t interval)
     traceContent_.dumpCount = 0;
     traceContent_.traceCount = 0;
     auto traceTask = [this, interval]() {
+        if (traceContent_.traceCount == 0) {
+            appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
+            auto result = traceCollector_->CaptureDurationTrace(appCaller_);
+            if (result.retCode != 0) {
+                traceContent_.traceState = DumpStackState::DEFAULT;
+                isMainThreadTraceEnabled_ = true;
+                return;
+            }
+        }
         traceContent_.traceCount++;
         if (CheckEventTimer(GetTimeStamp(), traceContent_.reportBegin,
             traceContent_.reportEnd, interval)) {
@@ -528,7 +537,6 @@ int32_t WatchdogInner::StartTraceProfile()
         XCOLLIE_LOGE("Create traceCollector failed.");
         return -1;
     }
-    appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
     appCaller_.bundleName = bundleName_;
     appCaller_.bundleVersion = bundleVersion_;
     appCaller_.uid = static_cast<int64_t>(getuid());
@@ -538,11 +546,8 @@ int32_t WatchdogInner::StartTraceProfile()
     appCaller_.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
     appCaller_.beginTime = traceContent_.reportBegin / MILLISEC_TO_NANOSEC;
     appCaller_.endTime = traceContent_.reportEnd / MILLISEC_TO_NANOSEC;
-    auto result = traceCollector_->CaptureDurationTrace(appCaller_);
-    if (result.retCode == 0) {
-        DumpTraceProfile(DURATION_TIME);
-    }
-    return result.retCode;
+    DumpTraceProfile(DUMPTRACE_TIME);
+    return 0;
 }
 
 void WatchdogInner::CollectTraceDetect(const TimePoint& endTime, int64_t durationTime)
