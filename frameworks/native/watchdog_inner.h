@@ -40,6 +40,7 @@ constexpr const char* const KEY_SAMPLE_REPORT_TIMES = "report_times_per_app";
 constexpr const char* const KEY_LOG_TYPE = "log_type";
 constexpr const char* const KEY_SET_TIMES_FLAG = "set_report_times_flag";
 constexpr const char* const KEY_IGNORE_STARTUP_TIME = "ignore_startup_time";
+constexpr const char* const KEY_CHECKER_INTERVAL = "checker_interval";
 const int SAMPLE_DEFULE_INTERVAL = 150;
 const int SAMPLE_DEFULE_COUNT = 10;
 const int SAMPLE_DEFULE_REPORT_TIMES = 1;
@@ -136,7 +137,7 @@ public:
     std::map<std::string, int> jankParamsMap = {
         {KEY_SAMPLE_INTERVAL, SAMPLE_DEFULE_INTERVAL}, {KEY_IGNORE_STARTUP_TIME, DEFAULT_IGNORE_STARTUP_TIME},
         {KEY_SAMPLE_COUNT, SAMPLE_DEFULE_COUNT}, {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFULE_REPORT_TIMES},
-        {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}
+        {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}, {KEY_CHECKER_INTERVAL, 0}
     };
     bool isScroll_ {false};
 

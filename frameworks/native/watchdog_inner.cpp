@@ -58,8 +58,8 @@ enum CatchLogType {
 };
 constexpr char STACK_CHECKER[] = "ThreadSampler";
 constexpr char TRACE_CHECKER[] = "TraceCollector";
-constexpr int64_t ONE_DAY_LIMIT = 86400000;
-constexpr int64_t ONE_HOUR_LIMIT = 3600000;
+constexpr int ONE_DAY_LIMIT = 86400000;
+constexpr int ONE_HOUR_LIMIT = 3600000;
 constexpr int MILLISEC_TO_NANOSEC = 1000000;
 const int FFRT_BUFFER_SIZE = 512 * 1024;
 const int DETECT_STACK_COUNT = 2;
@@ -366,8 +366,11 @@ bool WatchdogInner::SampleStackDetect(const TimePoint& endTime, int& reportTimes
         return false;
     }
     if (reportTimes <= 0) {
-        int64_t checkTimer = ONE_DAY_LIMIT;
-        if (!isScroll && (IsDeveloperOpen() ||
+        int32_t checkTimer = ONE_DAY_LIMIT;
+        int32_t checkInterval = jankParamsMap[KEY_CHECKER_INTERVAL];
+        if (checkInterval > 0) {
+            checkTimer = checkInterval;
+        } else if (!isScroll && (IsDeveloperOpen() ||
             (IsBetaVersion() && GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE))) {
             checkTimer = ONE_HOUR_LIMIT;
         }
@@ -1370,6 +1373,7 @@ void WatchdogInner::UpdateJankParam(int sampleInterval, int startUpTime, int sam
         return;
     }
     if (jankParamsMap[KEY_SET_TIMES_FLAG] == SET_TIMES_FLAG) {
+        UpdateReportTimes(bundleName_, reportTimes, jankParamsMap[KEY_CHECKER_INTERVAL]);
         jankParamsMap[KEY_SAMPLE_REPORT_TIMES] = reportTimes;
         stackContent_.reportTimes = reportTimes;
         jankParamsMap[KEY_SET_TIMES_FLAG] = 0;

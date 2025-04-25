@@ -20,6 +20,7 @@
 #include <string>
 #include <sys/ioctl.h>
 #include <fstream>
+#include <map>
 #include <vector>
 
 #include "hilog/log.h"
@@ -110,6 +111,10 @@ void* FunctionOpen(void* funcHandler, const char* funcName);
 int32_t GetUidByPid(const int32_t pid);
 
 int64_t GetAppStartTime(int32_t pid, int64_t tid);
+
+std::map<std::string, int> GetReportTimesMap();
+
+void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& checkInterval);
 } // end of HiviewDFX
 } // end of OHOS
 #endif

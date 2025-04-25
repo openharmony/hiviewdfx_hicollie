@@ -51,12 +51,14 @@ const uint64_t START_TIME_INDEX = 21;
 const int START_PATH_LEN = 128;
 constexpr int64_t MAX_TIME_BUFF = 64;
 constexpr int64_t SEC_TO_MILLISEC = 1000;
+constexpr int64_t MINUTE_TO_S = 60; // 60s
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_BETA_VAULE = "beta";
+constexpr const char* const KEY_REPORT_TIMES_TYPE = "persist.hiview.jank.reporttimes";
 
 static std::string g_curProcName;
 static int32_t g_lastPid;
@@ -528,6 +530,43 @@ int64_t GetAppStartTime(int32_t pid, int64_t tid)
         }
     }
     return startTime;
+}
+
+std::map<std::string, int> GetReportTimesMap()
+{
+    std::map<std::string, int> keyValueMap;
+    std::string reportTimes = system::GetParameter(KEY_REPORT_TIMES_TYPE, "");
+    XCOLLIE_LOGD("get reporttimes value is %{public}s.", reportTimes.c_str());
+    std::stringstream reportParams(reportTimes);
+    std::string line;
+    while (getline(reportParams, line, ';')) {
+        if (!line.empty()) {
+            size_t colonPos = line.find(":");
+            if (colonPos == std::string::npos) {
+                continue;
+            }
+            std::string key = line.substr(0, colonPos);
+            std::string value = line.substr(colonPos + 1);
+            if (std::all_of(std::begin(value), std::end(value), [] (const char &content) {
+                return isdigit(content);
+            })) {
+                keyValueMap[key] = std::stoi(value);
+            }
+        }
+    }
+    return keyValueMap;
+}
+
+void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& checkInterval)
+{
+    std::map<std::string, int> keyValueMap = GetReportTimesMap();
+    auto it = keyValueMap.find(bundleName);
+    if (it != keyValueMap.end()) {
+        times = it->second / MINUTE_TO_S;
+        checkInterval = MINUTE_TO_S * SEC_TO_MILLISEC;
+        XCOLLIE_LOGI("get reportTimes value is %{public}d, checkInterval is %{public}d.",
+            times, checkInterval);
+    }
 }
 } // end of HiviewDFX
 } // end of OHOS
