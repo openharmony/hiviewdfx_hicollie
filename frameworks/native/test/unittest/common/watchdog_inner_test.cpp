@@ -917,5 +917,27 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetScrollState_001, TestSize.Level
     WatchdogInner::GetInstance().SetScrollState(true);
     EXPECT_EQ(WatchdogInner::GetInstance().isScroll_, true);
 }
+
+/**
+ * @tc.name: WatchdogInner UpdateReportTimes Test;
+ * @tc.desc: add teatcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_UpdateReportTimes_002, TestSize.Level1)
+{
+    uint64_t taskId = 1;
+    const char *taskInfo = "Queue_Schedule_Timeout";
+    uint32_t delayedTaskCount = 0;
+    OHOS::system::SetParameter("persist.hiview.jank.reporttimes",
+        "WatchdogInnerUnitTest:120;com.sample.test:60");
+    int32_t checkInterval = 0;
+    int32_t times = 0;
+    std::string bundleName = "test";
+    UpdateReportTimes(bundleName, times, checkInterval);
+    EXPECT_TRUE(times == 0);
+    bundleName = "WatchdogInnerUnitTest";
+    UpdateReportTimes(bundleName, times, checkInterval);
+    EXPECT_TRUE(times == 2);
+}
 } // namespace HiviewDFX
 } // namespace OHOS
