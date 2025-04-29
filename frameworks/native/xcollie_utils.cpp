@@ -18,6 +18,7 @@
 #include <cinttypes>
 #include <algorithm>
 #include <cstdlib>
+#include <cstdio>
 #include <csignal>
 #include <sstream>
 #include <securec.h>
@@ -33,6 +34,7 @@
 #include "parameter.h"
 #include "parameters.h"
 #include <dlfcn.h>
+#include <dirent.h>
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -52,8 +54,9 @@ const int START_PATH_LEN = 128;
 constexpr int64_t MAX_TIME_BUFF = 64;
 constexpr int64_t SEC_TO_MILLISEC = 1000;
 constexpr int64_t MINUTE_TO_S = 60; // 60s
+constexpr uint64_t TOTAL_HALF = 2; // 2 : remove half of the total
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
-constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog";
+constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
@@ -387,6 +390,58 @@ bool CreateWatchdogDir()
     return true;
 }
 
+std::vector<FileInfo> GetFilesByDir(const std::string& dirPath)
+{
+    std::vector<FileInfo> fileInfos;
+    DIR* dir = opendir(dirPath.c_str());
+    if (dir == nullptr) {
+        XCOLLIE_LOGW("open dir failed, dir: %{public}s", dirPath.c_str());
+        return fileInfos;
+    }
+    struct stat st {};
+    for (auto* ent = readdir(dir); ent != nullptr; ent = readdir(dir)) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0 ||
+            ent->d_type == DT_DIR) {
+            continue;
+        }
+        std::string filePath(dirPath + ent->d_name);
+        int err = stat(filePath.c_str(), &st);
+        if (err != 0) {
+            XCOLLIE_LOGW("%{public}s: Get log stat failed, err(%{public}d).", filePath.c_str(), err);
+        } else {
+            FileInfo fileInfo = {
+                .filePath = filePath,
+                .mtime = st.st_mtime
+            };
+            fileInfos.push_back(fileInfo);
+        }
+    }
+    closedir(dir);
+    return fileInfos;
+}
+
+void ClearOldFiles()
+{
+    std::vector<FileInfo> fileInfos = GetFilesByDir(WATCHDOG_DIR);
+    if (fileInfos.size() != 0) {
+        std::sort(fileInfos.begin(), fileInfos.end(), [](FileInfo lfile, FileInfo rfile) {
+            return lfile.mtime < rfile.mtime;
+        });
+        size_t removeFileNums = fileInfos.size() / TOTAL_HALF;
+        size_t deleteCount = 0;
+        for (auto it = fileInfos.begin(); it != fileInfos.end(); it++) {
+            if (deleteCount >= removeFileNums) {
+                break;
+            }
+            XCOLLIE_LOGD("Remove file %{public}s.", it->filePath.c_str());
+            OHOS::RemoveFile(it->filePath);
+            deleteCount++;
+        }
+        XCOLLIE_LOGI("Remove files total num=%{public}zu.", deleteCount);
+        return;
+    }
+}
+
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const std::string& eventName,
     bool& isOverLimit)
 {
@@ -405,10 +460,11 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
     uint64_t fileSize = OHOS::GetFolderSize(realPath) + stackSize;
     if (fileSize > MAX_FILE_SIZE) {
         isOverLimit = true;
-        XCOLLIE_LOGE("CurrentDir is over limit: %{public}d. Will not write to stack file."
+        XCOLLIE_LOGW("CurrentDir is over limit: %{public}d. Will not write to stack file."
             "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
             isOverLimit, fileSize, MAX_FILE_SIZE);
-        return true;
+        ClearOldFiles();
+        XCOLLIE_LOGI("CurrentDir size: %{public}" PRIu64 "", (OHOS::GetFolderSize(realPath) + stackSize));
     }
     constexpr mode_t defaultLogFileMode = 0644;
     auto fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, defaultLogFileMode);
