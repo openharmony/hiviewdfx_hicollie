@@ -60,6 +60,12 @@ constexpr OHOS::HiviewDFX::HiLogLabel KLOG_LABEL = {
         (void)OHOS::HiviewDFX::HiLog::Error(KLOG_LABEL, __VA_ARGS__); \
     } while (0)
 
+struct FileInfo {
+    std::string filePath;
+    time_t mtime;
+};
+
+
 uint64_t GetCurrentTickMillseconds();
 
 uint64_t GetCurrentBootMillseconds();
@@ -100,6 +106,10 @@ std::string GetFormatDate();
 std::string FormatTime(const std::string &format);
 
 bool CreateWatchdogDir();
+
+std::vector<FileInfo> GetFilesByDir(const std::string& dirPath);
+
+void ClearOldFiles();
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
     const std::string& eventName, bool& isOverLimit);
