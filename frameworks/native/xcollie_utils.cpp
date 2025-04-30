@@ -421,15 +421,15 @@ std::vector<FileInfo> GetFilesByDir(const std::string& dirPath)
     return fileInfos;
 }
 
-void ClearOldFiles()
+int ClearOldFiles(const std::string& dirPath)
 {
-    std::vector<FileInfo> fileInfos = GetFilesByDir(WATCHDOG_DIR);
+    std::vector<FileInfo> fileInfos = GetFilesByDir(dirPath);
     size_t fileSize = fileInfos.size();
     if (fileSize != 0) {
         std::sort(fileInfos.begin(), fileInfos.end(), [](FileInfo lfile, FileInfo rfile) {
             return lfile.mtime < rfile.mtime;
         });
-        int removeFileNumber = fileSize - DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT;
+        int removeFileNumber = static_cast<int>(fileSize - DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT);
         if (removeFileNumber < 0) {
             removeFileNumber = static_cast<int>(fileSize / TOTAL_HALF);
         }
@@ -442,10 +442,11 @@ void ClearOldFiles()
             OHOS::RemoveFile(it->filePath);
             deleteCount++;
         }
-        XCOLLIE_LOGI("Remove files size=%{public}zu, remove total num=%{public}d.",
-            fileInfos.size(), deleteCount);
-        return;
+        XCOLLIE_LOGI("Remove total count=%{public}d, removeFileNumber=%{public}d, file count=%{public}zu",
+            deleteCount, removeFileNumber, fileInfos.size());
+        return deleteCount;
     }
+    return 0;
 }
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const std::string& eventName,
@@ -469,7 +470,7 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
         XCOLLIE_LOGW("CurrentDir is over limit: %{public}d. Will not write to stack file."
             "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
             isOverLimit, fileSize, MAX_FILE_SIZE);
-        ClearOldFiles();
+        ClearOldFiles(WATCHDOG_DIR);
         XCOLLIE_LOGI("CurrentDir size: %{public}" PRIu64 "", (OHOS::GetFolderSize(realPath) + stackSize));
     }
     constexpr mode_t defaultLogFileMode = 0644;

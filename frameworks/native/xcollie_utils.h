@@ -109,7 +109,7 @@ bool CreateWatchdogDir();
 
 std::vector<FileInfo> GetFilesByDir(const std::string& dirPath);
 
-void ClearOldFiles();
+int ClearOldFiles(const std::string& dirPath);
 
 bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
     const std::string& eventName, bool& isOverLimit);
