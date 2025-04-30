@@ -54,7 +54,8 @@ const int START_PATH_LEN = 128;
 constexpr int64_t MAX_TIME_BUFF = 64;
 constexpr int64_t SEC_TO_MILLISEC = 1000;
 constexpr int64_t MINUTE_TO_S = 60; // 60s
-constexpr uint64_t TOTAL_HALF = 2; // 2 : remove half of the total
+constexpr size_t TOTAL_HALF = 2; // 2 : remove half of the total
+constexpr size_t DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT = 100;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
@@ -423,21 +424,26 @@ std::vector<FileInfo> GetFilesByDir(const std::string& dirPath)
 void ClearOldFiles()
 {
     std::vector<FileInfo> fileInfos = GetFilesByDir(WATCHDOG_DIR);
-    if (fileInfos.size() != 0) {
+    size_t fileSize = fileInfos.size();
+    if (fileSize != 0) {
         std::sort(fileInfos.begin(), fileInfos.end(), [](FileInfo lfile, FileInfo rfile) {
             return lfile.mtime < rfile.mtime;
         });
-        size_t removeFileNums = fileInfos.size() / TOTAL_HALF;
-        size_t deleteCount = 0;
+        int removeFileNumber = fileSize - DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT;
+        if (removeFileNumber < 0) {
+            removeFileNumber = static_cast<int>(fileSize / TOTAL_HALF);
+        }
+        int deleteCount = 0;
         for (auto it = fileInfos.begin(); it != fileInfos.end(); it++) {
-            if (deleteCount >= removeFileNums) {
+            if (deleteCount >= removeFileNumber) {
                 break;
             }
             XCOLLIE_LOGD("Remove file %{public}s.", it->filePath.c_str());
             OHOS::RemoveFile(it->filePath);
             deleteCount++;
         }
-        XCOLLIE_LOGI("Remove files total num=%{public}zu.", deleteCount);
+        XCOLLIE_LOGI("Remove files size=%{public}zu, remove total num=%{public}d.",
+            fileInfos.size(), deleteCount);
         return;
     }
 }
