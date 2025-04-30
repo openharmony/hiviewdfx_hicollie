@@ -91,38 +91,31 @@ int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
     return reply.ReadInt32();
 }
 
-bool CheckBackGroundStatus(bool* isSixSecond)
+bool CheckInBackGround(bool* isSixSecond)
 {
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
         system_clock::now().time_since_epoch()).count();
     if ((now - g_lastWatchTime) > (RATIO * g_stuckTimeout)) {
-        XCOLLIE_LOGI("Update backgroundCount, currTime: %{public}ld, lastTime: %{public}ld",
-            now, g_lastWatchTime);
+        XCOLLIE_LOGI("Update backgroundCount, currentTime: %{public}llu, lastTime: %{public}llu",
+            static_cast<unsigned long long>(now), static_cast<unsigned long long>(g_lastWatchTime));
         g_backgroundReportCount.store(0);
     }
     bool inBackground = !OHOS::HiviewDFX::Watchdog::GetInstance().GetForeground();
     XCOLLIE_LOGD("In Background, thread is background: %{public}d", inBackground);
-    if (inBackground) {
-        if (g_backgroundReportCount.load() == BACKGROUND_REPORT_COUNT_MAX) {
-            XCOLLIE_LOGI("In Background, thread has been blocked, need to report event: "
-                "currTime: %{public}" PRId64 ", lastTime: %{public}" PRId64 ".", now, g_lastWatchTime);
-            *isSixSecond = false;
-            return false;
-        } else if (g_backgroundReportCount.load() < BACKGROUND_REPORT_COUNT_MAX) {
-            XCOLLIE_LOGI("In Background, not report event: g_backgroundReportCount: %{public}d"
-                "currentTime: %{public}" PRId64 ", lastTime: %{public}" PRId64 ".",
-                g_backgroundReportCount.load(), now, g_lastWatchTime);
-            g_backgroundReportCount++;
-            g_lastWatchTime = now;
-            return true;
-        }
+    if (inBackground && g_backgroundReportCount.load() < BACKGROUND_REPORT_COUNT_MAX) {
+        XCOLLIE_LOGI("In Background, not report event: g_backgroundReportCount: %{public}d, "
+            "currentTime: %{public}llu, lastTime: %{public}llu", g_backgroundReportCount.load(),
+            static_cast<unsigned long long>(now), static_cast<unsigned long long>(g_lastWatchTime));
+        g_backgroundReportCount++;
+        g_lastWatchTime = now;
+        return true;
     }
     return false;
 }
 
 int Report(bool* isSixSecond)
 {
-    if (CheckBackGroundStatus(isSixSecond, g_stuckTimeout)) {
+    if (CheckInBackGround(isSixSecond)) {
         return 0;
     }
     g_backgroundReportCount++;
@@ -155,8 +148,8 @@ int Report(bool* isSixSecond)
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
         system_clock::now().time_since_epoch()).count();
     if ((now - g_lastWatchTime) < 0 || (now - g_lastWatchTime) >= (g_stuckTimeout / RATIO)) {
-        XCOLLIE_LOGI("Update backgroundCount, currTime: %{public}ld, lastTime: %{public}ld",
-            now, g_lastWatchTime);
+        XCOLLIE_LOGI("Update backgroundCount, currentTime: %{public}llu, lastTime: %{public}llu",
+            static_cast<unsigned long long>(now), static_cast<unsigned long long>(g_lastWatchTime));
         g_lastWatchTime = now;
     }
     return result;
