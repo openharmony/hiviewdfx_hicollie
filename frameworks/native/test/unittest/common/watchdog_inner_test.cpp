@@ -939,5 +939,20 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_UpdateReportTimes_002, TestSize.Le
     UpdateReportTimes(bundleName, times, checkInterval);
     EXPECT_TRUE(times == 2);
 }
+
+/**
+ * @tc.name: WatchdogInner ClearOldFiles Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ClearOldFiles_001, TestSize.Level1)
+{
+    int deleteCount = ClearOldFiles("/data/storage/el2/log/watchdog/");
+    EXPECT_TRUE(deleteCount >= 0);
+    printf("deleteCount=%d\n", deleteCount);
+    deleteCount = ClearOldFiles("/data/storage/el2/log/watchdog");
+    EXPECT_TRUE(deleteCount == 0);
+    printf("deleteCount=%d\n", deleteCount);
+}
 } // namespace HiviewDFX
 } // namespace OHOS
