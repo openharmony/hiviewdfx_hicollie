@@ -48,6 +48,27 @@ ohos_unittest("XCollieUnitTest") {
   }
 }
 
+##############################unittest##########################################
+ohos_unittest("IpcFullUnitTest") {
+  module_out_path = module_output_path
+  sources = [ "ipc_full_test.cpp" ]
+
+  configs = [ ":module_private_config" ]
+
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
+  external_deps = [
+    "c_utils:utils",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+  ]
+  defines = []
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
+}
+
 ohos_unittest("WatchdogUnitTest") {
   module_out_path = module_output_path
   sources = [ "watchdog_interface_test.cpp" ]
@@ -194,6 +215,7 @@ group("unittest") {
     ":WatchdogTaskTest",
     ":WatchdogUnitTest",
     ":XCollieUnitTest",
+    ":IpcFullUnitTest"
   ]
 }
 ###############################################################################
