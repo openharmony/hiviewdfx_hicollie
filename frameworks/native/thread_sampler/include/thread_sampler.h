@@ -27,9 +27,9 @@
 #include "singleton.h"
 
 #include "unwinder.h"
-#include "unique_stack_table.h"
 #include "dfx_accessors.h"
 #include "dfx_maps.h"
+#include "stack_printer.h"
 #include "unwind_context.h"
 
 namespace OHOS {
@@ -53,17 +53,6 @@ struct UnwindInfo {
     DfxMaps* maps;
 };
 
-struct TimeAndFrames {
-    uint64_t requestTime {0};
-    uint64_t snapshotTime {0};
-    std::vector<DfxFrame> frameList;
-};
-
-struct StackIdAndCount {
-    uint64_t stackId {0};
-    uint32_t count {0};
-};
-
 class ThreadSampler : public Singleton<ThreadSampler> {
     DECLARE_SINGLETON(ThreadSampler);
 public:
@@ -83,8 +72,7 @@ private:
     void ReleaseRecordBuffer();
     bool InitUnwinder();
     void DestroyUnwinder();
-    bool InitUniqueStackTable();
-    void DeinitUniqueStackTable();
+    bool InitStackPrinter();
     void SendSampleRequest();
     void ProcessStackBuffer();
     int AccessElfMem(uintptr_t addr, uintptr_t *val);
@@ -107,9 +95,9 @@ private:
     void* mmapStart_ {MAP_FAILED};
     int32_t bufferSize_ {0};
     std::shared_ptr<Unwinder> unwinder_ {nullptr};
-    std::unique_ptr<UniqueStackTable> uniqueStackTable_ {nullptr};
     std::shared_ptr<UnwindAccessors> accessors_ {nullptr};
     std::shared_ptr<DfxMaps> maps_ {nullptr};
+    std::unique_ptr<StackPrinter> stackPrinter_ {nullptr};
     // size of the uniqueStackTableSize, default 128KB
     uint32_t uniqueStackTableSize_ {DEFAULT_UNIQUE_STACK_TABLE_SIZE};
     // name of the mmap of uniqueStackTable
@@ -126,8 +114,7 @@ private:
     MAYBE_UNUSED uint64_t signalTimeCost_ {0};
     MAYBE_UNUSED uint64_t processCount_ {0};
 
-    std::vector<TimeAndFrames> timeAndFrameList_;
-    std::vector<StackIdAndCount> stackIdCount_;
+    std::vector<TimeStampedPcs> timeStampedPcsList_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

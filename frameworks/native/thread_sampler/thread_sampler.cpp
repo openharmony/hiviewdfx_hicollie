@@ -31,7 +31,6 @@
 #include "dfx_regs.h"
 #include "dfx_elf.h"
 #include "dfx_frame_formatter.h"
-#include "sample_stack_printer.h"
 #include "thread_sampler_utils.h"
 #include "file_ex.h"
 
@@ -133,7 +132,7 @@ bool ThreadSampler::Init(int collectStackCount)
     }
 
     pid_ = getprocpid();
-    if (!InitUniqueStackTable()) {
+    if (!InitStackPrinter()) {
         XCOLLIE_LOGE("Failed to InitUniqueStackTable\n");
         Deinit();
         return false;
@@ -144,7 +143,6 @@ bool ThreadSampler::Init(int collectStackCount)
         Deinit();
         return false;
     }
-    stackIdCount_.reserve(collectStackCount);
 
     init_ = true;
     return true;
@@ -189,6 +187,7 @@ bool ThreadSampler::InitUnwinder()
     accessors_->GetMapByPc = &ThreadSampler::GetMapByPc;
     accessors_->FindUnwindTable = &ThreadSampler::FindUnwindTable;
     unwinder_ = std::make_shared<Unwinder>(accessors_, true);
+    unwinder_->EnableFillFrames(true);
 
     maps_ = DfxMaps::Create();
     if (maps_ == nullptr) {
@@ -202,21 +201,18 @@ bool ThreadSampler::InitUnwinder()
     return true;
 }
 
-bool ThreadSampler::InitUniqueStackTable()
+bool ThreadSampler::InitStackPrinter()
 {
-    uniqueStackTable_ = std::make_unique<UniqueStackTable>(pid_, uniqueStackTableSize_);
-    if (!uniqueStackTable_->Init()) {
+    if (stackPrinter_ != nullptr) {
+        return true;
+    }
+    stackPrinter_ = std::make_unique<StackPrinter>(unwinder_);
+    stackPrinter_->SetMaps(maps_);
+    if (!stackPrinter_->InitUniqueTable(pid_, uniqueStackTableSize_, uniTableMMapName_)) {
         XCOLLIE_LOGE("Failed to init unique_table\n");
         return false;
     }
-    void* uniqueTableBufMMap = reinterpret_cast<void*>(uniqueStackTable_->GetHeadNode());
-    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, uniqueTableBufMMap, uniqueStackTableSize_, uniTableMMapName_.c_str());
     return true;
-}
-
-void ThreadSampler::DeinitUniqueStackTable()
-{
-    uniqueStackTable_.reset();
 }
 
 void ThreadSampler::DestroyUnwinder()
@@ -370,9 +366,8 @@ void ThreadSampler::ProcessStackBuffer()
             .maps = maps_.get(),
         };
 
-        struct TimeAndFrames taf;
-        taf.requestTime = unwindInfo.context->requestTime;
-        taf.snapshotTime = unwindInfo.context->snapshotTime;
+        struct TimeStampedPcs p;
+        p.snapshotTime = unwindInfo.context->snapshotTime;
 
 #if defined(CONSUME_STATISTICS)
         uint64_t unwindStart = GetCurrentTimeNanoseconds();
@@ -381,16 +376,12 @@ void ThreadSampler::ProcessStackBuffer()
 #if defined(CONSUME_STATISTICS)
         uint64_t unwindEnd = GetCurrentTimeNanoseconds();
 #endif
-        /* for print full stack */
-        auto frames = unwinder_->GetFrames();
-        taf.frameList = frames;
-        timeAndFrameList_.emplace_back(taf);
-        /* for print tree format stack */
         auto pcs = unwinder_->GetPcs();
-        uint64_t stackId = 0;
-        auto stackIdPtr = reinterpret_cast<OHOS::HiviewDFX::StackId*>(&stackId);
-        uniqueStackTable_->PutPcsInTable(stackIdPtr, pcs.data(), pcs.size());
-        PutStackId(stackIdCount_, stackId);
+        /* for print full stack */
+        p.pcVec = pcs;
+        timeStampedPcsList_.emplace_back(p);
+        /* for print tree format stack */
+        stackPrinter_->PutPcsInTable(pcs, unwindInfo.context->snapshotTime);
 
         uint64_t ts = GetCurrentTimeNanoseconds();
 
@@ -446,7 +437,7 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
 
     stack.clear();
     heaviestStack_.clear();
-    if (timeAndFrameList_.empty() && stackIdCount_.empty()) {
+    if (timeStampedPcsList_.empty()) {
         stack += "/proc/self/wchan: \n";
         std::string fileStr = "";
         if (!LoadStringFromFile("/proc/self/wchan", fileStr)) {
@@ -463,14 +454,13 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
 #if defined(CONSUME_STATISTICS)
     uint64_t collectStart = GetCurrentTimeNanoseconds();
 #endif
-    auto printer = std::make_unique<SampleStackPrinter>(unwinder_, maps_);
     if (!treeFormat) {
-        stack = printer->GetFullStack(timeAndFrameList_);
+        stack = stackPrinter_->GetFullStack(timeStampedPcsList_);
     } else {
-        stack = printer->GetTreeStack(stackIdCount_, uniqueStackTable_, heaviestStack_);
+        stack = stackPrinter_->GetTreeStack();
+        heaviestStack_ = stackPrinter_->GetHeaviestStack();
     }
-    timeAndFrameList_.clear();
-    stackIdCount_.clear();
+    timeStampedPcsList_.clear();
 
 #if defined(CONSUME_STATISTICS)
     uint64_t collectEnd = GetCurrentTimeNanoseconds();
@@ -494,7 +484,7 @@ std::string ThreadSampler::GetHeaviestStack() const
 
 bool ThreadSampler::Deinit()
 {
-    DeinitUniqueStackTable();
+    stackPrinter_.reset();
     DestroyUnwinder();
     ReleaseRecordBuffer();
     init_ = false;

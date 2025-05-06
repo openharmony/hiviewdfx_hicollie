@@ -31,12 +31,14 @@ int ThreadSamplerInit(int collectStackCount);
 int32_t ThreadSamplerSample();
 
 /* To collect the stack infomation collected by thread sampler in string.
- * stack: the string to save the stack infomation.
+ * stack: the string to save the stack information.
+ * heaviestStack: the string to save the heaviest stack information.
  * size: the length of stack.
+ * heaviestSize: the length of heaviestStack.
  * treeFormat: collect stack infomation in tree format or not. 1 for tree format and 0 for not.
  * return 0 for success and -1 for fail.
  */
-int ThreadSamplerCollect(char* stack, char* heaviestStack, size_t stackSize, size_t heaviestSize, int treeFormat = 1);
+int ThreadSamplerCollect(char* stack, char* heaviestStack, size_t stackSize, size_t heaviestSize, int treeFormat);
 
 /* To deinitial thread sampler and unload the resources. */
 int ThreadSamplerDeinit();
