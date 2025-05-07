@@ -122,7 +122,7 @@ int Report(bool* isSixSecond)
 
     OHOS::HiviewDFX::ReportData reportData;
     reportData.faultType = OHOS::HiviewDFX::FaultDataType::APP_FREEZE;
-    int stuckTimeout = g_stuckTimeout;
+    uint32_t stuckTimeout = g_stuckTimeout;
     if (*isSixSecond) {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
         reportData.forceExit = true;
