@@ -613,7 +613,7 @@ std::map<std::string, int> GetReportTimesMap()
             if (std::all_of(std::begin(value), std::end(value), [] (const char &content) {
                 return isdigit(content);
             })) {
-                keyValueMap[key] = std::stoi(value);
+                keyValueMap[key] = std::atoi(value.c_str());
             }
         }
     }
