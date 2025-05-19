@@ -330,7 +330,7 @@ bool WatchdogInner::InitThreadSamplerFuncs()
         XCOLLIE_LOGE("ThreadSampler dlsym some function failed.\n");
         return false;
     }
-    XCOLLIE_LOGE("ThreadSampler has been successfully loaded.\n");
+    XCOLLIE_LOGI("ThreadSampler has been successfully loaded.\n");
     return true;
 }
 

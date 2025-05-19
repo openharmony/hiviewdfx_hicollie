@@ -140,6 +140,7 @@ std::string SampleStackPrinter::GetTreeStack(std::vector<StackIdAndCount>& stack
     std::sort(stackIdCount.begin(), stackIdCount.end(), [](const auto& a, const auto& b) {
         return a.count > b.count;
     });
+    unwinder_->EnableFillFrames(true);
     std::string stack("");
     for (auto it = stackIdCount.begin(); it != stackIdCount.end(); it++) {
         std::vector<uintptr_t> pcs;
