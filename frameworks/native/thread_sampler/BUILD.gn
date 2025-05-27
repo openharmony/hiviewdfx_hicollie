@@ -16,7 +16,6 @@ import("//build/ohos.gni")
 
 ohos_shared_library("libthread_sampler") {
   sources = [
-    "sample_stack_printer.cpp",
     "thread_sampler.cpp",
     "thread_sampler_api.cpp",
     "thread_sampler_utils.cpp",
@@ -25,7 +24,7 @@ ohos_shared_library("libthread_sampler") {
 
   external_deps = [
     "c_utils:utils",
-    "faultloggerd:libasync_stack",
+    "faultloggerd:libstack_printer",
     "faultloggerd:libunwinder",
     "hilog:libhilog",
   ]
