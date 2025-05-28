@@ -46,6 +46,7 @@ const int SAMPLE_DEFULE_COUNT = 10;
 const int SAMPLE_DEFULE_REPORT_TIMES = 1;
 const int SET_TIMES_FLAG = 1;
 const int DEFAULT_IGNORE_STARTUP_TIME = 10; // 10s
+const int ENABLE_TREE_FORMAT = 1;
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 struct TimeContent {
@@ -111,7 +112,7 @@ public:
     static void KillPeerBinderProcess(const std::string &description);
     bool StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
     void StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
-    bool CollectStack(std::string& stack, std::string& heaviestStack);
+    bool CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat = ENABLE_TREE_FORMAT);
     bool Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
@@ -127,6 +128,7 @@ public:
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
     void SetScrollState(bool isScroll);
+    void StartSample(int duration, int interval, std::string& outFile);
 
 public:
     std::string currentScene_;
@@ -167,6 +169,7 @@ private:
     void UpdateJankParam(int sampleInterval, int startUpTime, int sampleCount, int logType, int reportTimes);
     int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key);
     bool CheckSampleParam(std::map<std::string, std::string> paramsMap);
+    void SaveFreezeStackToFile(const std::string& outFile, int32_t pid);
 
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();

@@ -42,6 +42,11 @@ bool ReportData::WriteContent(Parcel &parcel) const
             return false;
         }
     }
+
+    if (!parcel.WriteString(freezeInfo)) {
+        XCOLLIE_LOGE("FreezeInfo [%{public}s] write string failed.", freezeInfo.c_str());
+        return false;
+    }
     return true;
 }
 

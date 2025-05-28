@@ -112,5 +112,10 @@ void Watchdog::SetScrollState(bool isScroll)
 {
     WatchdogInner::GetInstance().SetScrollState(isScroll);
 }
+
+void Watchdog::StartSample(int duration, int interval, std::string& outFile)
+{
+    WatchdogInner::GetInstance().StartSample(duration, interval, outFile);
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

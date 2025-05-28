@@ -960,5 +960,41 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ClearOldFiles_001, TestSize.Level1
     EXPECT_TRUE(deleteCount == 0);
     printf("deleteCount=%d\n", deleteCount);
 }
+
+/**
+ * @tc.name: WatchdogInner SaveStringToFile Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SaveStringToFile_001, TestSize.Level1)
+{
+    std::string filePath = "/";
+    std::string content = "WatchdogInnerTest_SaveStringToFile_001";
+    SaveStringToFile(filePath, content);
+    filePath = "/data/local/tmp/test.txt";
+    bool result = SaveStringToFile(filePath, content);
+    EXPECT_TRUE(result);
+}
+
+/**
+ * @tc.name: WatchdogInner StartSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
+{
+    std::string path = "test.txt";
+    WatchdogInner::GetInstance().SaveFreezeStackToFile(path, getpid());
+    std::string outFile;
+    WatchdogInner::GetInstance().StartSample(-3000, -300, outFile);
+    EXPECT_TRUE(outFile.empty());
+    WatchdogInner::GetInstance().StartSample(3000, 300, outFile);
+    int count = 0;
+    while (count < 6) {
+        sleep(1);
+        count++;
+    }
+    EXPECT_TRUE(!outFile.empty());
+}
 } // namespace HiviewDFX
 } // namespace OHOS

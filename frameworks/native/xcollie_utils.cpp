@@ -56,8 +56,8 @@ constexpr int64_t SEC_TO_MILLISEC = 1000;
 constexpr int64_t MINUTE_TO_S = 60; // 60s
 constexpr size_t TOTAL_HALF = 2; // 2 : remove half of the total
 constexpr size_t DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT = 100;
+constexpr mode_t DEFAULT_LOG_DIR_MODE = 0770;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
-constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
@@ -377,14 +377,15 @@ bool KillProcessByPid(int32_t pid)
     return (ret >= 0);
 }
 
-bool CreateWatchdogDir()
+bool CreateDir(const std::string& dirPath)
 {
-    constexpr mode_t defaultLogDirMode = 0770;
-    if (!OHOS::FileExists(WATCHDOG_DIR)) {
-        OHOS::ForceCreateDirectory(WATCHDOG_DIR);
-        OHOS::ChangeModeDirectory(WATCHDOG_DIR, defaultLogDirMode);
+    if (!OHOS::FileExists(dirPath)) {
+        OHOS::ForceCreateDirectory(dirPath);
+        OHOS::ChangeModeDirectory(dirPath, DEFAULT_LOG_DIR_MODE);
+    } else {
+        return true;
     }
-    if (OHOS::StorageDaemon::AclSetAccess(WATCHDOG_DIR, "g:1201:rwx") != 0) {
+    if (OHOS::StorageDaemon::AclSetAccess(dirPath, "g:1201:rwx") != 0) {
         XCOLLIE_LOGI("Failed to AclSetAccess");
         return false;
     }
@@ -449,12 +450,27 @@ int ClearOldFiles(const std::string& dirPath)
     return 0;
 }
 
-bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const std::string& eventName,
-    bool& isOverLimit)
+bool ClearFileIfNeed(const std::string& dirPath, uint64_t stackSize)
 {
-    if (!CreateWatchdogDir()) {
+    uint64_t fileSize = OHOS::GetFolderSize(dirPath) + stackSize;
+    if (fileSize < MAX_FILE_SIZE) {
         return false;
     }
+    XCOLLIE_LOGW("CurrentDir is over limit. Will to clear old file, "
+        "fileSize: %{public}" PRIu64 " max fileSize: %{public}" PRIu64 ".",
+        fileSize, MAX_FILE_SIZE);
+    ClearOldFiles(dirPath);
+    XCOLLIE_LOGD("CurrentDir size: %{public}" PRIu64 "", (OHOS::GetFolderSize(dirPath) + stackSize));
+    return true;
+}
+
+bool WriteStackToFd(int32_t pid, std::string& path, const std::string& stack, const std::string& eventName,
+    bool& isOverLimit)
+{
+    if (!CreateDir(WATCHDOG_DIR)) {
+        return false;
+    }
+    isOverLimit = ClearFileIfNeed(WATCHDOG_DIR, stack.size());
     std::string time = GetFormatDate();
     std::string realPath;
     if (!OHOS::PathToRealPath(WATCHDOG_DIR, realPath)) {
@@ -463,27 +479,22 @@ bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack, const st
     }
     path = realPath + "/" + eventName + "_" + time.c_str() + "_" +
         std::to_string(pid).c_str() + ".txt";
-    uint64_t stackSize = stack.size();
-    uint64_t fileSize = OHOS::GetFolderSize(realPath) + stackSize;
-    if (fileSize > MAX_FILE_SIZE) {
-        isOverLimit = true;
-        XCOLLIE_LOGW("CurrentDir is over limit: %{public}d. Will not write to stack file."
-            "MainThread fileSize: %{public}" PRIu64 " MAX_FILE_SIZE: %{public}" PRIu64 ".",
-            isOverLimit, fileSize, MAX_FILE_SIZE);
-        ClearOldFiles(WATCHDOG_DIR);
-        XCOLLIE_LOGI("CurrentDir size: %{public}" PRIu64 "", (OHOS::GetFolderSize(realPath) + stackSize));
-    }
+    return SaveStringToFile(path, stack);
+}
+
+bool SaveStringToFile(const std::string& path, const std::string& content)
+{
     constexpr mode_t defaultLogFileMode = 0644;
-    auto fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, defaultLogFileMode);
-    if (fd < 0) {
-        XCOLLIE_LOGE("Failed to create path");
+    FILE* fp = fopen(path.c_str(), "w+");
+    chmod(path.c_str(), defaultLogFileMode);
+    if (fp == nullptr) {
+        XCOLLIE_LOGE("Failed to create path=%{public}s", path.c_str());
         return false;
     } else {
-        XCOLLIE_LOGE("path=%{public}s", path.c_str());
+        XCOLLIE_LOGI("success to create path=%{public}s", path.c_str());
     }
-    OHOS::SaveStringToFd(fd, stack);
-    close(fd);
-
+    OHOS::SaveStringToFile(path, content, true);
+    (void)fclose(fp);
     return true;
 }
 
@@ -631,5 +642,6 @@ void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& c
             times, checkInterval);
     }
 }
+
 } // end of HiviewDFX
 } // end of OHOS

@@ -35,6 +35,8 @@ namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t MIN_APP_UID = 20000;
 constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
+constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
+constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
@@ -105,13 +107,15 @@ std::string GetFormatDate();
 
 std::string FormatTime(const std::string &format);
 
-bool CreateWatchdogDir();
+bool CreateDir(const std::string& dirPath);
 
 std::vector<FileInfo> GetFilesByDir(const std::string& dirPath);
 
 int ClearOldFiles(const std::string& dirPath);
 
-bool WriteStackToFd(int32_t pid, std::string& path, std::string& stack,
+bool ClearFileIfNeed(const std::string& dirPath, uint64_t stackSize);
+
+bool WriteStackToFd(int32_t pid, std::string& path, const std::string& stack,
     const std::string& eventName, bool& isOverLimit);
 
 int64_t GetTimeStamp();
@@ -125,6 +129,8 @@ int64_t GetAppStartTime(int32_t pid, int64_t tid);
 std::map<std::string, int> GetReportTimesMap();
 
 void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& checkInterval);
+
+bool SaveStringToFile(const std::string& path, const std::string& content);
 } // end of HiviewDFX
 } // end of OHOS
 #endif
