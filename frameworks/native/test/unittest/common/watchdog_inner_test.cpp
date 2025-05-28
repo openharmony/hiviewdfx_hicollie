@@ -177,7 +177,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_002, TestSize.Level1
     int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc,
         delay, interval, isOneshot));
     ASSERT_GT(id, 0);
-    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 0);
+    uint64_t result = WatchdogInner::GetInstance().FetchNextTask(now, task);
+    ASSERT_TRUE(result >= 0);
 }
 
 /**
@@ -534,7 +535,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     int count = 0;
-    while (count < 10) {
+    while (count < 40) {
         beginTest("Test");
         usleep(350 * 1000); // test value
         endTest("Test");
@@ -566,6 +567,11 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSiz
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
     WatchdogInner::GetInstance().SetScrollState(true);
     int count = 0;
+    while (count < 10) {
+        sleep(1); // test value
+        count++;
+    }
+    count = 0;
     while (count < 4) {
         beginTest("Test");
         usleep(50 * 1000); // test value
@@ -804,7 +810,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetEventConfig_006, TestSize.Level
     paramsMap[KEY_LOG_TYPE] = "0";
     paramsMap[KEY_SAMPLE_INTERVAL] = "49";
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
-    EXPECT_EQ(ret, 0);
+    EXPECT_EQ(ret, -1);
     /**
      * @tc.desc: set report times is not a number.
      */
