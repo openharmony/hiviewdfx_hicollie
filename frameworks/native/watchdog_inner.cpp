@@ -489,7 +489,7 @@ void WatchdogInner::SaveFreezeStackToFile(const std::string& outFile, int32_t pi
     std::string stack;
     std::string heaviestStack;
     CollectStack(stack, heaviestStack, 0);
-    std::string info = "#ThreadInfos Tid: " + std::to_string(pid) + ", Name: " + bundleName_ + "\n";
+    std::string info = "#ThreadInfos Tid: " + std::to_string(pid) + ", Name: " + bundleName_;
     if (g_isReuseStack) {
         info += "The current thread is collecting the stack, which conflicts with the main thread jank event."
             " Reuse the current stack\n";
@@ -979,7 +979,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
     } else if (queuedTaskCheck.name == STACK_CHECKER && isMainThreadStackEnabled_) {
         checkerQueue_.pop();
         taskNameSet_.erase("ThreadSampler");
-        if (Deinit()) {
+        if (!g_isReuseStack && Deinit()) {
             ResetThreadSamplerFuncs();
         }
         stackContent_.isStartSampleEnabled = true;
@@ -993,6 +993,14 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
             traceContent_.traceState = DumpStackState::DEFAULT;
         }
         XCOLLIE_LOGI("Detect collect trace task complete.");
+    } else if (queuedTaskCheck.name == FREEZE_SAMPLE && g_freezeTaskFinished) {
+        checkerQueue_.pop();
+        taskNameSet_.erase(FREEZE_SAMPLE);
+        if (Deinit()) {
+            ResetThreadSamplerFuncs();
+        }
+        g_isReuseStack.store(false);
+        g_freezeTaskFinished.store(false);
     } else {
         return false;
     }
@@ -1022,16 +1030,6 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     CheckKickWatchdog(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
         return queuedTask.nextTickTime - now;
-    }
-
-    const WatchdogTask& queuedFreezeTask = checkerQueue_.top();
-    if (g_freezeTaskFinished && queuedFreezeTask.name == FREEZE_SAMPLE) {
-        checkerQueue_.pop();
-        g_freezeTaskFinished.store(false);
-        taskNameSet_.erase(FREEZE_SAMPLE);
-        if (Deinit()) {
-            ResetThreadSamplerFuncs();
-        }
     }
 
     currentScene_ = "thread DfxWatchdog: Current scenario is task name: " + queuedTask.name + "\n";
