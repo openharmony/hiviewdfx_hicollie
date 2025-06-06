@@ -158,6 +158,11 @@ public:
      * @brief Set scroll param.
      */
     void SetScrollState(bool isScroll);
+
+    /**
+     * @brief Start freeze stack sample.
+     */
+    void StartSample(int duration, int interval, std::string& outFile);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

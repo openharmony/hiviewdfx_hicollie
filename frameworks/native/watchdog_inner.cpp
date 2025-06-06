@@ -58,6 +58,7 @@ enum CatchLogType {
 };
 constexpr char STACK_CHECKER[] = "ThreadSampler";
 constexpr char TRACE_CHECKER[] = "TraceCollector";
+constexpr const char* const FREEZE_SAMPLE = "FreezeSampler";
 constexpr int ONE_DAY_LIMIT = 86400000;
 constexpr int ONE_HOUR_LIMIT = 3600000;
 constexpr int MILLISEC_TO_NANOSEC = 1000000;
@@ -108,6 +109,7 @@ constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
 constexpr int SAMPLE_EXTRA_COUNT = 4;
 constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 constexpr int SCROLL_INTERVAL = 50; // 50ms
+constexpr int DEFAULT_SAMPLE_VALUE = 1;
 constexpr const char* const SCROLL_JANK = "SCROLL_JANK";
 constexpr const char* const MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
 constexpr const char* const BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
@@ -117,6 +119,12 @@ std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_lastKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
+
+static std::atomic_int g_scrollSampleCount {0};
+static std::atomic_int g_freezeSampleCount {0};
+static std::atomic_bool g_freezeTaskFinished {false};
+static std::atomic_bool g_isReuseStack {false};
+static std::atomic_bool g_isDumpStack {false};
 
 SigActionType WatchdogInner::threadSamplerSigHandler_ = nullptr;
 std::mutex WatchdogInner::threadSamplerSignalMutex_;
@@ -398,16 +406,22 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
     XCOLLIE_LOGI("StartScrollProfile durationTime: %{public}" PRId64 " ms, sampleInterval: %{public}d "
         "isScroll: %{public}d.", durationTime, sampleInterval, isScroll);
     int64_t tid = getproctid();
-    stackContent_.collectCount = 0;
+    g_scrollSampleCount.store(0);
     auto sampleTask = [this, sampleInterval, tid, isScroll]() {
-        if (!CheckThreadSampler() || threadSamplerSampleFunc_ == nullptr) {
+        if (g_scrollSampleCount.load() == 0 && (g_isDumpStack || !CheckThreadSampler())) {
+            isMainThreadStackEnabled_ = true;
+            return;
+        }
+        if (threadSamplerSampleFunc_ == nullptr) {
             isMainThreadStackEnabled_ = true;
             return;
         }
         if (stackContent_.collectCount == 0) {
+            g_isDumpStack.store(true);
             threadSamplerSampleFunc_();
-            stackContent_.collectCount++;
+            g_scrollSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
         } else {
+            g_isDumpStack.store(false);
             ReportMainThreadEvent(tid, SCROLL_JANK, isScroll);
             stackContent_.scrollTimes--;
             isMainThreadStackEnabled_ = true;
@@ -421,9 +435,8 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
 void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
 {
     std::unique_lock<std::mutex> lock(lock_);
-    bool result = SampleStackDetect(endTime, stackContent_.reportTimes,
-        jankParamsMap[KEY_SAMPLE_REPORT_TIMES], jankParamsMap[KEY_IGNORE_STARTUP_TIME]);
-    if (!result) {
+    if (!SampleStackDetect(endTime, stackContent_.reportTimes,
+        jankParamsMap[KEY_SAMPLE_REPORT_TIMES], jankParamsMap[KEY_IGNORE_STARTUP_TIME])) {
         return;
     }
     XCOLLIE_LOGI("StartProfileMainThread durationTime: %{public}" PRId64 " ms, sampleInterval: %{public}d.",
@@ -433,16 +446,18 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
     int sampleCount = jankParamsMap[KEY_SAMPLE_COUNT];
     int64_t tid = getproctid();
     auto sampleTask = [this, sampleInterval, sampleCount, tid]() {
-        if ((stackContent_.detectorCount == 0 && stackContent_.collectCount == 0 && !CheckThreadSampler()) ||
-            threadSamplerSampleFunc_ == nullptr) {
+        if ((stackContent_.detectorCount == 0 && stackContent_.collectCount == 0 &&
+            (g_isDumpStack || !CheckThreadSampler())) || threadSamplerSampleFunc_ == nullptr) {
             isMainThreadStackEnabled_ = true;
             return;
         }
         if (stackContent_.collectCount > DumpStackState::DEFAULT &&
             stackContent_.collectCount < sampleCount) {
+            g_isDumpStack.store(true);
             threadSamplerSampleFunc_();
             stackContent_.collectCount++;
         } else if (stackContent_.collectCount == sampleCount) {
+            g_isDumpStack.store(false);
             std::string eventName = buissnessThreadInfo_.empty() ? MAIN_THREAD_JANK : BUSSINESS_THREAD_JANK;
             ReportMainThreadEvent(tid, eventName);
             stackContent_.reportTimes--;
@@ -465,12 +480,84 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
     InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
 }
 
-bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack)
+void WatchdogInner::SaveFreezeStackToFile(const std::string& outFile, int32_t pid)
+{
+    if (!CreateDir(FREEZE_DIR)) {
+        XCOLLIE_LOGE("Path to realPath failed.");
+        return;
+    }
+    std::string stack;
+    std::string heaviestStack;
+    CollectStack(stack, heaviestStack, 0);
+    std::string info = "#ThreadInfos Tid: " + std::to_string(pid) + ", Name: " + bundleName_ + "\n";
+    if (g_isReuseStack) {
+        info += "The current thread is collecting the stack, which conflicts with the main thread jank event."
+            " Reuse the current stack\n";
+        g_isReuseStack.store(false);
+    }
+    info += stack;
+    ClearFileIfNeed(FREEZE_DIR, info.size());
+    bool saveRet = SaveStringToFile(FREEZE_DIR + outFile, info);
+    g_isDumpStack.store(false);
+    g_freezeTaskFinished.store(true);
+    XCOLLIE_LOGI("Save freeze stack to file, ret:%{public}d, isReuseStack:%{public}d.",
+        saveRet, g_isReuseStack.load());
+}
+
+void WatchdogInner::StartSample(int duration, int interval, std::string& outFile)
+{
+    std::unique_lock<std::mutex> lock(lock_);
+    if (IsTaskExistLocked(FREEZE_SAMPLE)) {
+        XCOLLIE_LOGW("StartSample task already exit, skip this task.");
+        return;
+    }
+    if (duration <= 0 || interval <= 0) {
+        XCOLLIE_LOGW("StartSample failed, duration=%{public}d, interval=%{public}d.",
+            duration, interval);
+        return;
+    }
+    int targetCount = duration / interval;
+    if (targetCount < DEFAULT_SAMPLE_VALUE) {
+        XCOLLIE_LOGW("StartSample failed, sampleCount=%{public}d", targetCount);
+        return;
+    }
+    int32_t pid = getpid();
+    g_freezeSampleCount.store(0);
+    outFile = "freeze_" + GetFormatDate() + "_" + std::to_string(pid) + ".txt";
+    auto sampleTask = [this, pid, targetCount, outFile]() {
+        if ((g_freezeSampleCount.load() == 0 && !CheckThreadSampler()) || threadSamplerSampleFunc_ == nullptr) {
+            g_freezeTaskFinished.store(true);
+            return;
+        }
+        if (g_freezeSampleCount.load() == 0 && g_isDumpStack) {
+            g_isReuseStack.store(true);
+        }
+        if (g_isReuseStack) {
+            if (g_isDumpStack) {
+                return;
+            }
+            SaveFreezeStackToFile(outFile, pid);
+            return;
+        }
+        if (g_freezeSampleCount.load() < targetCount) {
+            g_isDumpStack.store(true);
+            threadSamplerSampleFunc_();
+        } else {
+            SaveFreezeStackToFile(outFile, pid);
+        }
+        g_freezeSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
+    };
+    WatchdogTask task(FREEZE_SAMPLE, sampleTask, 0, interval, false);
+    if (!InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task))) {
+        outFile = "";
+    }
+}
+
+bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat)
 {
     if (threadSamplerCollectFunc_ == nullptr) {
         return false;
     }
-    int treeFormat = 1;
     char* stk = new char[STACK_LENGTH]();
     char* heaviest = new char[STACK_LENGTH]();
     int collectRet = threadSamplerCollectFunc_(stk, heaviest, STACK_LENGTH, STACK_LENGTH, treeFormat);
@@ -518,7 +605,7 @@ void WatchdogInner::DumpTraceProfile(int32_t interval)
         }
         if (traceContent_.traceCount >= COLLECT_TRACE_MAX) {
             if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
-                CreateWatchdogDir();
+                CreateDir(WATCHDOG_DIR);
                 appCaller_.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
                 appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
                 auto result = traceCollector_->CaptureDurationTrace(appCaller_);
@@ -935,6 +1022,16 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     CheckKickWatchdog(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
         return queuedTask.nextTickTime - now;
+    }
+
+    const WatchdogTask& queuedFreezeTask = checkerQueue_.top();
+    if (g_freezeTaskFinished && queuedFreezeTask.name == FREEZE_SAMPLE) {
+        checkerQueue_.pop();
+        g_freezeTaskFinished.store(false);
+        taskNameSet_.erase(FREEZE_SAMPLE);
+        if (Deinit()) {
+            ResetThreadSamplerFuncs();
+        }
     }
 
     currentScene_ = "thread DfxWatchdog: Current scenario is task name: " + queuedTask.name + "\n";
