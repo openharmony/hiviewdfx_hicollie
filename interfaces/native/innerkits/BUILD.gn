@@ -24,7 +24,7 @@ ohos_shared_library("libhicollie") {
   deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
 
   innerapi_tags = [
-    "chipsetsdk",
+    "chipsetsdk_sp",
     "platformsdk",
   ]
   external_deps = [ "hilog:libhilog" ]
