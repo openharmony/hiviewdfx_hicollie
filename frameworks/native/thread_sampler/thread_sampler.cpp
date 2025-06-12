@@ -206,8 +206,8 @@ bool ThreadSampler::InitStackPrinter()
     if (stackPrinter_ != nullptr) {
         return true;
     }
-    stackPrinter_ = std::make_unique<StackPrinter>(unwinder_);
-    stackPrinter_->SetMaps(maps_);
+    stackPrinter_ = std::make_unique<StackPrinter>();
+    stackPrinter_->SetUnwindInfo(unwinder_, maps_);
     if (!stackPrinter_->InitUniqueTable(pid_, uniqueStackTableSize_, uniTableMMapName_)) {
         XCOLLIE_LOGE("Failed to init unique_table\n");
         return false;
