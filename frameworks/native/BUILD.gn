@@ -52,6 +52,10 @@ ohos_source_set("libhicollie_source") {
     defines += [ "HOOK_ENABLE" ]
   }
 
+  if (suspend_check_enable) {
+    defines += [ "SUSPEND_CHECK_ENABLE" ]
+  }
+
   if (hicollie_jank_detection_enable) {
     defines += [ "HICOLLIE_JANK_ENABLE" ]
   }

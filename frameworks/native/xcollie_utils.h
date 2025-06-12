@@ -66,7 +66,9 @@ struct FileInfo {
     std::string filePath;
     time_t mtime;
 };
-
+#ifdef SUSPEND_CHECK_ENABLE
+std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now);
+#endif
 
 uint64_t GetCurrentTickMillseconds();
 

@@ -68,6 +68,40 @@ static std::string g_curProcName;
 static int32_t g_lastPid;
 static std::mutex g_lock;
 }
+#ifdef SUSPEND_CHECK_ENABLE
+std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now)
+{
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        XCOLLIE_LOGE("Failed to open file: %{public}s", path);
+        return {-1.0, -1.0};
+    }
+    double suspendStartTime = -1.0;
+    double suspendEndTime = -1.0;
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        if (iss >> suspendStartTime >> suspendEndTime) {
+            suspendStartTime *= SEC_TO_MILLISEC;
+            suspendEndTime *= SEC_TO_MILLISEC;
+        } else {
+            XCOLLIE_LOGE("Failed to parse suspend time from line: %{public}s", line.c_str());
+            file.close();
+            return {-1.0, -1.0};
+        }
+    }
+    file.close();
+    uint64_t currentTime = GetCurrentTickMillseconds();
+    uint64_t diff = (currentTime > now) ? (currentTime - now) : (now - currentTime);
+    XCOLLIE_LOGI(
+        "open file %{public}s, suspendStartTime: %{public}f, suspendEndTime: %{public}f, diff: %{public}" PRIu64 "",
+        path,
+        suspendStartTime,
+        suspendEndTime,
+        diff);
+    return {suspendStartTime, suspendEndTime};
+}
+#endif
 uint64_t GetCurrentTickMillseconds()
 {
     struct timespec t;

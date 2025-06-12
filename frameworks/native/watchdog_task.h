@@ -73,7 +73,9 @@ public:
     void DoCallback();
     void TimerCountTask();
     void DumpKernelStack(struct HstackVal& val, int& ret) const;
-
+#ifdef SUSPEND_CHECK_ENABLE
+    bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
+#endif
     int EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
     std::string name;
