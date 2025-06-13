@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import("//build/test.gni")
+import("//base/hiviewdfx/hicollie/hicollie.gni")
 
 module_output_path = "hicollie/hicollie"
 hicollie_part_path = "//base/hiviewdfx/hicollie"
@@ -173,6 +174,9 @@ ohos_unittest("WatchdogTaskTest") {
   ]
 
   defines = []
+  if (suspend_check_enable) {
+    defines += [ "SUSPEND_CHECK_ENABLE" ]
+  }
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]

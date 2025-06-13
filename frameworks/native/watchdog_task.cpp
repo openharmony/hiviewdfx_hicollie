@@ -39,6 +39,10 @@ namespace OHOS {
 namespace HiviewDFX {
 namespace {
 const char* BBOX_PATH = "/dev/bbox";
+#ifdef SUSPEND_CHECK_ENABLE
+const char* LAST_SUSPEND_TIME_PATH = "/sys/power/last_sr";
+static const double SUSPEND_TIME_RATIO = 0.2;
+#endif
 static const int COUNT_LIMIT_NUM_MAX_RATIO = 2;
 static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
 static const int UID_TYPE_THRESHOLD = 20000;
@@ -151,13 +155,38 @@ void WatchdogTask::DoCallback()
     }
 }
 
+#ifdef SUSPEND_CHECK_ENABLE
+bool WatchdogTask::ShouldSkipCheckForSuspend(uint64_t &now, double &lastSuspendStartTime, double &lastSuspendEndTime)
+{
+    if (lastSuspendStartTime < 0 || lastSuspendEndTime < 0) {
+        return false;
+    }
+    if (lastSuspendStartTime > lastSuspendEndTime) {
+        return true;
+    }
+    if ((lastSuspendEndTime - lastSuspendStartTime) > (SUSPEND_TIME_RATIO * checkInterval) &&
+        (static_cast<double>(now) - lastSuspendStartTime) < checkInterval) {
+        return true;
+    }
+    return false;
+}
+#endif
+
 void WatchdogTask::Run(uint64_t now)
 {
     if (countLimit > 0) {
         TimerCountTask();
         return;
     }
-
+#ifdef SUSPEND_CHECK_ENABLE
+    auto [lastSuspendStartTime, lastSuspendEndTime] = GetSuspendTime(LAST_SUSPEND_TIME_PATH, now);
+    if (ShouldSkipCheckForSuspend(now, lastSuspendStartTime, lastSuspendEndTime)) {
+        XCOLLIE_LOGI("in suspend status, ship check, reset next tick time.interval:%{public}" PRIu64
+            " now:%{public}" PRIu64 " lastSuspendStartTime:%{public}f lastSuspendEndTime:%{public}f",
+            checkInterval, now, lastSuspendStartTime, lastSuspendEndTime);
+        return;
+    }
+#endif
     constexpr int resetRatio = 2;
     if ((checkInterval != 0) && (now - nextTickTime > (resetRatio * checkInterval))) {
         XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."

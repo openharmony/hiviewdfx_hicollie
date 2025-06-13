@@ -114,5 +114,122 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_004, TestSize.Level1)
     task.TimerCountTask();
     EXPECT_TRUE(task.countLimit != 0);
 }
+
+#ifdef SUSPEND_CHECK_ENABLE
+/**
+ * @tc.name: WatchdogTask_GetSuspendTimeTask_001
+ * @tc.desc: verify wherther the time is read successfully from the file
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTask_GetSuspendTimeTask_001, TestSize.Level1)
+{
+    uint64_t now = GetCurrentTickMillseconds();
+    const char *LAST_SUSPEND_TIME_PATH = "/sys/power/last_sr";
+    auto [lastSuspendStartTime, lastSuspendEndTime] = GetSuspendTime(LAST_SUSPEND_TIME_PATH, now);
+    ASSERT_GT(lastSuspendStartTime, -1);
+    ASSERT_GT(lastSuspendEndTime, -1);
+}
+
+/**
+ * @tc.name: WatchdogTask_WatchdogSkipCheckWhenSuspend_001
+ * @tc.desc: verify wherther the task skipped successfully
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTask_WatchdogSkipCheckWhenSuspend_001, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "SkipCheckWhenSuspend_001";
+    uint64_t delay = 0;
+    uint64_t interval = 5000;
+    bool isOneshot = true;
+    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
+    double testLastSuspendStartTime = 1500.238412;
+    double testLastSuspendEndTime = 900.391023;
+    uint64_t testNow = 1600;
+    ASSERT_EQ(task.ShouldSkipCheckForSuspend(testNow, testLastSuspendStartTime, testLastSuspendEndTime), true);
+}
+
+/**
+ * @tc.name: WatchdogTask_WatchdogSkipCheckWhenSuspend_002
+ * @tc.desc: verify wherther the task skipped successfully
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTask_WatchdogSkipCheckWhenSuspend_002, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "SkipCheckWhenSuspend_002";
+    uint64_t delay = 0;
+    uint64_t interval = 10000;
+    bool isOneshot = true;
+    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
+    double testLastSuspendStartTime = 9000.391023;
+    double testLastSuspendEndTime = 15000.238412;
+    uint64_t testNow = 16000;
+    ASSERT_EQ(task.ShouldSkipCheckForSuspend(testNow, testLastSuspendStartTime, testLastSuspendEndTime), true);
+}
+
+/**
+ * @tc.name: WatchdogTask_WatchdogSkipCheckWhenSuspend_003
+ * @tc.desc: verify wherther the task skipped successfully
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTask_WatchdogSkipCheckWhenSuspend_003, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "SkipCheckWhenSuspend_003";
+    uint64_t delay = 0;
+    uint64_t interval = 3000;
+    bool isOneshot = true;
+    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
+    double testLastSuspendStartTime = 9000.391023;
+    double testLastSuspendEndTime = 15000.238412;
+    uint64_t testNow = 16000;
+    ASSERT_EQ(task.ShouldSkipCheckForSuspend(testNow, testLastSuspendStartTime, testLastSuspendEndTime), false);
+}
+
+/**
+ * @tc.name: WatchdogTask_WatchdogSkipCheckWhenSuspend_004
+ * @tc.desc: verify wherther the task skipped successfully
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTask_WatchdogSkipCheckWhenSuspend_004, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "SkipCheckWhenSuspend_004";
+    uint64_t delay = 0;
+    uint64_t interval = 3000;
+    bool isOneshot = true;
+    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
+    double testLastSuspendStartTime = -1;
+    double testLastSuspendEndTime = 15000.238412;
+    uint64_t testNow = 16000;
+    ASSERT_EQ(task.ShouldSkipCheckForSuspend(testNow, testLastSuspendStartTime, testLastSuspendEndTime), false);
+}
+
+/**
+ * @tc.name: WatchdogTask_WatchdogSkipCheckWhenSuspend_005
+ * @tc.desc: verify wherther the task skipped successfully
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTask_WatchdogSkipCheckWhenSuspend_005, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "SkipCheckWhenSuspend_005";
+    uint64_t delay = 0;
+    uint64_t interval = 3000;
+    bool isOneshot = true;
+    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
+    double testLastSuspendStartTime = -1;
+    double testLastSuspendEndTime = -1;
+    uint64_t testNow = -1;
+    ASSERT_EQ(task.ShouldSkipCheckForSuspend(testNow, testLastSuspendStartTime, testLastSuspendEndTime), false);
+}
+
+#endif
 } // namespace HiviewDFX
 } // namespace OHOS
