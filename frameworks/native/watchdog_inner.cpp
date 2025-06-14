@@ -416,7 +416,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
             isMainThreadStackEnabled_ = true;
             return;
         }
-        if (stackContent_.collectCount == 0) {
+        if (g_scrollSampleCount.load() == 0) {
             g_isDumpStack.store(true);
             threadSamplerSampleFunc_();
             g_scrollSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
