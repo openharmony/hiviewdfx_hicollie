@@ -111,11 +111,11 @@ std::string FormatTime(const std::string &format);
 
 bool CreateDir(const std::string& dirPath);
 
-std::vector<FileInfo> GetFilesByDir(const std::string& dirPath);
+void GetFilesByDir(std::vector<FileInfo> &fileList, const std::string& dir);
 
-int ClearOldFiles(const std::string& dirPath);
+int ClearOldFiles(const std::vector<FileInfo> &fileList);
 
-bool ClearFileIfNeed(const std::string& dirPath, uint64_t stackSize);
+bool ClearFreezeFileIfNeed(uint64_t stackSize);
 
 bool WriteStackToFd(int32_t pid, std::string& path, const std::string& stack,
     const std::string& eventName, bool& isOverLimit);
