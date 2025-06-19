@@ -421,9 +421,9 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
             threadSamplerSampleFunc_();
             g_scrollSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
         } else {
-            g_isDumpStack.store(false);
             ReportMainThreadEvent(tid, SCROLL_JANK, isScroll);
             stackContent_.scrollTimes--;
+            g_isDumpStack.store(false);
             isMainThreadStackEnabled_ = true;
         }
     };
@@ -492,11 +492,11 @@ void WatchdogInner::SaveFreezeStackToFile(const std::string& outFile, int32_t pi
     std::string info = "#ThreadInfos Tid: " + std::to_string(pid) + ", Name: " + bundleName_;
     if (g_isReuseStack) {
         info += "The current thread is collecting the stack, which conflicts with the main thread jank event."
-            " Reuse the current stack\n";
+            " Reuse the current stack.";
         g_isReuseStack.store(false);
     }
     info += stack;
-    ClearFileIfNeed(FREEZE_DIR, info.size());
+    ClearFreezeFileIfNeed(info.size());
     bool saveRet = SaveStringToFile(FREEZE_DIR + outFile, info);
     g_isDumpStack.store(false);
     g_freezeTaskFinished.store(true);

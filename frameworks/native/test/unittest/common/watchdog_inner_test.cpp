@@ -953,12 +953,16 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_UpdateReportTimes_002, TestSize.Le
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ClearOldFiles_001, TestSize.Level1)
 {
-    int deleteCount = ClearOldFiles("/data/storage/el2/log/watchdog/");
+    std::string dir = "/data/storage/el2/log/watchdog/";
+    std::vector<FileInfo> fileList;
+    GetFilesByDir(fileList, dir);
+    int deleteCount = ClearOldFiles(fileList);
     EXPECT_TRUE(deleteCount >= 0);
-    printf("deleteCount=%d\n", deleteCount);
-    deleteCount = ClearOldFiles("/data/storage/el2/log/watchdog");
-    EXPECT_TRUE(deleteCount == 0);
-    printf("deleteCount=%d\n", deleteCount);
+    printf("deleteCount: %d\n", deleteCount);
+    dir = "/data/storage/el2/log/watchdog";
+    GetFilesByDir(fileList, dir);
+    deleteCount = ClearOldFiles(fileList);
+    EXPECT_TRUE(deleteCount > 0);
 }
 
 /**

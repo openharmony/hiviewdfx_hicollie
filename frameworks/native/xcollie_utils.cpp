@@ -17,6 +17,7 @@
 #include <ctime>
 #include <cinttypes>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <cstdio>
 #include <csignal>
@@ -25,6 +26,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
+#include <filesystem>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <set>
@@ -416,8 +418,6 @@ bool CreateDir(const std::string& dirPath)
     if (!OHOS::FileExists(dirPath)) {
         OHOS::ForceCreateDirectory(dirPath);
         OHOS::ChangeModeDirectory(dirPath, DEFAULT_LOG_DIR_MODE);
-    } else {
-        return true;
     }
     if (OHOS::StorageDaemon::AclSetAccess(dirPath, "g:1201:rwx") != 0) {
         XCOLLIE_LOGI("Failed to AclSetAccess");
@@ -426,76 +426,55 @@ bool CreateDir(const std::string& dirPath)
     return true;
 }
 
-std::vector<FileInfo> GetFilesByDir(const std::string& dirPath)
+void GetFilesByDir(std::vector<FileInfo> &fileList, const std::string& dir)
 {
-    std::vector<FileInfo> fileInfos;
-    DIR* dir = opendir(dirPath.c_str());
-    if (dir == nullptr) {
-        XCOLLIE_LOGW("open dir failed, dir: %{public}s", dirPath.c_str());
-        return fileInfos;
+    if (!OHOS::FileExists(dir)) {
+        XCOLLIE_LOGW("dir: %{public}s not exists.", dir.c_str());
+        return;
     }
-    struct stat st {};
-    for (auto* ent = readdir(dir); ent != nullptr; ent = readdir(dir)) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0 ||
-            ent->d_type == DT_DIR) {
+    struct stat fileStat {};
+    for (const auto &entry : std::filesystem::directory_iterator(dir)) {
+        if (!entry.is_regular_file()) {
             continue;
         }
-        std::string filePath(dirPath + ent->d_name);
-        int err = stat(filePath.c_str(), &st);
+        std::string filePath = entry.path().string();
+        int err = stat(filePath.c_str(), &fileStat);
         if (err != 0) {
-            XCOLLIE_LOGW("%{public}s: Get log stat failed, err(%{public}d).", filePath.c_str(), err);
+            XCOLLIE_LOGW("%{public}s: get fileStat failed, err(%{public}d).", filePath.c_str(), err);
         } else {
             FileInfo fileInfo = {
                 .filePath = filePath,
-                .mtime = st.st_mtime
+                .mtime = fileStat.st_mtime
             };
-            fileInfos.push_back(fileInfo);
+            fileList.push_back(fileInfo);
         }
     }
-    closedir(dir);
-    return fileInfos;
+    XCOLLIE_LOGI("GetFilesByDir fileList size: %{public}zu.", fileList.size());
+    std::sort(fileList.begin(), fileList.end(), [](FileInfo lfile, FileInfo rfile) {
+        return lfile.mtime < rfile.mtime;
+    });
 }
 
-int ClearOldFiles(const std::string& dirPath)
+int ClearOldFiles(const std::vector<FileInfo> &fileList)
 {
-    std::vector<FileInfo> fileInfos = GetFilesByDir(dirPath);
-    size_t fileSize = fileInfos.size();
-    if (fileSize != 0) {
-        std::sort(fileInfos.begin(), fileInfos.end(), [](FileInfo lfile, FileInfo rfile) {
-            return lfile.mtime < rfile.mtime;
-        });
+    size_t fileSize = fileList.size();
+    if (fileSize > 0) {
         int removeFileNumber = static_cast<int>(fileSize - DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT);
         if (removeFileNumber < 0) {
-            removeFileNumber = static_cast<int>(fileSize / TOTAL_HALF);
+            removeFileNumber = static_cast<int>(std::ceil(fileSize / static_cast<double>(TOTAL_HALF)));
         }
         int deleteCount = 0;
-        for (auto it = fileInfos.begin(); it != fileInfos.end(); it++) {
+        for (auto it = fileList.begin(); it != fileList.end(); it++) {
             if (deleteCount >= removeFileNumber) {
                 break;
             }
-            XCOLLIE_LOGD("Remove file %{public}s.", it->filePath.c_str());
+            XCOLLIE_LOGW("Remove file %{public}s.", it->filePath.c_str());
             OHOS::RemoveFile(it->filePath);
             deleteCount++;
         }
-        XCOLLIE_LOGI("Remove total count=%{public}d, removeFileNumber=%{public}d, file count=%{public}zu",
-            deleteCount, removeFileNumber, fileInfos.size());
         return deleteCount;
     }
     return 0;
-}
-
-bool ClearFileIfNeed(const std::string& dirPath, uint64_t stackSize)
-{
-    uint64_t fileSize = OHOS::GetFolderSize(dirPath) + stackSize;
-    if (fileSize < MAX_FILE_SIZE) {
-        return false;
-    }
-    XCOLLIE_LOGW("CurrentDir is over limit. Will to clear old file, "
-        "fileSize: %{public}" PRIu64 " max fileSize: %{public}" PRIu64 ".",
-        fileSize, MAX_FILE_SIZE);
-    ClearOldFiles(dirPath);
-    XCOLLIE_LOGD("CurrentDir size: %{public}" PRIu64 "", (OHOS::GetFolderSize(dirPath) + stackSize));
-    return true;
 }
 
 bool WriteStackToFd(int32_t pid, std::string& path, const std::string& stack, const std::string& eventName,
@@ -504,16 +483,33 @@ bool WriteStackToFd(int32_t pid, std::string& path, const std::string& stack, co
     if (!CreateDir(WATCHDOG_DIR)) {
         return false;
     }
-    isOverLimit = ClearFileIfNeed(WATCHDOG_DIR, stack.size());
+    isOverLimit = ClearFreezeFileIfNeed(stack.size());
+
     std::string time = GetFormatDate();
     std::string realPath;
     if (!OHOS::PathToRealPath(WATCHDOG_DIR, realPath)) {
-        XCOLLIE_LOGE("Path to realPath failed.");
+        XCOLLIE_LOGE("Path to realPath failed.errno:%{public}d", errno);
         return false;
     }
     path = realPath + "/" + eventName + "_" + time.c_str() + "_" +
         std::to_string(pid).c_str() + ".txt";
     return SaveStringToFile(path, stack);
+}
+
+bool ClearFreezeFileIfNeed(uint64_t stackSize)
+{
+    uint64_t fileSize = OHOS::GetFolderSize(WATCHDOG_DIR) + stackSize;
+    if (fileSize < MAX_FILE_SIZE) {
+        return false;
+    }
+    XCOLLIE_LOGW("CurrentDir: %{public}s is over limit. Will to clear old file, fileSize: "
+        "%{public}" PRIu64 " max fileSize: %{public}" PRIu64 ".", WATCHDOG_DIR, fileSize, MAX_FILE_SIZE);
+    std::vector<FileInfo> fileList;
+    GetFilesByDir(fileList, FREEZE_DIR);
+    GetFilesByDir(fileList, WATCHDOG_DIR);
+    int deleteCount = ClearOldFiles(fileList);
+    XCOLLIE_LOGI("Clear old file count:%{public}d", deleteCount);
+    return true;
 }
 
 bool SaveStringToFile(const std::string& path, const std::string& content)
@@ -655,10 +651,13 @@ std::map<std::string, int> GetReportTimesMap()
             }
             std::string key = line.substr(0, colonPos);
             std::string value = line.substr(colonPos + 1);
+            if (key.empty() || value.empty()) {
+                continue;
+            }
             if (std::all_of(std::begin(value), std::end(value), [] (const char &content) {
                 return isdigit(content);
             })) {
-                keyValueMap[key] = std::atoi(value.c_str());
+                keyValueMap[key] = std::stoi(value.c_str());
             }
         }
     }
