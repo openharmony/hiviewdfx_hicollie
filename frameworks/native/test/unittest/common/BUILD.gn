@@ -174,7 +174,7 @@ ohos_unittest("WatchdogTaskTest") {
   ]
 
   defines = []
-  if (suspend_check_enable) {
+  if (hicollie_suspend_check_enable) {
     defines += [ "SUSPEND_CHECK_ENABLE" ]
   }
   if (defined(global_parts_info) &&
