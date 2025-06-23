@@ -13,7 +13,8 @@
         "name": "hicollie",
         "subsystem": "hiviewdfx",
         "features": [
-            "hicollie_jank_detection_enable"
+            "hicollie_jank_detection_enable",
+            "hicollie_suspend_check_enable"
         ],
         "syscap": [
             "SystemCapability.HiviewDFX.HiCollie"

@@ -52,7 +52,7 @@ ohos_source_set("libhicollie_source") {
     defines += [ "HOOK_ENABLE" ]
   }
 
-  if (suspend_check_enable) {
+  if (hicollie_suspend_check_enable) {
     defines += [ "SUSPEND_CHECK_ENABLE" ]
   }
 
