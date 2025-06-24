@@ -888,7 +888,9 @@ int64_t WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, Watchdo
         taskNameSet_.insert(name);
     }
     CreateWatchdogThreadIfNeed();
-    condition_.notify_all();
+    if (task.nextTickTime < nextWeakUpTime_) {
+        condition_.notify_all();
+    }
 
     return id;
 }
@@ -1009,7 +1011,6 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
 
 uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
 {
-    std::unique_lock<std::mutex> lock(lock_);
     if (isNeedStop_) {
         while (!checkerQueue_.empty()) {
             checkerQueue_.pop();
@@ -1067,7 +1068,12 @@ bool WatchdogInner::Start()
         }
         uint64_t now = GetCurrentTickMillseconds();
         WatchdogTask task;
-        uint64_t leftTimeMill = FetchNextTask(now, task);
+        uint64_t leftTimeMill;
+        {
+            std::unique_lock<std::mutex> lock(lock_);
+            leftTimeMill = FetchNextTask(now, task);
+            nextWeakUpTime_ = now + leftTimeMill;
+        }
         if (leftTimeMill == 0) {
             if (!IsInSleep(task)) {
                 task.Run(now);

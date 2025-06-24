@@ -217,6 +217,7 @@ private:
         .isBusinessJank = false,
     };
     std::string specifiedProcessName_;
+    uint64_t nextWeakUpTime_ {UINT64_MAX};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
