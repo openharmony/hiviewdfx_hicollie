@@ -32,7 +32,7 @@ static constexpr int INVALID_ID = -1;
 
 /* define ipc full default params */
 static constexpr uint64_t IPC_FULL_INTERVAL = 30;
-static constexpr char IPC_FULL_TASK[] = "XcollieIpcFullTask";
+static constexpr char IPC_FULL_TASK[] = "OS_DfxIpcCheck";
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif
