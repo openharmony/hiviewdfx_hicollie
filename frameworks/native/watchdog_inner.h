@@ -31,63 +31,14 @@
 #include "singleton.h"
 #include "client/trace_collector_client.h"
 #include "xcollie_define.h"
+#include "watchdog_inner_data.h"
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr const char* const KEY_SAMPLE_INTERVAL = "sample_interval";
-constexpr const char* const KEY_SAMPLE_COUNT = "sample_count";
-constexpr const char* const KEY_SAMPLE_REPORT_TIMES = "report_times_per_app";
-constexpr const char* const KEY_LOG_TYPE = "log_type";
-constexpr const char* const KEY_SET_TIMES_FLAG = "set_report_times_flag";
-constexpr const char* const KEY_IGNORE_STARTUP_TIME = "ignore_startup_time";
-constexpr const char* const KEY_CHECKER_INTERVAL = "checker_interval";
-const int SAMPLE_DEFULE_INTERVAL = 150;
-const int SAMPLE_DEFULE_COUNT = 10;
-const int SAMPLE_DEFULE_REPORT_TIMES = 1;
-const int SET_TIMES_FLAG = 1;
-const int DEFAULT_IGNORE_STARTUP_TIME = 10; // 10s
-const int ENABLE_TREE_FORMAT = 1;
-
-using TimePoint = AppExecFwk::InnerEvent::TimePoint;
-struct TimeContent {
-    int64_t curBegin;
-    int64_t curEnd;
-};
-
-struct StackContent {
-    bool isStartSampleEnabled {true};
-    int detectorCount {0};
-    int collectCount {0};
-    int reportTimes {SAMPLE_DEFULE_REPORT_TIMES};
-    int scrollTimes {SAMPLE_DEFULE_REPORT_TIMES};
-    int64_t reportBegin {0};
-    int64_t reportEnd {0};
-    TimePoint lastEndTime;
-};
-
-struct TraceContent {
-    int traceState {0};
-    int traceCount {0};
-    int dumpCount {0};
-    int64_t reportBegin {0};
-    int64_t reportEnd {0};
-    TimePoint lastEndTime;
-};
-
-typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
-typedef void (*WatchdogInnerEndFunc)(const char* eventName);
-
-typedef int (*ThreadSamplerInitFunc)(int);
-typedef int32_t (*ThreadSamplerSampleFunc)();
-typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
-typedef int (*ThreadSamplerDeinitFunc)();
-typedef void (*SigActionType)(int, siginfo_t*, void*);
 
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
 public:
-    static const int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
-    static const int XCOLLIE_CALLBACK_TIMEWIN_MAX = 60;
     std::map<int64_t, int> taskIdCnt;
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler, uint64_t interval);
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
@@ -129,6 +80,7 @@ public:
     std::string GetSpecifiedProcessName();
     void SetScrollState(bool isScroll);
     void StartSample(int duration, int interval, std::string& outFile);
+    bool EnableAppStartSample(const TimePoint& endTime, const TimePoint& startTime);
 
 public:
     std::string currentScene_;
@@ -157,7 +109,7 @@ private:
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
     void CreateWatchdogThreadIfNeed();
-    bool ReportMainThreadEvent(int64_t tid, std::string eventName, bool isScroll = false);
+    bool ReportMainThreadEvent(int64_t tid, std::string eventName, bool isScroll = false, bool appStart = false);
     bool CheckEventTimer(int64_t currentTime, int64_t reportBegin, int64_t reportEnd, int interval);
     void DumpTraceProfile(int32_t interval);
     int32_t StartTraceProfile();
@@ -170,7 +122,12 @@ private:
     int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key);
     bool CheckSampleParam(std::map<std::string, std::string> paramsMap);
     void SaveFreezeStackToFile(const std::string& outFile, int32_t pid);
-
+    void AppStartSample(int64_t tid, bool isScroll);
+    void ClearParam(bool& isFinished);
+    void UpdateAppStartContent(const std::map<std::string, int64_t>& paramsMap);
+    bool GetStartSampleValue(const std::string& tokens, std::string& key, std::string& value, char flag);
+    void ParseAppStartParams(const std::string& configStr);
+    void ReadAppStartConfig(const std::string& filePath);
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();
     void UninstallThreadSamplerSignal();
@@ -218,6 +175,7 @@ private:
     };
     std::string specifiedProcessName_;
     uint64_t nextWeakUpTime_ {UINT64_MAX};
+    AppStartContent startContent_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
