@@ -121,6 +121,7 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLi
 
 void WatchdogTask::DoCallback()
 {
+    std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
     if (func) {
         XCOLLIE_LOGE("XCollieInner::DoTimerCallback %{public}s callback", name.c_str());
         func(arg);
@@ -136,7 +137,7 @@ void WatchdogTask::DoCallback()
             HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_TIMEOUT");
         XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_TIMEOUT, "
             "ret=%{public}d", getprocpid(), ret);
-        SendXCollieEvent(name, msg);
+        SendXCollieEvent(name, msg, faultTimeStr);
     }
     if (getuid() > UID_TYPE_THRESHOLD) {
         XCOLLIE_LOGI("check uid is app, do not exit");
@@ -257,7 +258,7 @@ void WatchdogTask::RunHandlerCheckerTask()
     }
 }
 
-void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName)
+void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventName, const std::string& faultTimeStr)
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -288,7 +289,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
             }
         }
     }
-
+    sendMsg += faultTimeStr;
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
@@ -324,7 +325,8 @@ void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
     }
 }
 
-void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const
+void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg,
+    const std::string& faultTimeStr) const
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -335,7 +337,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
     std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" +
-        "timeout timer: " + timerName + "\n" + keyMsg;
+        "timeout timer: " + timerName + "\n" + keyMsg + faultTimeStr;
 
     struct HstackVal val;
     if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {
@@ -375,6 +377,7 @@ int WatchdogTask::EvaluateCheckerState()
         reportCount = 0;
         return waitState;
     }
+    std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
     if (func) { // only ipc full exec func
         func(arg);
         flag = (flag & XCOLLIE_FLAG_LOG) ? XCOLLIE_FLAG_LOG : XCOLLIE_FLAG_NOOP;
@@ -388,7 +391,7 @@ int WatchdogTask::EvaluateCheckerState()
     if (IsMemHookOn()) {
         return waitState;
     }
-    std::string description = GetBlockDescription(checkInterval / 1000);
+    std::string description = GetBlockDescription(checkInterval / TO_MILLISECOND_MULTPLE);
     if (waitState == CheckStatus::WAITED_HALF) {
         description += "\nReportCount = " + std::to_string(++reportCount);
         if (name != IPC_FULL_TASK) {
@@ -396,20 +399,20 @@ int WatchdogTask::EvaluateCheckerState()
                 HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_WARNING");
             XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_WARNING, ret=%{public}d",
                 getprocpid(), ret);
-            SendEvent(description, "SERVICE_WARNING");
+            SendEvent(description, "SERVICE_WARNING", faultTimeStr);
         } else if (flag & XCOLLIE_FLAG_LOG) {
-            SendEvent(description, "IPC_FULL_WARNING");
+            SendEvent(description, "IPC_FULL_WARNING", faultTimeStr);
         }
     } else {
         description += ", report twice instead of exiting process.\nReportCount = " + std::to_string(++reportCount);
         if (name != IPC_FULL_TASK) {
-            SendEvent(description, "SERVICE_BLOCK");
+            SendEvent(description, "SERVICE_BLOCK", faultTimeStr);
         } else if (flag & XCOLLIE_FLAG_LOG) {
             int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
                 HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "IPC_FULL");
             XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=IPC_FULL, ret=%{public}d",
                 getprocpid(), ret);
-            SendEvent(description, "IPC_FULL");
+            SendEvent(description, "IPC_FULL", faultTimeStr);
         }
         // peer binder log is collected in hiview asynchronously
         // if blocked process exit early, binder blocked state will change

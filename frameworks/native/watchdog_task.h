@@ -68,8 +68,9 @@ public:
 
     void Run(uint64_t now);
     void RunHandlerCheckerTask();
-    void SendEvent(const std::string &msg, const std::string &eventName);
-    void SendXCollieEvent(const std::string &timerName, const std::string &keyMsg) const;
+    void SendEvent(const std::string &msg, const std::string &eventName, const std::string& faultTimeStr);
+    void SendXCollieEvent(const std::string &timerName, const std::string &keyMsg,
+        const std::string& faultTimeStr) const;
     void DoCallback();
     void TimerCountTask();
     void DumpKernelStack(struct HstackVal& val, int& ret) const;
