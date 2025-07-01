@@ -21,7 +21,7 @@ namespace HiviewDFX {
 namespace {
 constexpr int SUCCESS = 0;
 constexpr int FAIL = -1;
-}
+}  // namespace
 int ThreadSamplerInit(int collectStackCount)
 {
     return ThreadSampler::GetInstance().Init(collectStackCount) ? SUCCESS : FAIL;
@@ -60,5 +60,5 @@ void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context)
 {
     ThreadSampler::ThreadSamplerSignalHandler(sig, si, context);
 }
-}
-}
+}  // namespace HiviewDFX
+}  // namespace OHOS

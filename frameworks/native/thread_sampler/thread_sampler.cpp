@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <csignal>
 #include <memory>
 #include <queue>
 #include <set>
@@ -25,14 +26,13 @@
 #include <sys/mman.h>
 #include <sys/prctl.h>
 #include <syscall.h>
-#include <csignal>
 
-#include "unwinder.h"
-#include "dfx_regs.h"
 #include "dfx_elf.h"
 #include "dfx_frame_formatter.h"
-#include "thread_sampler_utils.h"
+#include "dfx_regs.h"
 #include "file_ex.h"
+#include "thread_sampler_utils.h"
+#include "unwinder.h"
 
 #define NO_SANITIZER __attribute__((no_sanitize("address"), no_sanitize("hwaddress")))
 
@@ -57,9 +57,9 @@ ThreadSampler::~ThreadSampler()
     XCOLLIE_LOGI("Destroy ThreadSampler.\n");
 }
 
-int ThreadSampler::FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void *arg)
+int ThreadSampler::FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void* arg)
 {
-    UnwindInfo* unwindInfo = static_cast<UnwindInfo *>(arg);
+    UnwindInfo* unwindInfo = static_cast<UnwindInfo*>(arg);
     if (unwindInfo == nullptr) {
         XCOLLIE_LOGE("invalid FindUnwindTable param\n");
         return -1;
@@ -79,17 +79,16 @@ int ThreadSampler::FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, 
     return -1;
 }
 
-int ThreadSampler::AccessMem(uintptr_t addr, uintptr_t *val, void *arg)
+int ThreadSampler::AccessMem(uintptr_t addr, uintptr_t* val, void* arg)
 {
-    UnwindInfo* unwindInfo = static_cast<UnwindInfo *>(arg);
+    UnwindInfo* unwindInfo = static_cast<UnwindInfo*>(arg);
     if (unwindInfo == nullptr || addr + sizeof(uintptr_t) < addr) {
         XCOLLIE_LOGE("invalid AccessMem param\n");
         return -1;
     }
 
     *val = 0;
-    if (addr < unwindInfo->context->sp ||
-        addr + sizeof(uintptr_t) >= unwindInfo->context->sp + STACK_BUFFER_SIZE) {
+    if (addr < unwindInfo->context->sp || addr + sizeof(uintptr_t) >= unwindInfo->context->sp + STACK_BUFFER_SIZE) {
         return ThreadSampler::GetInstance().AccessElfMem(addr, val);
     } else {
         size_t stackOffset = addr - unwindInfo->context->sp;
@@ -97,14 +96,14 @@ int ThreadSampler::AccessMem(uintptr_t addr, uintptr_t *val, void *arg)
             XCOLLIE_LOGE("limit stack\n");
             return -1;
         }
-        *val = *(reinterpret_cast<uintptr_t *>(&unwindInfo->context->buffer[stackOffset]));
+        *val = *(reinterpret_cast<uintptr_t*>(&unwindInfo->context->buffer[stackOffset]));
     }
     return 0;
 }
 
-int ThreadSampler::GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void *arg)
+int ThreadSampler::GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void* arg)
 {
-    UnwindInfo* unwindInfo = static_cast<UnwindInfo *>(arg);
+    UnwindInfo* unwindInfo = static_cast<UnwindInfo*>(arg);
     if (unwindInfo == nullptr) {
         XCOLLIE_LOGE("invalid GetMapByPc param\n");
         return -1;
@@ -155,8 +154,7 @@ bool ThreadSampler::InitRecordBuffer()
     }
     // create buffer
     bufferSize_ = SAMPLER_MAX_BUFFER_SZ * sizeof(struct ThreadUnwindContext);
-    mmapStart_ = mmap(nullptr, bufferSize_,
-        PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    mmapStart_ = mmap(nullptr, bufferSize_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mmapStart_ == MAP_FAILED) {
         XCOLLIE_LOGE("Failed to create buffer for thread sampler!(%{public}d)\n", errno);
         return false;
@@ -222,7 +220,7 @@ void ThreadSampler::DestroyUnwinder()
     accessors_.reset();
 }
 
-int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t *val)
+int ThreadSampler::AccessElfMem(uintptr_t addr, uintptr_t* val)
 {
     std::shared_ptr<DfxMap> map;
     if (maps_->FindMapByAddr(addr, map)) {
@@ -300,7 +298,7 @@ NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 #elif defined(__loongarch_lp64)
     contextArray[index].fp = static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_FP];
     contextArray[index].lr =
-	static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_LOONGARCH64_R1];
+        static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_LOONGARCH64_R1];
     contextArray[index].sp = static_cast<ucontext_t*>(context)->uc_mcontext.__gregs[RegsEnumLoongArch64::REG_SP];
     contextArray[index].pc = static_cast<ucontext_t*>(context)->uc_mcontext.__pc;
 #endif
@@ -308,7 +306,7 @@ NO_SANITIZER void ThreadSampler::WriteContext(void* context)
         return;
     }
     uintptr_t curStackSz = stackEnd_ - contextArray[index].sp;
-    uintptr_t cpySz = curStackSz  > STACK_BUFFER_SIZE ? STACK_BUFFER_SIZE : curStackSz;
+    uintptr_t cpySz = curStackSz > STACK_BUFFER_SIZE ? STACK_BUFFER_SIZE : curStackSz;
     for (uintptr_t pos = 0; pos < cpySz; pos++) {
         reinterpret_cast<char*>(contextArray[index].buffer)[pos] =
             reinterpret_cast<const char*>(contextArray[index].sp)[pos];
@@ -339,11 +337,11 @@ void ThreadSampler::SendSampleRequest()
     si.si_errno = 0;
     si.si_code = -1;
     if (syscall(SYS_rt_tgsigqueueinfo, pid_, pid_, si.si_signo, &si) != 0) {
-        XCOLLIE_LOGE("Failed to queue signal(%{public}d) to %{public}d, errno(%{public}d).\n",
-            si.si_signo, pid_, errno);
+        XCOLLIE_LOGE("Failed to queue signal(%{public}d) to %{public}d, errno(%{public}d).\n", si.si_signo, pid_,
+                     errno);
         return;
     }
-#if defined (CONSUME_STATISTICS)
+#if defined(CONSUME_STATISTICS)
     requestCount_++;
 #endif
 }
@@ -381,7 +379,7 @@ void ThreadSampler::ProcessStackBuffer()
         p.pcVec = pcs;
         timeStampedPcsList_.emplace_back(p);
         /* for print tree format stack */
-        stackPrinter_->PutPcsInTable(pcs, unwindInfo.context->snapshotTime);
+        stackPrinter_->PutPcsInTable(pcs, pid_, unwindInfo.context->snapshotTime);
 
         uint64_t ts = GetCurrentTimeNanoseconds();
 
@@ -424,7 +422,7 @@ void ThreadSampler::ResetConsumeInfo()
     unwindCount_ = 0;
     unwindTimeCost_ = 0;
     signalTimeCost_ = 0;
-#endif // #if defined(CONSUME_STATISTICS)
+#endif  // #if defined(CONSUME_STATISTICS)
 }
 
 bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
@@ -457,20 +455,21 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     if (!treeFormat) {
         stack = stackPrinter_->GetFullStack(timeStampedPcsList_);
     } else {
-        stack = stackPrinter_->GetTreeStack();
-        heaviestStack_ = stackPrinter_->GetHeaviestStack();
+        stack = stackPrinter_->GetTreeStack(pid_);
+        heaviestStack_ = stackPrinter_->GetHeaviestStack(pid_);
     }
     timeStampedPcsList_.clear();
 
 #if defined(CONSUME_STATISTICS)
     uint64_t collectEnd = GetCurrentTimeNanoseconds();
     uint64_t elapse = collectEnd - collectStart;
-    XCOLLIE_LOGI("Sample count:%{public}llu\nRequest count:%{public}llu\n\
+    XCOLLIE_LOGI(
+        "Sample count:%{public}llu\nRequest count:%{public}llu\n\
         Snapshot count:%{public}llu\nAverage copy stack time:%{public}llu ns\n",
-        (unsigned long long)sampleCount_, (unsigned long long)requestCount_,
-        (unsigned long long)copyStackCount_, (unsigned long long)copyStackTimeCost_ / copyStackCount_);
-    XCOLLIE_LOGI("Average process time:%{public}llu ns\n", (unsigned long long)processTimeCost_/processCount_);
-    XCOLLIE_LOGI("Average unwind time:%{public}llu ns\n", (unsigned long long)unwindTimeCost_/unwindCount_);
+        (unsigned long long)sampleCount_, (unsigned long long)requestCount_, (unsigned long long)copyStackCount_,
+        (unsigned long long)copyStackTimeCost_ / copyStackCount_);
+    XCOLLIE_LOGI("Average process time:%{public}llu ns\n", (unsigned long long)processTimeCost_ / processCount_);
+    XCOLLIE_LOGI("Average unwind time:%{public}llu ns\n", (unsigned long long)unwindTimeCost_ / unwindCount_);
     XCOLLIE_LOGI("FormatStack time:%{public}llu ns\n", (unsigned long long)elapse);
     ResetConsumeInfo();
 #endif
@@ -490,5 +489,5 @@ bool ThreadSampler::Deinit()
     init_ = false;
     return !init_;
 }
-} // end of namespace HiviewDFX
-} // end of namespace OHOS
+}  // end of namespace HiviewDFX
+}  // end of namespace OHOS

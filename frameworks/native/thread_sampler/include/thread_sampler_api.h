@@ -49,6 +49,6 @@ void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
 #ifdef __cplusplus
 }
 #endif
-}
-}
+}  // namespace HiviewDFX
+}  // namespace OHOS
 #endif

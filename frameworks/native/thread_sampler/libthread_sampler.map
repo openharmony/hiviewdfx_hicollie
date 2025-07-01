@@ -1,12 +1,12 @@
 {
   global:
-  extern "C" {
-    ThreadSamplerInit;
-    ThreadSamplerSample;
-    ThreadSamplerCollect;
-    ThreadSamplerDeinit;
-    ThreadSamplerSigHandler;
-  };
+    extern "C" {
+      ThreadSamplerInit;
+      ThreadSamplerSample;
+      ThreadSamplerCollect;
+      ThreadSamplerDeinit;
+      ThreadSamplerSigHandler;
+    };
   local:
     *;
 };
