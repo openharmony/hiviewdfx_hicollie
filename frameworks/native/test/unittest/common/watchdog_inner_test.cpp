@@ -498,7 +498,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcNameFromProcCmdline_001, Te
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_001, TestSize.Level1)
 {
     EXPECT_TRUE(IsProcessDebug(getprocpid()));
-    WatchdogInner::GetInstance().SendFfrtEvent("msg", "testName", "taskInfo");
+    std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
+    WatchdogInner::GetInstance().SendFfrtEvent("msg", "testName", "taskInfo", faultTimeStr);
 }
 
 /**

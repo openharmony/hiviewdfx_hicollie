@@ -1419,6 +1419,7 @@ bool WatchdogInner::WriteStringToFile(uint32_t pid, const char *str)
 
 void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount)
 {
+    std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
     std::string description = "FfrtCallback: task(";
     description += taskInfo;
     description += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
@@ -1428,9 +1429,9 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
             HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "Queue_Schedule_Timeout");
         XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=Queue_Schedule_Timeout, "
             "ret=%{public}d", getprocpid(), ret);
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr);
         description += ", report twice instead of exiting process.";
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
         WatchdogInner::KillPeerBinderProcess(description);
         return;
     }
@@ -1448,7 +1449,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
 
     if (isExist) {
         description += ", report twice instead of exiting process."; // 1s = 1000ms
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo);
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
         WatchdogInner::KillPeerBinderProcess(description);
     } else {
@@ -1456,7 +1457,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
             HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "Serial_Schedule_Timeout");
         XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=Serial_Schedule_Timeout, "
             "ret=%{public}d", getprocpid(), ret);
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo);
+        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr);
     }
 }
 
@@ -1469,7 +1470,8 @@ void WatchdogInner::InitFfrtWatchdog()
     IpcCheck();
 }
 
-void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo)
+void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo,
+    const std::string& faultTimeStr)
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -1488,6 +1490,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     delete[] buffer;
     int32_t tid = pid;
     GetFfrtTaskTid(tid, sendMsg);
+    sendMsg += faultTimeStr;
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
         "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),

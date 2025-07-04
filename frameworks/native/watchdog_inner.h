@@ -58,7 +58,8 @@ public:
     void InitFfrtWatchdog();
     static bool WriteStringToFile(uint32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
-    static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo);
+    static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo,
+        const std::string& faultTimeStr);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
     bool StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
