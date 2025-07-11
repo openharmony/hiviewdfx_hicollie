@@ -14,8 +14,8 @@
  */
 #include "thread_sampler_utils.h"
 
-#include <ctime>
 #include <cstdio>
+#include <ctime>
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -51,5 +51,5 @@ void DoUnwind(const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo)
     unwinder->Unwind(&unwindInfo);
 #endif  // #if defined(__loongarch_lp64)
 }
-} // end of namespace HiviewDFX
-} // end of namespace OHOS
+}  // end of namespace HiviewDFX
+}  // end of namespace OHOS

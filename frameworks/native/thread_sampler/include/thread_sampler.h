@@ -19,18 +19,17 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
-#include <string>
 #include <mutex>
+#include <string>
 
 #include <sys/mman.h>
 
-#include "singleton.h"
-
-#include "unwinder.h"
 #include "dfx_accessors.h"
 #include "dfx_maps.h"
+#include "singleton.h"
 #include "stack_printer.h"
 #include "unwind_context.h"
+#include "unwinder.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -42,10 +41,10 @@ struct ThreadUnwindContext {
     uintptr_t sp {0};
     uintptr_t fp {0};
     uintptr_t lr {0};
-    std::atomic<uint64_t> requestTime {0}; // begin sample
-    std::atomic<uint64_t> snapshotTime {0}; // end of stack copy in signal handler
-    std::atomic<uint64_t> processTime {0}; // end of unwind and unique stack
-    uint8_t buffer[STACK_BUFFER_SIZE] {0}; // 16K stack buffer
+    std::atomic<uint64_t> requestTime {0};   // begin sample
+    std::atomic<uint64_t> snapshotTime {0};  // end of stack copy in signal handler
+    std::atomic<uint64_t> processTime {0};   // end of unwind and unique stack
+    uint8_t buffer[STACK_BUFFER_SIZE] {0};   // 16K stack buffer
 };
 
 struct UnwindInfo {
@@ -55,13 +54,14 @@ struct UnwindInfo {
 
 class ThreadSampler : public Singleton<ThreadSampler> {
     DECLARE_SINGLETON(ThreadSampler);
+
 public:
     static const int32_t SAMPLER_MAX_BUFFER_SZ = 2;
     static void ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context);
 
     // Initial sampler, include uwinder, recorde buffer etc.
     bool Init(int collectStackCount);
-    int32_t Sample();   // Interface of sample, to send sample request.
+    int32_t Sample();  // Interface of sample, to send sample request.
     // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
     bool CollectStack(std::string& stack, bool treeFormat = true);
     bool Deinit();  // Release sampler
@@ -75,11 +75,11 @@ private:
     bool InitStackPrinter();
     void SendSampleRequest();
     void ProcessStackBuffer();
-    int AccessElfMem(uintptr_t addr, uintptr_t *val);
+    int AccessElfMem(uintptr_t addr, uintptr_t* val);
 
-    static int FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void *arg);
-    static int AccessMem(uintptr_t addr, uintptr_t *val, void *arg);
-    static int GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void *arg);
+    static int FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void* arg);
+    static int AccessMem(uintptr_t addr, uintptr_t* val, void* arg);
+    static int GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void* arg);
 
     ThreadUnwindContext* GetReadContext();
     ThreadUnwindContext* GetWriteContext();
@@ -116,6 +116,6 @@ private:
 
     std::vector<TimeStampedPcs> timeStampedPcsList_;
 };
-} // end of namespace HiviewDFX
-} // end of namespace OHOS
+}  // end of namespace HiviewDFX
+}  // end of namespace OHOS
 #endif

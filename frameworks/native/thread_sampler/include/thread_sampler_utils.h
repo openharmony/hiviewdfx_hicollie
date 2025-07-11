@@ -15,12 +15,12 @@
 #ifndef RELIABILITY_THREAD_SAMPLER_UTILS_H
 #define RELIABILITY_THREAD_SAMPLER_UTILS_H
 
-#include <string>
 #include <map>
+#include <string>
 #include <vector>
 
-#include "thread_sampler.h"
 #include "hilog/log.h"
+#include "thread_sampler.h"
 
 #undef LOG_DOMAIN
 #define LOG_DOMAIN 0xD002D06
@@ -39,6 +39,6 @@ namespace HiviewDFX {
 
 uint64_t GetCurrentTimeNanoseconds();
 void DoUnwind(const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo);
-} // end of namespace HiviewDFX
-} // end of namespace OHOS
+}  // end of namespace HiviewDFX
+}  // end of namespace OHOS
 #endif
