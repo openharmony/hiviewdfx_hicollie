@@ -191,6 +191,10 @@ static bool IsInAppspwan()
         return true;
     }
 
+    if (getuid() == 0 && GetSelfProcName().find("hybridspawn") != std::string::npos) {
+        return true;
+    }
+
     return false;
 }
 
