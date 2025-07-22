@@ -133,10 +133,6 @@ void WatchdogTask::DoCallback()
     if (flag & XCOLLIE_FLAG_LOG) {
         /* send to freezedetetor */
         std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
-        int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-            HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_TIMEOUT");
-        XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_TIMEOUT, "
-            "ret=%{public}d", getprocpid(), ret);
         SendXCollieEvent(name, msg, faultTimeStr);
     }
     if (getuid() > UID_TYPE_THRESHOLD) {
@@ -395,10 +391,6 @@ int WatchdogTask::EvaluateCheckerState()
     if (waitState == CheckStatus::WAITED_HALF) {
         description += "\nReportCount = " + std::to_string(++reportCount);
         if (name != IPC_FULL_TASK) {
-            int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-                HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "SERVICE_WARNING");
-            XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=SERVICE_WARNING, ret=%{public}d",
-                getprocpid(), ret);
             SendEvent(description, "SERVICE_WARNING", faultTimeStr);
         } else if (flag & XCOLLIE_FLAG_LOG) {
             SendEvent(description, "IPC_FULL_WARNING", faultTimeStr);
@@ -408,10 +400,6 @@ int WatchdogTask::EvaluateCheckerState()
         if (name != IPC_FULL_TASK) {
             SendEvent(description, "SERVICE_BLOCK", faultTimeStr);
         } else if (flag & XCOLLIE_FLAG_LOG) {
-            int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-                HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "IPC_FULL");
-            XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=IPC_FULL, ret=%{public}d",
-                getprocpid(), ret);
             SendEvent(description, "IPC_FULL", faultTimeStr);
         }
         // peer binder log is collected in hiview asynchronously

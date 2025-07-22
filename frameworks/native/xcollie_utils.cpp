@@ -543,9 +543,13 @@ std::string FormatTime(const std::string &format)
     auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
     auto timestamp = millisecs.count();
     std::time_t tt = static_cast<std::time_t>(timestamp / SEC_TO_MILLISEC);
-    std::tm t = *std::localtime(&tt);
+    std::tm* t = std::localtime(&tt);
+    if (t == nullptr) {
+        XCOLLIE_LOGE("localtime failed.");
+        return "";
+    }
     char buffer[MAX_TIME_BUFF] = {0};
-    std::strftime(buffer, sizeof(buffer), format.c_str(), &t);
+    std::strftime(buffer, sizeof(buffer), format.c_str(), t);
     return std::string(buffer);
 }
 
