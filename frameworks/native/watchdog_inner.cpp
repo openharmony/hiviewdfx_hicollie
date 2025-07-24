@@ -1425,10 +1425,6 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     description += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
     std::string info(taskInfo);
     if (info.find("Queue_Schedule_Timeout") != std::string::npos) {
-        int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-            HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "Queue_Schedule_Timeout");
-        XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=Queue_Schedule_Timeout, "
-            "ret=%{public}d", getprocpid(), ret);
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr);
         description += ", report twice instead of exiting process.";
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
@@ -1453,10 +1449,6 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
         WatchdogInner::KillPeerBinderProcess(description);
     } else {
-        int ret = HiSysEventWrite(HiviewDFX::HiSysEvent::Domain::RELIABILITY, "LOWMEM_DUMP",
-            HiviewDFX::HiSysEvent::EventType::STATISTIC, "PID", getprocpid(), "MSG", "Serial_Schedule_Timeout");
-        XCOLLIE_LOGI("hisysevent pid=%{public}d, eventName=LOWMEM_DUMP, MSG=Serial_Schedule_Timeout, "
-            "ret=%{public}d", getprocpid(), ret);
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr);
     }
 }
