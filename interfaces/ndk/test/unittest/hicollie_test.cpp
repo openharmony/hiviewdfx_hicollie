@@ -135,6 +135,7 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Init_JankDetection_1, TestSize.Level1)
 HWTEST_F(HiCollieTest, Test_OH_HiCollie_Report_1, TestSize.Level1)
 {
     bool isSixSecond = false;
+    OHOS::HiviewDFX::Watchdog::GetInstance().SetForeground(true);
     int result = OH_HiCollie_Report(&isSixSecond);
     printf("OH_HiCollie_Report result: %d\n", result);
     EXPECT_TRUE(isSixSecond);
