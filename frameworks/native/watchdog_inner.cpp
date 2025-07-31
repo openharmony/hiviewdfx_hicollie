@@ -84,11 +84,11 @@ constexpr uint32_t FOUNDATION_UID = 5523;
 constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
 const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
-const char* HMOS_HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
+const char* HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 const char* ON_KICK_TIME = "on,72";
-const char* ON_KICK_TIME_HMOS = "on,10,foundation";
+const char* ON_KICK_TIME_EXTRA = "on,10,foundation";
 const char* KICK_TIME = "kick";
-const char* KICK_TIME_HMOS = "kick,foundation";
+const char* KICK_TIME_EXTRA = "kick,foundation";
 const int32_t NOT_OPEN = -1;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
@@ -1327,7 +1327,7 @@ bool WatchdogInner::KickWatchdog()
     if (g_fd == NOT_OPEN) {
         g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
         if (g_fd < 0) {
-            g_fd = open(HMOS_HUNGTASK_USERLIST, O_WRONLY);
+            g_fd = open(HUNGTASK_USERLIST, O_WRONLY);
             if (g_fd < 0) {
                 XCOLLIE_KLOGE("can't open hungtask file, errno:%{public}d", errno);
                 g_existFile = false;
@@ -1339,12 +1339,12 @@ bool WatchdogInner::KickWatchdog()
             XCOLLIE_KLOGI("change to linux kernel");
         }
 
-        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_HMOS : ON_KICK_TIME)) {
+        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_EXTRA : ON_KICK_TIME)) {
             XCOLLIE_KLOGI("kick watchdog send msg to hungtask fail");
             return false;
         }
     }
-    return SendMsgToHungtask(isHmos ? KICK_TIME_HMOS : KICK_TIME);
+    return SendMsgToHungtask(isHmos ? KICK_TIME_EXTRA : KICK_TIME);
 }
 
 bool WatchdogInner::AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg)
