@@ -47,6 +47,16 @@ bool ReportData::WriteContent(Parcel &parcel) const
         XCOLLIE_LOGE("FreezeInfo [%{public}s] write string failed.", freezeInfo.c_str());
         return false;
     }
+
+    if (!parcel.WriteString(appRunningUniqueId)) {
+        XCOLLIE_LOGE("AppRunningUniqueId [%{public}s] write string failed.", appRunningUniqueId.c_str());
+        return false;
+    }
+
+    if (!parcel.WriteString(procStatm)) {
+        XCOLLIE_LOGE("ProcStatm [%{public}s] write string failed.", procStatm.c_str());
+        return false;
+    }
     return true;
 }
 

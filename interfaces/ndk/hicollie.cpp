@@ -44,16 +44,17 @@ DECLARE_INTERFACE_DESCRIPTOR(u"ohos.appexecfwk.AppMgr");
     constexpr uint32_t RATIO = 2;
     constexpr int32_t BACKGROUND_REPORT_COUNT_MAX = 5;
 }
+
 static int32_t g_bussinessTid = 0;
 static uint32_t g_stuckTimeout = 0;
 static int64_t g_lastWatchTime = 0;
 static std::atomic_int g_backgroundReportCount = 0;
+static int g_pid = getpid();
 
 bool IsAppMainThread()
 {
-    static int pid = getpid();
     static uint64_t uid = getuid();
-    if (pid == gettid() && uid >= MIN_APP_UID) {
+    if (g_pid == gettid() && uid >= MIN_APP_UID) {
         return true;
     }
     return false;
@@ -128,6 +129,13 @@ int Report(bool* isSixSecond)
         reportData.forceExit = true;
         *isSixSecond = false;
         stuckTimeout = g_stuckTimeout * RATIO;
+        std::ifstream statmStream("/proc/" + std::to_string(g_pid) + "/statm");
+        if (statmStream) {
+            std::string procStatm;
+            std::getline(statmStream, procStatm);
+            statmStream.close();
+            reportData.procStatm = procStatm;
+        }
     } else {
         reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_3S";
         reportData.forceExit = false;
@@ -141,7 +149,7 @@ int Report(bool* isSixSecond)
     reportData.notifyApp = false;
     reportData.waitSaveState = false;
     reportData.stuckTimeout = g_stuckTimeout;
-    reportData.tid = g_bussinessTid > 0 ? g_bussinessTid : getpid();
+    reportData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
     auto result = NotifyAppFault(reportData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
         result, reportData.tid, reportData.stuckTimeout);

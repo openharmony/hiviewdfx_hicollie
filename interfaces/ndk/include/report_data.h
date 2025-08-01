@@ -54,6 +54,8 @@ struct ReportData : public Parcelable {
     uint32_t stuckTimeout = 0;
     sptr<IRemoteObject> token = nullptr;
     std::string freezeInfo = "";
+    std::string appRunningUniqueId;
+    std::string procStatm;
 };
 } // end of HiviewDFX
 } // end of OHOS
