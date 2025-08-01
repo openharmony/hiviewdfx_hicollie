@@ -73,30 +73,6 @@ static void InitEndFuncTest(const char* name)
 }
 
 /**
- * @tc.name: WatchdogInner thread RemoveInnerTask test
- * @tc.desc: add test case
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_TaskRemoveInnerTask_001, TestSize.Level1)
-{
-    WatchdogInner::GetInstance().RemoveInnerTask("WatchdogInnerTest_RemoveInnerTask_001");
-    ASSERT_EQ(WatchdogInner::GetInstance().checkerQueue_.size(), 0);
-}
-
-/**
- * @tc.name: WatchdogInner thread run a oneshot task
- * @tc.desc: Verify whether the task has been executed failed
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_RunOneShotTask_001, TestSize.Level1)
-{
-    int taskResult = 0;
-    auto taskFunc = [&taskResult]() { taskResult = 1; };
-    WatchdogInner::GetInstance().RunOneShotTask("", taskFunc, 0);
-    ASSERT_EQ(taskResult, 0);
-}
-
-/**
  * @tc.name: WatchdogInner TriggerTimerCountTask Test
  * @tc.desc: add teatcase
  * @tc.type: FUNC
@@ -106,79 +82,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_TriggerTimerCountTask_001, TestSiz
     std::string name = "WatchdogInnerTest_RunPeriodicalTask_001";
     WatchdogInner::GetInstance().TriggerTimerCountTask(name, true, "test");
     ASSERT_EQ(WatchdogInner::GetInstance().checkerQueue_.size(), 0);
-}
-
-/**
- * @tc.name: WatchdogInner thread run a periodical task
- * @tc.desc: Verify whether the task has been executed failed
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_RunPeriodicalTask_001, TestSize.Level1)
-{
-    int taskResult = 0;
-    auto taskFunc = [&taskResult]() { taskResult = 1; };
-    std::string name = "RunPeriodicalTask_001";
-    WatchdogInner::GetInstance().RunPeriodicalTask(name, taskFunc, 2000, 0);
-    ASSERT_TRUE(WatchdogInner::GetInstance().checkerQueue_.size() > 0);
-    WatchdogInner::GetInstance().TriggerTimerCountTask(name, false, "test");
-    WatchdogInner::GetInstance().TriggerTimerCountTask(name, true, "test");
-    ASSERT_EQ(taskResult, 0);
-    size_t beforeSize = WatchdogInner::GetInstance().taskNameSet_.size();
-    WatchdogInner::GetInstance().RemoveInnerTask(name);
-    size_t afterSize = WatchdogInner::GetInstance().taskNameSet_.size();
-    ASSERT_EQ(beforeSize, (afterSize + 1));
-    WatchdogInner::GetInstance().RunPeriodicalTask("", taskFunc, 2000, 0);
-    WatchdogInner::GetInstance().SetTimerCountTask("", 1, 1);
-    WatchdogInner::GetInstance().RemoveInnerTask("");
-}
-
-/**
- * @tc.name: WatchdogInner fetch next task;
- * @tc.desc: Verify whether the task acquisition failed
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_001, TestSize.Level1)
-{
-    uint64_t now = GetCurrentTickMillseconds();
-    int taskResult = 0;
-    auto taskFunc = [&taskResult]() { taskResult = 1; };
-    const std::string name = "task1";
-    uint64_t delay = 0;
-    uint64_t interval = 0;
-    bool isOneshot = true;
-    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
-    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc,
-        delay, interval, isOneshot));
-    ASSERT_GT(id, 0);
-    WatchdogInner::GetInstance().isNeedStop_.store(true);
-    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task), 60000);
-    WatchdogInner::GetInstance().isNeedStop_.store(false);
-    WatchdogTask task1;
-    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task1), 60000);
-    WatchdogTask task2("", taskFunc, delay, interval, isOneshot);
-    ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task1), 60000);
-}
-
-/**
- * @tc.name: WatchdogInner fetch next task;
- * @tc.desc: Verify whether the task acquisition successfully
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FetchNextTask_002, TestSize.Level1)
-{
-    uint64_t now = GetCurrentTickMillseconds() + 6500;
-    int taskResult = 0;
-    auto taskFunc = [&taskResult]() { taskResult = 1; };
-    const std::string name = "FetchNextTask_002";
-    uint64_t delay = 0;
-    uint64_t interval = 0;
-    bool isOneshot = true;
-    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
-    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc,
-        delay, interval, isOneshot));
-    ASSERT_GT(id, 0);
-    uint64_t result = WatchdogInner::GetInstance().FetchNextTask(now, task);
-    ASSERT_TRUE(result >= 0);
 }
 
 /**

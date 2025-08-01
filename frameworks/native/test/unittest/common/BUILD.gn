@@ -132,6 +132,41 @@ ohos_unittest("WatchdogInnerUnitTest") {
   }
 }
 
+ohos_unittest("WatchdogInnerTaskTest") {
+  module_out_path = module_output_path
+  sources = [
+    "watchdog_inner_task_test.cpp",
+    "watchdog_inner_util_test.cpp",
+  ]
+
+  configs = [ ":module_private_config" ]
+
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
+
+  external_deps = [
+    "c_utils:utils",
+    "ffrt:libffrt",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "init:libbegetutil",
+  ]
+
+  defines = []
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.notification_eventhandler)) {
+    external_deps += [ "eventhandler:libeventhandler" ]
+  }
+  if (defined(global_parts_info) &&
+      defined(global_parts_info.hiviewdfx_hiview)) {
+    external_deps += [ "hiview:libucollection_client" ]
+    defines += [ "HIVIEW_ENABLE" ]
+  }
+  if (defined(global_parts_info.hiviewdfx_hisysevent)) {
+    external_deps += [ "hisysevent:libhisysevent" ]
+    defines += [ "HISYSEVENT_ENABLE" ]
+  }
+}
+
 ohos_unittest("HandlerCheckerTest") {
   module_out_path = module_output_path
   sources = [ "handler_checker_test.cpp" ]
@@ -215,6 +250,7 @@ group("unittest") {
     # deps file
     ":HandlerCheckerTest",
     ":ThreadSamplerTest",
+    ":WatchdogInnerTaskTest",
     ":WatchdogInnerUnitTest",
     ":WatchdogTaskTest",
     ":WatchdogUnitTest",
