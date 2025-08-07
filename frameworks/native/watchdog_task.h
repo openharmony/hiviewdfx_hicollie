@@ -100,9 +100,6 @@ public:
     uint64_t bootTimeStart;
     uint64_t monoTimeStart;
     int reportCount;
-
-private:
-    bool IsMemHookOn();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

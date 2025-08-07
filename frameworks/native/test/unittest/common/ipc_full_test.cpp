@@ -16,64 +16,64 @@
 #include "ipc_full_test.h"
 
 #include "ipc_full.h"
- 
+
 using namespace testing::ext;
- 
+
 namespace OHOS {
 namespace HiviewDFX {
 void IpcFullTest::SetUpTestCase(void)
 {
 }
- 
+
 void IpcFullTest::TearDownTestCase(void)
 {
 }
- 
+
 void IpcFullTest::SetUp(void)
 {
 }
- 
+
 void IpcFullTest::TearDown(void)
 {
 }
- 
- /**
-  * @tc.name: AddIpcFullTest
-  * @tc.desc: Verify add ipc full interface
-  * @tc.type: FUNC
-  * @tc.require: AR20250307218293
-  * @tc.author: zhengchengkai
-  */
-HWTEST_F(IpcFullTest, AddIpcFullTest_001, TestSize.Level1)
-{
+
+/**
+ * @tc.name: AddIpcFullTest
+ * @tc.desc: Verify add ipc full interface
+ * @tc.type: FUNC
+ * @tc.require: AR20250307218293
+ * @tc.author: zhengchengkai
+ */
+    HWTEST_F(IpcFullTest, AddIpcFullTest_001, TestSize.Level1)
+    {
     /**
-    * @tc.steps: step1. input interval param below the min allowable threshold
-    * @tc.expected: step1. add ipc full failed;
-    */
+     * @tc.steps: step1. input interval param below the min allowable threshold
+     * @tc.expected: step1. add ipc full failed;
+     */
     bool result = IpcFull::GetInstance().AddIpcFull(4);
     ASSERT_EQ(result, false);
 
     /**
-    * @tc.steps: step2. input interval param above the max allowable threshold
-    * @tc.expected: step2. add ipc full failed;
-    */
+     * @tc.steps: step2. input interval param above the max allowable threshold
+     * @tc.expected: step2. add ipc full failed;
+     */
     result = IpcFull::GetInstance().AddIpcFull(32);
     ASSERT_EQ(result, false);
 
     /**
-    * @tc.steps: step3. input valid interval param
-    * @tc.expected: step3. add ipc full successfully;
-    */
+     * @tc.steps: step3. input valid interval param
+     * @tc.expected: step3. add ipc full successfully;
+     */
     result = IpcFull::GetInstance().AddIpcFull(12);
     ASSERT_EQ(result, true);
 
     /**
-    * @tc.steps: step4. ipc full task already exists
-    * @tc.expected: step4. add ipc full successfully;
-    */
+     * @tc.steps: step4. ipc full task already exists
+     * @tc.expected: step4. add ipc full failed;
+     */
     result = IpcFull::GetInstance().AddIpcFull(12);
     ASSERT_EQ(result, false);
-}
+    }
 } // namespace HiviewDFX
 } // namespace OHOS
  

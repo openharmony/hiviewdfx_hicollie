@@ -26,14 +26,10 @@
 #include <unistd.h>
 
 #include "backtrace_local.h"
-#include "musl_preinit_common.h"
+#include "hisysevent.h"
 #include "watchdog_inner.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
-
-#ifdef HISYSEVENT_ENABLE
-#include "hisysevent.h"
-#endif
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -131,7 +127,7 @@ void WatchdogTask::DoCallback()
         return;
     }
     if (flag & XCOLLIE_FLAG_LOG) {
-        /* send to freezedetetor */
+        /* send to freezedetector */
         std::string msg = "timeout: " + name + " to check " + std::to_string(timeout) + "ms ago";
         SendXCollieEvent(name, msg, faultTimeStr);
     }
@@ -195,9 +191,6 @@ void WatchdogTask::Run(uint64_t now)
     }
 
     if (timeout != 0) {
-        if (IsMemHookOn()) {
-            return;
-        }
         DoCallback();
     } else if (task != nullptr) {
         task();
@@ -285,6 +278,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
             }
         }
     }
+
     sendMsg += faultTimeStr;
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
@@ -384,9 +378,6 @@ int WatchdogTask::EvaluateCheckerState()
         timeOutCallback(name, waitState);
         return waitState;
     }
-    if (IsMemHookOn()) {
-        return waitState;
-    }
     std::string description = GetBlockDescription(checkInterval / TO_MILLISECOND_MULTPLE);
     if (waitState == CheckStatus::WAITED_HALF) {
         description += "\nReportCount = " + std::to_string(++reportCount);
@@ -418,15 +409,6 @@ std::string WatchdogTask::GetBlockDescription(uint64_t interval)
     desc += name;
     desc += ") blocked " + std::to_string(interval) + "s";
     return desc;
-}
-
-bool WatchdogTask::IsMemHookOn()
-{
-    bool hookFlag = __get_global_hook_flag();
-    if (hookFlag) {
-        XCOLLIE_LOGI("memory hook is on, timeout task will skip");
-    }
-    return hookFlag;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -56,10 +56,10 @@ public:
     bool IpcCheck(uint64_t interval = IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
         IpcFullCallback func = nullptr, void *arg = nullptr, bool defaultType = true);
     void InitFfrtWatchdog();
-    static bool WriteStringToFile(uint32_t pid, const char *str);
+    static bool WriteStringToFile(int32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
     static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo,
-        const std::string& faultTimeStr);
+        const std::string& faultTimeStr, const bool isDumpStack = true);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
     bool StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
@@ -74,14 +74,14 @@ public:
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
-    bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes,
-        int ignoreTime = DEFAULT_IGNORE_STARTUP_TIME, bool isScroll = false);
+    bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes, int ignoreTime,
+        bool isScroll = false);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
     void SetScrollState(bool isScroll);
     void StartSample(int duration, int interval, std::string& outFile);
-    bool EnableAppStartSample(const TimePoint& endTime, const TimePoint& startTime);
+    bool CheckSample(const TimePoint& endTime, int64_t durationTime);
 
 public:
     std::string currentScene_;
@@ -119,23 +119,22 @@ private:
     bool InitThreadSamplerFuncs();
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
-    void UpdateJankParam(int sampleInterval, int startUpTime, int sampleCount, int logType, int reportTimes);
+    void UpdateJankParam(int sampleInterval, int ignoreStartUpTime, int sampleCount, int logType, int reportTimes);
     int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key);
     bool CheckSampleParam(std::map<std::string, std::string> paramsMap);
     void SaveFreezeStackToFile(const std::string& outFile, int32_t pid);
-    void AppStartSample(int64_t tid, bool isScroll);
+    bool AppStartSample(bool isScroll, AppStartContent& startContent);
     void ClearParam(bool& isFinished);
-    void UpdateAppStartContent(const std::map<std::string, int64_t>& paramsMap);
-    bool GetStartSampleValue(const std::string& tokens, std::string& key, std::string& value, char flag);
-    void ParseAppStartParams(const std::string& configStr);
+    void UpdateAppStartContent(const std::map<std::string, int64_t>& paramsMap, AppStartContent& startContent);
+    void ParseAppStartParams(const std::string& line, const std::string& eventName);
     void ReadAppStartConfig(const std::string& filePath);
+    bool EnableAppStartSample(AppStartContent& startContent, int64_t durationTime, bool isScroll);
+
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();
     void UninstallThreadSamplerSignal();
 
     static SigActionType threadSamplerSigHandler_;
-
-    static const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
     std::unique_ptr<std::thread> threadLoop_;
     std::mutex lock_;
@@ -176,7 +175,8 @@ private:
     };
     std::string specifiedProcessName_;
     uint64_t nextWeakUpTime_ {UINT64_MAX};
-    AppStartContent startContent_;
+    AppStartContent startSlowContent_;
+    AppStartContent scrollSlowContent_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

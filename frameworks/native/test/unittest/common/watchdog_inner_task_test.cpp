@@ -156,27 +156,5 @@ HWTEST_F(WatchdogInnerTaskTest, WatchdogInnerTaskTest_FetchNextTask_001, TestSiz
     WatchdogTask task2("", taskFunc, delay, interval, isOneshot);
     ASSERT_EQ(WatchdogInner::GetInstance().FetchNextTask(now, task1), 60000);
 }
-
-/**
- * @tc.name: WatchdogInner fetch next task;
- * @tc.desc: Verify whether the task acquisition successfully
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTaskTest, WatchdogInnerTaskTest_FetchNextTask_002, TestSize.Level1)
-{
-    uint64_t now = GetCurrentTickMillseconds() + 6500;
-    int taskResult = 0;
-    auto taskFunc = [&taskResult]() { taskResult = 1; };
-    const std::string name = "FetchNextTask_002";
-    uint64_t delay = 0;
-    uint64_t interval = 0;
-    bool isOneshot = true;
-    WatchdogTask task(name, taskFunc, delay, interval, isOneshot);
-    int id = WatchdogInner::GetInstance().InsertWatchdogTaskLocked(name, WatchdogTask(name, taskFunc,
-        delay, interval, isOneshot));
-    ASSERT_GT(id, 0);
-    uint64_t result = WatchdogInner::GetInstance().FetchNextTask(now, task);
-    ASSERT_TRUE(result >= 0);
-}
 } // namespace HiviewDFX
 } // namespace OHOS

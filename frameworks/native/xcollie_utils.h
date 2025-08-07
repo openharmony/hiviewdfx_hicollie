@@ -35,6 +35,7 @@ namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t MIN_APP_UID = 20000;
 constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
+constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
 
@@ -55,11 +56,13 @@ constexpr OHOS::HiviewDFX::HiLogLabel KLOG_LABEL = {
 #define XCOLLIE_KLOGI(...) \
     do { \
         (void)OHOS::HiviewDFX::HiLog::Info(KLOG_LABEL, __VA_ARGS__); \
+        HILOG_INFO(LOG_CORE, __VA_ARGS__); \
     } while (0)
- 
+
 #define XCOLLIE_KLOGE(...) \
     do { \
         (void)OHOS::HiviewDFX::HiLog::Error(KLOG_LABEL, __VA_ARGS__); \
+        HILOG_ERROR(LOG_CORE, __VA_ARGS__); \
     } while (0)
 
 struct FileInfo {
@@ -71,6 +74,7 @@ std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now);
 #endif
 
 uint64_t GetCurrentTickMillseconds();
+
 
 uint64_t GetCurrentBootMillseconds();
 
@@ -133,6 +137,11 @@ std::map<std::string, int> GetReportTimesMap();
 void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& checkInterval);
 
 bool SaveStringToFile(const std::string& path, const std::string& content);
+
+bool IsNum(const std::string& str);
+
+bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& value,
+    char flag);
 } // end of HiviewDFX
 } // end of OHOS
 #endif
