@@ -72,6 +72,33 @@ static void InitEndFuncTest(const char* name)
     std::string nameStr(name);
 }
 
+int TestCreateFile(const std::string &path)
+{
+    if (OHOS::FileExists(path)) {
+        return 0;
+    } else {
+        std::ofstream fout(path);
+        if (!fout.is_open()) {
+            return -1;
+        }
+        fout.flush();
+        fout.close();
+        chmod(path.c_str(), 0644); // 0644: test value
+    }
+    return 0;
+}
+
+void TestInitAppStartSample(AppStartContent& startContent)
+{
+    startContent.threshold = 500; // 500: test value
+    startContent.sampleInterval = 50; // 50: test value
+    startContent.targetCount = 10; // 10: test value
+    startContent.reportTimes = 1; // 1: test value
+    startContent.startTime = GetTimeStamp();
+    startContent.enableStartSample = true;
+    startContent.startUpDuration = 5000; // 5000: test value
+}
+
 /**
  * @tc.name: WatchdogInner TriggerTimerCountTask Test
  * @tc.desc: add teatcase
@@ -167,7 +194,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
     int result = ParsePeerBinderPid(fin, pid);
     fin.close();
     EXPECT_TRUE(result > 0);
-
+ 
     path = "/data/test/log/test2.txt";
     ofs.open(path.c_str(), std::ios::trunc);
     if (!ofs.is_open()) {
@@ -275,6 +302,10 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     std::string eventName = WatchdogInner::GetInstance().buissnessThreadInfo_.empty() ?
         "MAIN_THREAD_JANK" : "BUSSINESS_THREAD_JANK";
     bool ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid(), eventName);
+    printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
+    ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid(), eventName, true, true);
+    printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
+    ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid(), eventName, false, true);
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
     int32_t interval = 150; // test value
     WatchdogInner::GetInstance().StartTraceProfile();
@@ -455,7 +486,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     usleep(3500 * 1000); // test value
     endTest("Test");
     EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 1);
-    EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
 }
 
 /**
@@ -483,8 +513,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_002, TestSiz
         count++;
     }
     sleep(2); // test value
-    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.scrollTimes < 1);
-    EXPECT_EQ(WatchdogInner::GetInstance().stackContent_.isStartSampleEnabled, true);
+    EXPECT_EQ(WatchdogInner::GetInstance().isScroll_, true);
 }
 
 /**
@@ -903,6 +932,158 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
         count++;
     }
     EXPECT_TRUE(!outFile.empty());
+}
+
+/**
+ * @tc.name: WatchdogInner ReadAppStartConfig Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ReadAppStartConfig_001, TestSize.Level1)
+{
+    std::string filePath = "/data/test/log/test1.txt";
+    TestCreateFile(filePath);
+    WatchdogInner::GetInstance().ReadAppStartConfig(filePath);
+    EXPECT_TRUE(OHOS::FileExists(filePath));
+    filePath = "/data/log/test11234.txt";
+    WatchdogInner::GetInstance().ReadAppStartConfig(filePath);
+    EXPECT_TRUE(!OHOS::FileExists(filePath));
+}
+
+/**
+ * @tc.name: WatchdogInner ParseAppStartParams Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseAppStartParams_001, TestSize.Level1)
+{
+    std::string eventName = "APP_START_SLOW";
+    std::string configStr = "event_name:APP_START_SLOW,"
+        "threshold:500,collect_times:10,trigger_interval:50,report_times:1,start_time:1750343372595";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = "event_name:testValue,"
+        "threshold:500,collect_times:10,trigger_interval:50,report_times:1,start_time:1750343372595";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = ",1234";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = ",1234";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = ",:123,";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    EXPECT_TRUE(!WatchdogInner::GetInstance().scrollSlowContent_.enableStartSample);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseAppStartParams Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseAppStartParams_002, TestSize.Level1)
+{
+    std::string eventName = "APP_START_SLOW";
+    std::string configStr = "event_name:APP_START_SLOW,start_time:1752580699000,"
+        "collect_times:10,trigger_interval:50,report_times:1,start_time:1750343372595";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = "event_name:APP_START_SLOW,start_time:1752580699000,"
+        "threshold:500,trigger_interval:50,report_times:1,start_time:1750343372595";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = "event_name:APP_START_SLOW,start_time:1752580699000,"
+        "threshold:500,collect_times:10,report_times:1,start_time:1750343372595";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = "event_name:APP_START_SLOW,,start_time:1752580699000,"
+        "threshold:500,collect_times:10,trigger_interval:50,start_time:1750343372595";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    configStr = "event_name:APP_START_SLOW,start_time:1752580699000,"
+        "threshold:500,collect_times:10,trigger_interval:50,report_times:1,startup_duration:5000";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    EXPECT_TRUE(WatchdogInner::GetInstance().startSlowContent_.enableStartSample);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseAppStartParams Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseAppStartParams_003, TestSize.Level1)
+{
+    std::string eventName = "SLIDING_JANK";
+    std::string configStr = "event_name:SLIDING_JANK,start_time:1752580699000,"
+        "threshold:500,collect_times:10,trigger_interval:50,report_times:1";
+    WatchdogInner::GetInstance().ParseAppStartParams(configStr, eventName);
+    EXPECT_TRUE(WatchdogInner::GetInstance().scrollSlowContent_.enableStartSample);
+}
+
+/**
+ * @tc.name: WatchdogInner CheckSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckSample_001, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().isScroll_ = true;
+    TimePoint endTime = std::chrono::steady_clock::now();
+    int64_t durationTime = 1000;
+    bool result = WatchdogInner::GetInstance().CheckSample(endTime, durationTime);
+    EXPECT_TRUE(!result);
+    WatchdogInner::GetInstance().isScroll_ = false;
+    result = WatchdogInner::GetInstance().CheckSample(endTime, durationTime);
+    EXPECT_TRUE(!result);
+}
+
+/**
+ * @tc.name: WatchdogInner EnableAppStartSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_EnableAppStartSample_001, TestSize.Level1)
+{
+    bool isScroll = true;
+    int64_t durationTime = 1000;
+    AppStartContent startContent;
+    bool result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    isScroll = false;
+    TestInitAppStartSample(startContent);
+    int ret = TestCreateFile(APP_START_CONFIG);
+    EXPECT_EQ(ret, 0);
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+}
+
+/**
+ * @tc.name: WatchdogInner EnableAppStartSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_EnableAppStartSample_002, TestSize.Level1)
+{
+    bool isScroll = false;
+    int64_t durationTime = 1000;
+    AppStartContent startContent;
+    startContent.startUpDuration = 0;
+    bool result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    startContent.enableStartSample = true;
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    startContent.enableStartSample = false;
+    int ret = TestCreateFile(APP_START_CONFIG);
+    EXPECT_EQ(ret, 0);
+    WatchdogInner::GetInstance().watchdogStartTime_ = GetCurrentTickMillseconds();
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    WatchdogInner::GetInstance().watchdogStartTime_ = 0;
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    startContent.reportTimes = 1;
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    startContent.isStartSampleEnabled = true;
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
+    startContent.threshold = 1000;
+    result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
+    EXPECT_TRUE(!result);
 }
 } // namespace HiviewDFX
 } // namespace OHOS

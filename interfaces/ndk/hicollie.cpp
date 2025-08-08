@@ -148,8 +148,8 @@ int Report(bool* isSixSecond)
     reportData.errorObject.stack = "";
     reportData.notifyApp = false;
     reportData.waitSaveState = false;
-    reportData.stuckTimeout = g_stuckTimeout;
     reportData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
+    reportData.stuckTimeout = g_stuckTimeout;
     auto result = NotifyAppFault(reportData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
         result, reportData.tid, reportData.stuckTimeout);

@@ -42,7 +42,6 @@ namespace OHOS {
 namespace HiviewDFX {
 namespace {
 constexpr int64_t SEC_TO_MANOSEC = 1000000000;
-constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr uint64_t MAX_FILE_SIZE = 10 * 1024 * 1024; // 10M
 const int MAX_NAME_SIZE = 128;
 const int MIN_WAIT_NUM = 3;
@@ -71,35 +70,39 @@ static int32_t g_lastPid;
 static std::mutex g_lock;
 }
 #ifdef SUSPEND_CHECK_ENABLE
-std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now)
+std::pair<double, double> GetSuspendTime(const char *path, uint64_t &now)
 {
     std::ifstream file(path);
     if (!file.is_open()) {
         XCOLLIE_LOGE("Failed to open file: %{public}s", path);
         return {-1.0, -1.0};
     }
-    double suspendStartTime = -1.0;
-    double suspendEndTime = -1.0;
+
     std::string line;
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        if (iss >> suspendStartTime >> suspendEndTime) {
-            suspendStartTime *= SEC_TO_MILLISEC;
-            suspendEndTime *= SEC_TO_MILLISEC;
-        } else {
-            XCOLLIE_LOGE("Failed to parse suspend time from line: %{public}s", line.c_str());
-            file.close();
-            return {-1.0, -1.0};
-        }
+    if (!std::getline(file, line)) {
+        XCOLLIE_LOGE("Failed to read file: %{public}s", path);
+        file.close();
+        return {-1.0, -1.0};
     }
     file.close();
+    double suspendStartTime = -1.0;
+    double suspendEndTime = -1.0;
+    std::istringstream iss(line);
+    if (!(iss >> suspendStartTime >> suspendEndTime)) {
+        XCOLLIE_LOGE("Parse failed: %{public}s", line.c_str());
+        return {-1.0, -1.0};
+    }
+    suspendStartTime *= SEC_TO_MILLISEC;
+    suspendEndTime *= SEC_TO_MILLISEC;
     uint64_t currentTime = GetCurrentTickMillseconds();
     uint64_t diff = (currentTime > now) ? (currentTime - now) : (now - currentTime);
-    XCOLLIE_LOGI(
-        "open file %{public}s, suspendStartTime: %{public}f, suspendEndTime: %{public}f, diff: %{public}" PRIu64 "",
+    XCOLLIE_LOGW("open file %{public}s, suspendStartTime: %{public}f, suspendEndTime: %{public}f, currentTime: "
+                "%{public}" PRIu64 " now: %{public}" PRIu64 " diff: %{public}" PRIu64,
         path,
         suspendStartTime,
         suspendEndTime,
+        currentTime,
+        now,
         diff);
     return {suspendStartTime, suspendEndTime};
 }
@@ -122,13 +125,13 @@ uint64_t GetCurrentBootMillseconds()
     return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
-void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart)
+void CalculateTimes(uint64_t &bootTimeStart, uint64_t &monoTimeStart)
 {
     uint64_t timesArr[TIMES_ARR_SIZE] = {0};
     uint64_t minTimeDiff = UINT64_MAX;
     size_t index = 1;
 
-    for (size_t i = 0; i < TIMES_ARR_SIZE ; i++) {
+    for (size_t i = 0; i < TIMES_ARR_SIZE; i++) {
         timesArr[i] = (i & 1) ? GetCurrentTickMillseconds() : GetCurrentBootMillseconds();
         if (i <= 1) {
             continue;
@@ -450,9 +453,6 @@ void GetFilesByDir(std::vector<FileInfo> &fileList, const std::string& dir)
         }
     }
     XCOLLIE_LOGI("GetFilesByDir fileList size: %{public}zu.", fileList.size());
-    std::sort(fileList.begin(), fileList.end(), [](FileInfo lfile, FileInfo rfile) {
-        return lfile.mtime < rfile.mtime;
-    });
 }
 
 int ClearOldFiles(const std::vector<FileInfo> &fileList)
@@ -507,6 +507,9 @@ bool ClearFreezeFileIfNeed(uint64_t stackSize)
     std::vector<FileInfo> fileList;
     GetFilesByDir(fileList, FREEZE_DIR);
     GetFilesByDir(fileList, WATCHDOG_DIR);
+    std::sort(fileList.begin(), fileList.end(), [](FileInfo lfile, FileInfo rfile) {
+        return lfile.mtime < rfile.mtime;
+    });
     int deleteCount = ClearOldFiles(fileList);
     XCOLLIE_LOGI("Clear old file count:%{public}d", deleteCount);
     return true;
@@ -549,7 +552,10 @@ std::string FormatTime(const std::string &format)
         return "";
     }
     char buffer[MAX_TIME_BUFF] = {0};
-    std::strftime(buffer, sizeof(buffer), format.c_str(), t);
+    if (std::strftime(buffer, sizeof(buffer), format.c_str(), t) == 0) {
+        XCOLLIE_LOGE("strftime failed.");
+        return "";
+    }
     return std::string(buffer);
 }
 
@@ -630,12 +636,11 @@ int64_t GetAppStartTime(int32_t pid, int64_t tid)
             return startTime;
         }
         content = strings[START_TIME_INDEX];
-        if (std::all_of(std::begin(content), std::end(content), [] (const char &c) {
-            return isdigit(c);
-        })) {
-            startTime = std::stoi(content);
-            lastTid = tid;
+        if (!IsNum(content)) {
+            return startTime;
         }
+        startTime = std::stoi(content);
+        lastTid = tid;
     }
     return startTime;
 }
@@ -647,23 +652,16 @@ std::map<std::string, int> GetReportTimesMap()
     XCOLLIE_LOGD("get reporttimes value is %{public}s.", reportTimes.c_str());
     std::stringstream reportParams(reportTimes);
     std::string line;
-    while (getline(reportParams, line, ';')) {
-        if (!line.empty()) {
-            size_t colonPos = line.find(":");
-            if (colonPos == std::string::npos) {
-                continue;
-            }
-            std::string key = line.substr(0, colonPos);
-            std::string value = line.substr(colonPos + 1);
-            if (key.empty() || value.empty()) {
-                continue;
-            }
-            if (std::all_of(std::begin(value), std::end(value), [] (const char &content) {
-                return isdigit(content);
-            })) {
-                keyValueMap[key] = std::stoi(value.c_str());
-            }
+    while (getline(reportParams, line, ';') && !line.empty()) {
+        std::string key;
+        std::string value;
+        if (value.size() > std::to_string(INT32_MAX).length() ||
+            !GetKeyValueByStr(line, key, value, ':')) {
+            XCOLLIE_LOGE("Parse param failed, key:%{public}s, value:%{public}s",
+                key.c_str(), value.c_str());
+            continue;
         }
+        keyValueMap[key] = std::stoi(value);
     }
     return keyValueMap;
 }
@@ -680,5 +678,28 @@ void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& c
     }
 }
 
+bool IsNum(const std::string& str)
+{
+    return std::all_of(str.begin(), str.end(), ::isdigit);
+}
+
+bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& value,
+    char flag)
+{
+    size_t colonPos = tokens.find(flag);
+    if (colonPos == std::string::npos) {
+        return false;
+    }
+    key = tokens.substr(0, colonPos);
+    value = tokens.substr(colonPos + 1);
+    if (key.empty() || value.empty()) {
+        return false;
+    }
+    value.erase(std::remove_if(value.begin(), value.end(), ::isspace), value.end());
+    if (!IsNum(value)) {
+        return false;
+    }
+    return true;
+}
 } // end of HiviewDFX
 } // end of OHOS
