@@ -62,7 +62,7 @@ struct HstackVal {
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
+      watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler);
@@ -74,7 +74,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 
 WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag)
     : name(IPC_FULL_TASK), task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
-      flag(flag), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
+      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
