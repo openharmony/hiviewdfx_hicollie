@@ -97,7 +97,7 @@ std::pair<double, double> GetSuspendTime(const char *path, uint64_t &now)
     uint64_t currentTime = GetCurrentTickMillseconds();
     uint64_t diff = (currentTime > now) ? (currentTime - now) : (now - currentTime);
     XCOLLIE_LOGW("open file %{public}s, suspendStartTime: %{public}f, suspendEndTime: %{public}f, currentTime: "
-                "%{public}" PRIu64 " now: %{public}" PRIu64 " diff: %{public}" PRIu64,
+            "%{public}" PRIu64 " now: %{public}" PRIu64 " diff: %{public}" PRIu64,
         path,
         suspendStartTime,
         suspendEndTime,
@@ -657,7 +657,7 @@ std::map<std::string, int> GetReportTimesMap()
         std::string value;
         if (value.size() > std::to_string(INT32_MAX).length() ||
             !GetKeyValueByStr(line, key, value, ':')) {
-            XCOLLIE_LOGE("Parse param failed, key:%{public}s, value:%{public}s",
+            XCOLLIE_LOGE("Parse param failed, key:%{public}s value:%{public}s",
                 key.c_str(), value.c_str());
             continue;
         }

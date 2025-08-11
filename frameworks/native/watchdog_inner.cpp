@@ -465,7 +465,7 @@ bool WatchdogInner::EnableAppStartSample(AppStartContent& startContent, int64_t 
     if (!isScroll && (GetCurrentTickMillseconds() - watchdogStartTime_) >
         static_cast<uint64_t>(startContent.startUpDuration)) {
         startContent.enableStartSample.store(false);
-        XCOLLIE_LOGD("CurrentThread is not in starting period.startUpDuration:%{public}lld",
+        XCOLLIE_LOGD("CurrentThread is not in starting period. startUpDuration:%{public}lld",
             startContent.startUpDuration);
         return false;
     }
@@ -1075,7 +1075,7 @@ void WatchdogInner::UpdateAppStartContent(const std::map<std::string, int64_t>& 
     }
     startContent.enableStartSample.store(true);
     XCOLLIE_LOGW("UpdateAppStartContent threshold=%{public}lld, sampleInterval=%{public}lld, targetCount=%{public}d, "
-        "reportTimes=%{public}d, startTime=%{public}" PRId64","
+        "reportTimes=%{public}d, startTime=%{public}" PRId64", "
         "enableStartSample=%{public}d, startUpDuration=%{public}" PRId64".",
         startContent.threshold, startContent.sampleInterval, startContent.targetCount, startContent.reportTimes,
         startContent.startTime, startContent.enableStartSample.load(), startContent.startUpDuration);
@@ -1091,7 +1091,7 @@ void WatchdogInner::ParseAppStartParams(const std::string& line, const std::stri
         std::string value;
         if (value.size() > std::to_string(INT64_MAX).length() ||
             !GetKeyValueByStr(tokens, key, value, ':')) {
-            XCOLLIE_LOGE("ParseAppStartParams failed, key:%{public}s, value:%{public}s",
+            XCOLLIE_LOGE("ParseAppStartParams failed, key:%{public}s value:%{public}s",
                 key.c_str(), value.c_str());
             continue;
         }
@@ -1727,7 +1727,7 @@ int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap,
     }
     if (num < 0) {
         XCOLLIE_LOGE("Set param error, %{public}s: %{public}s should be a number, "
-            " and greater than 0 and less than INT32_MAX.", key.c_str(), str.c_str());
+            "and greater than 0 and less than INT32_MAX.", key.c_str(), str.c_str());
     }
     return num;
 }

@@ -50,7 +50,7 @@ struct ReportData : public Parcelable {
     bool needKillProcess = true;
     uint32_t state = 0;
     int32_t eventId = -1;
-    int32_t tid = -1;
+    int32_t tid = 0;
     uint32_t stuckTimeout = 0;
     sptr<IRemoteObject> token = nullptr;
     std::string freezeInfo = "";
