@@ -97,7 +97,7 @@ std::pair<double, double> GetSuspendTime(const char *path, uint64_t &now)
     uint64_t currentTime = GetCurrentTickMillseconds();
     uint64_t diff = (currentTime > now) ? (currentTime - now) : (now - currentTime);
     XCOLLIE_LOGW("open file %{public}s, suspendStartTime: %{public}f, suspendEndTime: %{public}f, currentTime: "
-            "%{public}" PRIu64 " now: %{public}" PRIu64 " diff: %{public}" PRIu64,
+                 "%{public}" PRIu64 " now: %{public}" PRIu64 " diff: %{public}" PRIu64,
         path,
         suspendStartTime,
         suspendEndTime,
