@@ -465,7 +465,7 @@ bool WatchdogInner::EnableAppStartSample(AppStartContent& startContent, int64_t 
     if (!isScroll && (GetCurrentTickMillseconds() - watchdogStartTime_) >
         static_cast<uint64_t>(startContent.startUpDuration)) {
         startContent.enableStartSample.store(false);
-        XCOLLIE_LOGD("CurrentThread is not in starting period. startUpDuration:%{public}lld",
+        XCOLLIE_LOGD("CurrentThread is not in starting period. startUpDuration:%{public}" PRId64,
             startContent.startUpDuration);
         return false;
     }
@@ -473,7 +473,7 @@ bool WatchdogInner::EnableAppStartSample(AppStartContent& startContent, int64_t 
     if (curTime - startContent.startTime > APP_START_LIMIT) {
         startContent.enableStartSample.store(false);
         XCOLLIE_LOGD("The time for detecting the slow startup of an application exceeds the limit, "
-            "curTime:%{public}lld", curTime);
+            "curTime:%{public}" PRId64, curTime);
         return false;
     }
     if (startContent.reportTimes <= 0) {
@@ -1074,8 +1074,8 @@ void WatchdogInner::UpdateAppStartContent(const std::map<std::string, int64_t>& 
         startContent.startUpDuration = it->second;
     }
     startContent.enableStartSample.store(true);
-    XCOLLIE_LOGW("UpdateAppStartContent threshold=%{public}lld, sampleInterval=%{public}lld, targetCount=%{public}d, "
-        "reportTimes=%{public}d, startTime=%{public}" PRId64", "
+    XCOLLIE_LOGW("UpdateAppStartContent threshold=%{public}" PRId64", sampleInterval=%{public}" PRId64
+        ", targetCount=%{public}d, ""reportTimes=%{public}d, startTime=%{public}" PRId64", "
         "enableStartSample=%{public}d, startUpDuration=%{public}" PRId64".",
         startContent.threshold, startContent.sampleInterval, startContent.targetCount, startContent.reportTimes,
         startContent.startTime, startContent.enableStartSample.load(), startContent.startUpDuration);
