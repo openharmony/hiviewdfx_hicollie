@@ -21,51 +21,49 @@ namespace OHOS {
 namespace HiviewDFX {
 void HandlerChecker::ScheduleCheck()
 {
-    if (!isCompleted_ || handler_ == nullptr) {
+    if (!handler_) {
         return;
     }
-    if (name_ == IPC_FULL_TASK) {
-        auto fb = [] {
-            IPCDfx::BlockUntilThreadAvailable();
-        };
-        if (!handler_->PostTask(fb, "IpcCheck Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
-            XCOLLIE_LOGE("XCollie IpcCheck Task PostTask failed.");
-        }
+
+    bool expected = true;
+    if (!isCompleted_.compare_exchange_strong(expected, false)) {
+        return;
     }
 
-    isCompleted_.store(false);
-    taskSlow_ = false;
     auto weak = weak_from_this();
-    auto f = [weak] () {
+    auto checkTask = [weak]() {
         auto self = weak.lock();
         if (self) {
+            if (self->name_ == IPC_FULL_TASK) {
+                IPCDfx::BlockUntilThreadAvailable();
+            }
             self->isCompleted_.store(true);
         }
     };
-    if (!handler_->PostTask(f, "XCollie Watchdog Task", 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
-        XCOLLIE_LOGE("XCollie Watchdog Task PostTask False.");
+
+    std::string taskName = (name_ == IPC_FULL_TASK) ? "XCollie IpcCheck Task" : "XCollie Watchdog Task";
+    if (!handler_->PostTask(checkTask, taskName, 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
+        XCOLLIE_LOGE("post %{public}s false.", taskName.c_str());
     }
 }
 
 int HandlerChecker::GetCheckState()
 {
-    if (isCompleted_) {
+    if (isCompleted_.load()) {
         taskSlow_ = false;
         return CheckStatus::COMPLETED;
-    } else {
-        if (!taskSlow_) {
-            taskSlow_ = true;
-            return CheckStatus::WAITED_HALF;
-        } else {
-            return CheckStatus::WAITING;
-        }
     }
+    if (!taskSlow_) {
+        taskSlow_ = true;
+        return CheckStatus::WAITED_HALF;
+    }
+    return CheckStatus::WAITING;
 }
 
 std::string HandlerChecker::GetDumpInfo()
 {
     std::string ret;
-    if (handler_ != nullptr) {
+    if (handler_) {
         HandlerDumper handlerDumper;
         handler_->Dump(handlerDumper);
         ret = handlerDumper.GetDumpInfo();

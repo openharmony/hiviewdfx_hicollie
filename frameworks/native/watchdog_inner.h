@@ -53,7 +53,7 @@ public:
     void TriggerTimerCountTask(const std::string &name, bool bTrigger, const std::string &message);
     void StopWatchdog();
     bool IsCallbackLimit(unsigned int flag);
-    bool IpcCheck(uint64_t interval = IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
+    bool IpcCheck(uint64_t interval = DEFAULT_IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
         IpcFullCallback func = nullptr, void *arg = nullptr, bool defaultType = true);
     void InitFfrtWatchdog();
     static bool WriteStringToFile(int32_t pid, const char *str);

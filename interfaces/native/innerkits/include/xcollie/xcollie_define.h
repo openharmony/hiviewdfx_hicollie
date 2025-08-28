@@ -18,21 +18,22 @@
 namespace OHOS {
 namespace HiviewDFX {
 /* define watchdog type */
-static constexpr unsigned int XCOLLIE_LOCK = (1 << 0);
-static constexpr unsigned int XCOLLIE_THREAD = (1 << 1);
+constexpr unsigned int XCOLLIE_LOCK = (1 << 0);
+constexpr unsigned int XCOLLIE_THREAD = (1 << 1);
 
 /* define timeout flag */
-static constexpr unsigned int XCOLLIE_FLAG_DEFAULT = (~0); // do all callback function
-static constexpr unsigned int XCOLLIE_FLAG_NOOP = (0); // do nothing but the caller defined function
-static constexpr unsigned int XCOLLIE_FLAG_LOG = (1 << 0); // generate log file
-static constexpr unsigned int XCOLLIE_FLAG_RECOVERY = (1 << 1); // die when timeout
+constexpr unsigned int XCOLLIE_FLAG_DEFAULT = (~0); // do all callback function
+constexpr unsigned int XCOLLIE_FLAG_NOOP = (0); // do nothing but the caller defined function
+constexpr unsigned int XCOLLIE_FLAG_LOG = (1 << 0); // generate log file
+constexpr unsigned int XCOLLIE_FLAG_RECOVERY = (1 << 1); // die when timeout
 
 /* define xcollie id */
-static constexpr int INVALID_ID = -1;
+constexpr int INVALID_ID = -1;
 
 /* define ipc full default params */
-static constexpr uint64_t IPC_FULL_INTERVAL = 30;
-static constexpr char IPC_FULL_TASK[] = "OS_DfxIpcCheck";
+constexpr uint64_t DEFAULT_IPC_FULL_INTERVAL = 30;
+constexpr uint64_t ADD_IPC_FULL_INTERVAL = 10;
+constexpr char IPC_FULL_TASK[] = "OS_DfxIpcCheck";
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif
