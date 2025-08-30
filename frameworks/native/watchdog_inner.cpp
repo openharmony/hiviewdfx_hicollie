@@ -38,6 +38,7 @@
 #include "ipc_skeleton.h"
 #include "xcollie_utils.h"
 #include "dfx_define.h"
+#include "dfx_dumprequest.h"
 #include "parameter.h"
 #include "file_ex.h"
 
@@ -68,14 +69,12 @@ const int DETECT_STACK_COUNT = 2;
 const int COLLECT_STACK_COUNT = 10;
 const int COLLECT_TRACE_MIN = 1;
 const int COLLECT_TRACE_MAX = 20;
-const int TASK_INTERVAL = 155;
 const int DURATION_TIME = 150;
 const int DISTRIBUTE_TIME = 2000;
 const int DUMPTRACE_TIME = 450;
 constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
-constexpr uint32_t IPC_CHECKER_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
 constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr uint32_t AUDIO_SERVER_UID = 1041;
@@ -90,7 +89,6 @@ const char* ON_KICK_TIME_EXTRA = "on,10,foundation";
 const char* KICK_TIME = "kick";
 const char* KICK_TIME_EXTRA = "kick,foundation";
 const int32_t NOT_OPEN = -1;
-constexpr uint64_t MAX_START_TIME = 10 * 1000;
 const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
 constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
@@ -1153,6 +1151,8 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
+                // Enable kernel snapshot, and disable it on DFX unwind success
+                DFX_EnableNativeCrashKernelSnapshot();
                 SetThreadSignalMask(SIGDUMP, true, true);
             }
             XCOLLIE_LOGD("Watchdog is running!");
