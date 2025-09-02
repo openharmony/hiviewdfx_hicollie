@@ -697,6 +697,18 @@ void WatchdogInner::DumpTraceProfile(int32_t interval)
     traceContent_.dumpCount = 0;
     traceContent_.traceCount = 0;
     auto traceTask = [this, interval]() {
+        if (traceContent_.traceCount == 0) {
+            uint64_t beforeTime = GetCurrentTickMillseconds();
+            appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
+            auto result = traceCollector_->CaptureDurationTrace(appCaller_);
+            XCOLLIE_LOGI("MainThread collect trace result: %{public}d interval: %{public}llu", result.retCode,
+                static_cast<unsigned long long>(GetCurrentTickMillseconds() - beforeTime));
+            if (result.retCode != 0) {
+                isMainThreadTraceEnabled_ = true;
+                traceContent_.traceState = DumpStackState::DEFAULT;
+                return;
+            }
+        }
         traceContent_.traceCount++;
         if (CheckEventTimer(GetTimeStamp(), traceContent_.reportBegin,
             traceContent_.reportEnd, interval)) {
@@ -726,7 +738,6 @@ int32_t WatchdogInner::StartTraceProfile()
         XCOLLIE_LOGE("Create traceCollector failed.");
         return -1;
     }
-    appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
     appCaller_.bundleName = bundleName_;
     appCaller_.bundleVersion = bundleVersion_;
     appCaller_.uid = static_cast<int64_t>(getuid());
@@ -736,12 +747,8 @@ int32_t WatchdogInner::StartTraceProfile()
     appCaller_.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
     appCaller_.beginTime = traceContent_.reportBegin / MILLISEC_TO_NANOSEC;
     appCaller_.endTime = traceContent_.reportEnd / MILLISEC_TO_NANOSEC;
-    auto result = traceCollector_->CaptureDurationTrace(appCaller_);
-    XCOLLIE_LOGI("MainThread TraceCollector Start result: %{public}d", result.retCode);
-    if (result.retCode == 0) {
-        DumpTraceProfile(DURATION_TIME);
-    }
-    return result.retCode;
+    DumpTraceProfile(DURATION_TIME);
+    return 0;
 }
 
 void WatchdogInner::CollectTraceDetect(const TimePoint& endTime, int64_t durationTime)
@@ -1808,7 +1815,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             break;
         }
         default: {
-            XCOLLIE_LOGE("Set the log_type can only be 0、1、2, logType: %{public}d", logType);
+            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}d", logType);
             return -1;
         }
     };
