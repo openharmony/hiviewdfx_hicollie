@@ -80,7 +80,8 @@ public:
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
     void SetScrollState(bool isScroll);
-    void StartSample(int duration, int interval, std::string& outFile);
+    void StartSample(int duration, int interval);
+    std::string StopSample(int sampleCount);
     bool CheckSample(const TimePoint& endTime, int64_t durationTime);
 
 public:
@@ -122,7 +123,7 @@ private:
     void UpdateJankParam(int sampleInterval, int ignoreStartUpTime, int sampleCount, int logType, int reportTimes);
     int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key);
     bool CheckSampleParam(std::map<std::string, std::string> paramsMap);
-    void SaveFreezeStackToFile(const std::string& outFile, int32_t pid);
+    std::string SaveFreezeStackToFile(int32_t pid);
     bool AppStartSample(bool isScroll, AppStartContent& startContent);
     void ClearParam(bool& isFinished);
     void UpdateAppStartContent(const std::map<std::string, int64_t>& paramsMap, AppStartContent& startContent);
@@ -133,6 +134,7 @@ private:
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();
     void UninstallThreadSamplerSignal();
+    void ResetFreezeSampleFlags();
 
     static SigActionType threadSamplerSigHandler_;
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -177,6 +179,7 @@ private:
     uint64_t nextWeakUpTime_ {UINT64_MAX};
     AppStartContent startSlowContent_;
     AppStartContent scrollSlowContent_;
+    SampleFreezeInfo sampleFreezeInfo_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

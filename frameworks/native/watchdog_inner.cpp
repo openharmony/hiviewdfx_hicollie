@@ -588,77 +588,102 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
     InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
 }
 
-void WatchdogInner::SaveFreezeStackToFile(const std::string& outFile, int32_t pid)
+std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
 {
     if (!CreateDir(FREEZE_DIR)) {
         XCOLLIE_LOGE("Path to realPath failed.");
-        return;
+        ResetFreezeSampleFlags();
+        return "";
     }
     std::string stack;
     std::string heaviestStack;
-    CollectStack(stack, heaviestStack, 0);
+    if (!CollectStack(stack, heaviestStack, 0)) {
+        stack = "";
+        heaviestStack = "";
+        XCOLLIE_LOGI("Collect freeze sample stack failed.");
+        return "";
+    }
     std::string info = "#ThreadInfos Tid: " + std::to_string(pid) + ", Name: " + bundleName_ + "\n";
     if (g_isReuseStack) {
         info += "The current thread is collecting the stack, which conflicts with the main thread jank event."
             " Reuse the current stack.";
-        g_isReuseStack.store(false);
     }
     info += stack;
     ClearFreezeFileIfNeed(info.size());
-    bool saveRet = SaveStringToFile(FREEZE_DIR + outFile, info);
-    g_isDumpStack.store(false);
-    g_freezeTaskFinished.store(true);
-    XCOLLIE_LOGI("Save freeze stack to file, ret:%{public}d, isReuseStack:%{public}d.",
-        saveRet, g_isReuseStack.load());
+    std::string freezeFile = "freeze_" + GetFormatDate() + "_" + std::to_string(pid) + ".txt";
+    bool saveRet = SaveStringToFile(FREEZE_DIR + freezeFile, info);
+    sampleFreezeInfo_ = {
+        .lastSaveTime = GetCurrentTickMillseconds(),
+        .freezeFile = freezeFile,
+    };
+    XCOLLIE_LOGI("Save freeze stack to file, ret:%{public}d, logFile:%{public}s.", saveRet, freezeFile.c_str());
+    ResetFreezeSampleFlags();
+    return freezeFile;
 }
 
-void WatchdogInner::StartSample(int duration, int interval, std::string& outFile)
+void WatchdogInner::ResetFreezeSampleFlags()
+{
+    g_isDumpStack.store(false);
+    g_isReuseStack.store(false);
+    g_freezeTaskFinished.store(true);
+}
+
+void WatchdogInner::StartSample(int duration, int interval)
 {
     std::unique_lock<std::mutex> lock(lock_);
     if (IsTaskExistLocked(FREEZE_SAMPLE)) {
-        XCOLLIE_LOGW("StartSample task already exit, skip this task.");
+        XCOLLIE_LOGW("Sample freeze task already exit, skip this task.");
         return;
     }
     if (duration <= 0 || interval <= 0) {
-        XCOLLIE_LOGW("StartSample failed, duration=%{public}d, interval=%{public}d.",
+        XCOLLIE_LOGW("Sample freeze failed, duration=%{public}d, interval=%{public}d.",
             duration, interval);
         return;
     }
     int targetCount = duration / interval;
     if (targetCount < DEFAULT_SAMPLE_VALUE) {
-        XCOLLIE_LOGW("StartSample failed, sampleCount=%{public}d", targetCount);
+        XCOLLIE_LOGW("Sample freeze failed, sampleCount=%{public}d", targetCount);
         return;
     }
     int32_t pid = getpid();
     g_freezeSampleCount.store(0);
-    outFile = "freeze_" + GetFormatDate() + "_" + std::to_string(pid) + ".txt";
-    auto sampleTask = [this, pid, targetCount, outFile]() {
-        if ((g_freezeSampleCount.load() == 0 && !CheckThreadSampler()) || threadSamplerSampleFunc_ == nullptr) {
-            g_freezeTaskFinished.store(true);
-            return;
-        }
+    auto sampleTask = [this, pid, targetCount]() {
         if (g_freezeSampleCount.load() == 0 && g_isDumpStack) {
             g_isReuseStack.store(true);
         }
         if (g_isReuseStack) {
-            if (g_isDumpStack) {
-                return;
+            if (!g_isDumpStack) {
+                SaveFreezeStackToFile(pid);
             }
-            SaveFreezeStackToFile(outFile, pid);
+            return;
+        }
+        if ((g_freezeSampleCount.load() == 0 && !CheckThreadSampler()) || threadSamplerSampleFunc_ == nullptr) {
+            ResetFreezeSampleFlags();
             return;
         }
         if (g_freezeSampleCount.load() < targetCount) {
             g_isDumpStack.store(true);
             threadSamplerSampleFunc_();
         } else {
-            SaveFreezeStackToFile(outFile, pid);
+            g_freezeSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
+            SaveFreezeStackToFile(pid);
         }
         g_freezeSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
     };
     WatchdogTask task(FREEZE_SAMPLE, sampleTask, 0, interval, false);
-    if (!InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task))) {
-        outFile = "";
+    InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task));
+}
+
+std::string WatchdogInner::StopSample(int sampleCount)
+{
+    int pid = getpid();
+    if (g_freezeSampleCount.load() > 0 && g_freezeSampleCount.load() <= sampleCount) {
+        return SaveFreezeStackToFile(pid);
     }
+    uint64_t curTime = GetCurrentTickMillseconds();
+    XCOLLIE_LOGW("get lastest freeze file: %{public}s, interval: %{public}llu.",
+        sampleFreezeInfo_.freezeFile.c_str(), (curTime - sampleFreezeInfo_.lastSaveTime));
+    return sampleFreezeInfo_.freezeFile;
 }
 
 bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat)
