@@ -95,8 +95,8 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_003, TestSize.Level1)
     auto handler = std::make_shared<EventHandler>(runner);
     WatchdogTask task1("WatchdogTaskTest_003", handler, nullptr, 5);
     task1.RunHandlerCheckerTask();
-    int ret = task1.EvaluateCheckerState();
-    EXPECT_TRUE(ret >= 0);
+    EXPECT_TRUE(task1.checker != nullptr);
+    EXPECT_TRUE(task1.checker->GetCheckState() >= 0);
 }
 
 /**
@@ -113,6 +113,23 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_004, TestSize.Level1)
     task.triggerTimes.push_back(now + 2000);
     task.TimerCountTask();
     EXPECT_TRUE(task.countLimit != 0);
+}
+
+/**
+ * @tc.name: WatchdogTaskTest_005
+ * @tc.desc: add testcase code coverage
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_005, TestSize.Level1)
+{
+    IpcFullCallback callback = [] (void* arg) {
+        printf("WatchdogTaskTest_005 test ipc full");
+    };
+
+    WatchdogTask task(10, callback, nullptr, HiviewDFX::XCOLLIE_FLAG_DEFAULT);
+    task.RunHandlerCheckerTask();
+    EXPECT_TRUE(task.checker != nullptr);
+    EXPECT_TRUE(task.checker->GetCheckState() >= 0);
 }
 
 #ifdef SUSPEND_CHECK_ENABLE

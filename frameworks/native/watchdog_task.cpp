@@ -34,15 +34,15 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
-const char* BBOX_PATH = "/dev/bbox";
+constexpr const char* BBOX_PATH = "/dev/bbox";
 #ifdef SUSPEND_CHECK_ENABLE
-const char* LAST_SUSPEND_TIME_PATH = "/sys/power/last_sr";
-static const double SUSPEND_TIME_RATIO = 0.2;
+constexpr const char* LAST_SUSPEND_TIME_PATH = "/sys/power/last_sr";
+constexpr double SUSPEND_TIME_RATIO = 0.2;
 #endif
-static const int COUNT_LIMIT_NUM_MAX_RATIO = 2;
-static const int TIME_LIMIT_NUM_MAX_RATIO = 2;
-static const int UID_TYPE_THRESHOLD = 20000;
-const int BUFF_STACK_SIZE = 20 * 1024;
+constexpr int COUNT_LIMIT_NUM_MAX_RATIO = 2;
+constexpr int TIME_LIMIT_NUM_MAX_RATIO = 2;
+constexpr int UID_TYPE_THRESHOLD = 20000;
+constexpr int BUFF_STACK_SIZE = 20 * 1024;
 constexpr const char* CORE_PROCS[] = {
     "anco_service_broker", "aptouch_daemon", "foundation", "init",
     "multimodalinput", "com.ohos.sceneboard", "render_service"
@@ -63,7 +63,6 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     checker = std::make_shared<HandlerChecker>(name, handler);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
-    isTaskScheduled = false;
     isOneshotTask = false;
 }
 
@@ -75,7 +74,6 @@ WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, u
     checker = std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
-    isTaskScheduled = false;
     isOneshotTask = false;
 }
 
@@ -87,7 +85,6 @@ WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64
     id = ++curId;
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
-    isTaskScheduled = false;
     isOneshotTask = isOneshot;
 }
 
@@ -98,7 +95,6 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     id = ++curId;
     checkInterval = 0;
     nextTickTime = GetCurrentTickMillseconds() + timeout;
-    isTaskScheduled = false;
     isOneshotTask = true;
     watchdogTid = getproctid();
     CalculateTimes(bootTimeStart, monoTimeStart);
@@ -106,8 +102,8 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      isTaskScheduled(false), isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit),
-      bootTimeStart(0), monoTimeStart(0), reportCount(0)
+      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit), bootTimeStart(0),
+      monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;
@@ -156,11 +152,8 @@ bool WatchdogTask::ShouldSkipCheckForSuspend(uint64_t &now, double &lastSuspendS
     if (lastSuspendStartTime > lastSuspendEndTime) {
         return true;
     }
-    if ((lastSuspendEndTime - lastSuspendStartTime) > (SUSPEND_TIME_RATIO * checkInterval) &&
-        (static_cast<double>(now) - lastSuspendStartTime) < checkInterval) {
-        return true;
-    }
-    return false;
+    return (lastSuspendEndTime - lastSuspendStartTime) > (SUSPEND_TIME_RATIO * checkInterval) &&
+        (static_cast<double>(now) - lastSuspendStartTime) < checkInterval;
 }
 #endif
 
@@ -185,7 +178,6 @@ void WatchdogTask::Run(uint64_t now)
             "now:%{public}" PRIu64 " expect:%{public}" PRIu64 " interval:%{public}" PRIu64 "",
             now, nextTickTime, checkInterval);
         nextTickTime = now;
-        isTaskScheduled = false;
         return;
     }
 
@@ -231,18 +223,10 @@ void WatchdogTask::TimerCountTask()
 
 void WatchdogTask::RunHandlerCheckerTask()
 {
-    if (checker == nullptr) {
-        return;
-    }
-
-    if (!isTaskScheduled) {
+    if (checker) {
+        EvaluateCheckerState();
+        // While state is completed, check!
         checker->ScheduleCheck();
-        isTaskScheduled = true;
-    } else {
-        if (EvaluateCheckerState() == CheckStatus::COMPLETED) {
-            // allow next check
-            isTaskScheduled = false;
-        }
     }
 }
 
@@ -256,8 +240,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
-    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
-        "\n" + msg + "\n";
+    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) + "\n" + msg + "\n";
     sendMsg += checker->GetDumpInfo();
 
     watchdogTid = pid;
@@ -280,15 +263,17 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
     sendMsg += faultTimeStr;
 #ifdef HISYSEVENT_ENABLE
+    std::string processName = GetSelfProcName();
+    std::string moduleName = (name == IPC_FULL_TASK) ? (processName + "_" + name) : name;
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
-        "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", GetProcessStacktrace());
+        "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", moduleName,
+        "PROCESS_NAME", processName, "MSG", sendMsg, "STACK", GetProcessStacktrace());
     if (ret == ERR_OVER_SIZE) {
-        std::string stack = "";
+        std::string stack;
         GetBacktraceStringByTid(stack, watchdogTid, 0, true);
         ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-            "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", name,
-            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack);
+            "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", moduleName,
+            "PROCESS_NAME", processName, "MSG", sendMsg, "STACK", stack);
     }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
@@ -338,11 +323,11 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     int ret = 0;
     DumpKernelStack(val, ret);
     std::string eventName = "APP_HICOLLIE";
+    std::string stack;
     std::string processName = GetSelfProcName();
-    std::string stack = "";
     if (uid <= UID_TYPE_THRESHOLD) {
-        eventName = std::find(std::begin(CORE_PROCS), std::end(CORE_PROCS), processName) != std::end(CORE_PROCS) ?
-            "SERVICE_TIMEOUT" : "SERVICE_TIMEOUT_WARNING";
+        eventName = std::find(std::begin(CORE_PROCS), std::end(CORE_PROCS), processName) != std::end(CORE_PROCS)
+            ? "SERVICE_TIMEOUT" : "SERVICE_TIMEOUT_WARNING";
         stack = GetProcessStacktrace();
     } else if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
         XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);
@@ -359,12 +344,12 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 #endif
 }
 
-int WatchdogTask::EvaluateCheckerState()
+void WatchdogTask::EvaluateCheckerState()
 {
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
         reportCount = 0;
-        return waitState;
+        return;
     }
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
     if (func) { // only ipc full exec func
@@ -373,9 +358,9 @@ int WatchdogTask::EvaluateCheckerState()
     }
 
     XCOLLIE_LOGI("%{public}s block happened, waitState = %{public}d", name.c_str(), waitState);
-    if (timeOutCallback != nullptr) {
+    if (timeOutCallback) {
         timeOutCallback(name, waitState);
-        return waitState;
+        return;
     }
     std::string description = GetBlockDescription(checkInterval / TO_MILLISECOND_MULTPLE);
     if (waitState == CheckStatus::WAITED_HALF) {
@@ -399,14 +384,11 @@ int WatchdogTask::EvaluateCheckerState()
             WatchdogInner::KillPeerBinderProcess(description);
         }
     }
-    return waitState;
 }
 
 std::string WatchdogTask::GetBlockDescription(uint64_t interval)
 {
-    std::string desc = "Watchdog: thread(";
-    desc += name;
-    desc += ") blocked " + std::to_string(interval) + "s";
+    std::string desc = "Watchdog: thread(" + name + ") blocked " + std::to_string(interval) + "s";
     return desc;
 }
 } // end of namespace HiviewDFX

@@ -36,7 +36,7 @@ public:
     HandlerChecker(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler)
         : name_(name), handler_(handler)
     {
-        if (name == IPC_FULL_TASK && handler == nullptr) {
+        if (name == IPC_FULL_TASK && !handler) {
             auto runner = AppExecFwk::EventRunner::Create(name);
             handler_ = std::make_shared<AppExecFwk::EventHandler>(runner);
         }
