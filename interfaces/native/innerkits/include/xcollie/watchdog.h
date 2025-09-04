@@ -163,6 +163,11 @@ public:
      * @brief Start freeze stack sample.
      */
     void StartSample(int duration, int interval, std::string& outFile);
+
+    /**
+     * @brief Get sampler result.
+     */
+    void GetSamplerResult(uint64_t &samplerStartTime, uint64_t &samplerFinishTime, int32_t &samplerCount);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

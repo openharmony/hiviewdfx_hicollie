@@ -52,6 +52,12 @@ constexpr int64_t APP_START_LIMIT = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 
+struct SamplerResult {
+    uint64_t samplerStartTime;
+    uint64_t samplerFinishTime;
+    int32_t samplerCount;
+};
+
 typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
 typedef void (*WatchdogInnerEndFunc)(const char* eventName);
 typedef int (*ThreadSamplerInitFunc)(int);
@@ -59,6 +65,7 @@ typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef int (*ThreadSamplerDeinitFunc)();
 typedef void (*SigActionType)(int, siginfo_t*, void*);
+typedef SamplerResult (*ThreadSamplerGetResultFunc)();
 
 struct TimeContent {
     int64_t curBegin;

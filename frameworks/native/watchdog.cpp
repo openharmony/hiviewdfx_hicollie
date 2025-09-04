@@ -117,5 +117,13 @@ void Watchdog::StartSample(int duration, int interval, std::string& outFile)
 {
     WatchdogInner::GetInstance().StartSample(duration, interval, outFile);
 }
+
+void Watchdog::GetSamplerResult(uint64_t &samplerStartTime, uint64_t &samplerFinishTime, int32_t &samplerCount)
+{
+    SamplerResult result = WatchdogInner::GetInstance().GetSamplerResult();
+    samplerStartTime = result.samplerStartTime;
+    samplerFinishTime = result.samplerFinishTime;
+    samplerCount = result.samplerCount;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -42,6 +42,8 @@
         "OHOS::HiviewDFX::Watchdog::SetScrollState(bool)";
         "OHOS::HiviewDFX::Watchdog::GetForeground()";
         "OHOS::HiviewDFX::Watchdog::StartSample(int, int, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>&)";
+        "OHOS::HiviewDFX::Watchdog::GetSamplerResult(unsigned long&, unsigned long&, int&)";
+        "OHOS::HiviewDFX::Watchdog::GetSamplerResult(unsigned long long&, unsigned long long&, int&)";
     };
   local:
     *;

@@ -346,9 +346,11 @@ bool WatchdogInner::InitThreadSamplerFuncs()
         reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
     threadSamplerSigHandler_ =
         reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
+    threadSamplerGetResultFunc_ =
+        reinterpret_cast<ThreadSamplerGetResultFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
     if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
         threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
-        threadSamplerSigHandler_ == nullptr) {
+        threadSamplerSigHandler_ == nullptr || threadSamplerGetResultFunc_ == nullptr) {
         ResetThreadSamplerFuncs();
         XCOLLIE_LOGE("ThreadSampler dlsym some function failed.\n");
         return false;
@@ -364,6 +366,10 @@ void WatchdogInner::ResetThreadSamplerFuncs()
     threadSamplerCollectFunc_ = nullptr;
     threadSamplerDeinitFunc_ = nullptr;
     threadSamplerSigHandler_ = nullptr;
+    if (threadSamplerGetResultFunc_) {
+        samplerResult_ = threadSamplerGetResultFunc_();
+        threadSamplerGetResultFunc_ = nullptr;
+    }
     dlclose(threadSamplerFuncHandler_);
     threadSamplerFuncHandler_ = nullptr;
 }
@@ -659,6 +665,14 @@ void WatchdogInner::StartSample(int duration, int interval, std::string& outFile
     if (!InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task))) {
         outFile = "";
     }
+}
+
+SamplerResult WatchdogInner::GetSamplerResult()
+{
+    if (threadSamplerGetResultFunc_ != nullptr) {
+        samplerResult_ = threadSamplerGetResultFunc_();
+    }
+    return samplerResult_;
 }
 
 bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat)
