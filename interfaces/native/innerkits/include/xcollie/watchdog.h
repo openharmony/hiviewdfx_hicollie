@@ -162,7 +162,12 @@ public:
     /**
      * @brief Start freeze stack sample.
      */
-    void StartSample(int duration, int interval, std::string& outFile);
+    void StartSample(int duration, int interval);
+
+    /**
+     * @brief Stop freeze stack sample.
+     */
+    std::string StopSample(int sampleCount);
 
     /**
      * @brief Get sampler result.

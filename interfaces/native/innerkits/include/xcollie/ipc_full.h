@@ -25,7 +25,7 @@ namespace HiviewDFX {
 class IpcFull : public Singleton<IpcFull> {
     DECLARE_SINGLETON(IpcFull);
 public:
-    bool AddIpcFull(uint64_t interval = IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
+    bool AddIpcFull(uint64_t interval = ADD_IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
         IpcFullCallback func = nullptr, void *arg = nullptr);
 };
 } // end of namespace HiviewDFX

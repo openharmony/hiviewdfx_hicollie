@@ -50,7 +50,6 @@ public:
           flag(0),
           checkInterval(0),
           nextTickTime(0),
-          isTaskScheduled(false),
           isOneshotTask(false),
           watchdogTid(0),
           timeLimit(0),
@@ -77,7 +76,7 @@ public:
 #ifdef SUSPEND_CHECK_ENABLE
     bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
 #endif
-    int EvaluateCheckerState();
+    void EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
     std::string name;
     std::string message;
@@ -91,7 +90,6 @@ public:
     unsigned int flag;
     uint64_t checkInterval;
     uint64_t nextTickTime;
-    bool isTaskScheduled;
     bool isOneshotTask;
     pid_t watchdogTid;
     uint64_t timeLimit;

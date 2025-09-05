@@ -104,6 +104,11 @@ struct AppStartContent {
     bool isFinishStartSample {false};
     std::atomic_bool enableStartSample {false};
 };
+
+struct SampleFreezeInfo {
+    uint64_t lastSaveTime {0};
+    std::string freezeFile;
+};
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif

@@ -482,7 +482,6 @@ std::string ThreadSampler::GetHeaviestStack() const
     return heaviestStack_;
 }
 
-
 bool ThreadSampler::Deinit()
 {
     stackPrinter_.reset();
@@ -495,9 +494,10 @@ bool ThreadSampler::Deinit()
 
 SamplerResult ThreadSampler::ThreadSamplerGetResult()
 {
+    constexpr uint64_t nanoSecToMilliSec = 1000000;
     return SamplerResult{
-        .samplerStartTime = processStartTime_,
-        .samplerFinishTime = processFinishTime_,
+        .samplerStartTime = processStartTime_ / nanoSecToMilliSec,
+        .samplerFinishTime = processFinishTime_ / nanoSecToMilliSec,
         .samplerCount = static_cast<int32_t>(processCount_),
     };
 }

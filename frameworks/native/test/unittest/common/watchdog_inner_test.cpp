@@ -921,17 +921,18 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SaveStringToFile_001, TestSize.Lev
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
 {
     std::string path = "test.txt";
-    WatchdogInner::GetInstance().SaveFreezeStackToFile(path, getpid());
+    WatchdogInner::GetInstance().SaveFreezeStackToFile(getpid());
     std::string outFile;
-    WatchdogInner::GetInstance().StartSample(-3000, -300, outFile);
+    WatchdogInner::GetInstance().StartSample(-3000, -300);
     EXPECT_TRUE(outFile.empty());
-    WatchdogInner::GetInstance().StartSample(3000, 300, outFile);
+    WatchdogInner::GetInstance().StartSample(3000, 300);
     int count = 0;
     while (count < 6) {
         sleep(1);
         count++;
     }
-    EXPECT_TRUE(!outFile.empty());
+    outFile = WatchdogInner::GetInstance().StopSample(10);
+    EXPECT_TRUE(outFile.empty());
 }
 
 /**

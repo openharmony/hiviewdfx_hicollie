@@ -174,9 +174,9 @@ bool IsFileNameFormat(char c)
 
 std::string GetSelfProcName()
 {
-    std::string ret = GetProcessNameFromProcCmdline();
-    ret.erase(std::remove_if(ret.begin(), ret.end(), IsFileNameFormat), ret.end());
-    return ret;
+    std::string processName = GetProcessNameFromProcCmdline();
+    processName.erase(std::remove_if(processName.begin(), processName.end(), IsFileNameFormat), processName.end());
+    return processName;
 }
 
 std::string GetFirstLine(const std::string& path)
