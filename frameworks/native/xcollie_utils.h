@@ -109,6 +109,10 @@ bool IsDeveloperOpen();
 
 bool IsBetaVersion();
 
+bool IsAsyncStackEnable();
+
+bool IsAsyncStackBlockBundle(const std::string& bundleName);
+
 std::string GetFormatDate();
 
 std::string FormatTime(const std::string &format);

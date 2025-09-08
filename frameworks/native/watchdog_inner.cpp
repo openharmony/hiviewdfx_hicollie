@@ -115,6 +115,7 @@ constexpr int CPU_FREQ_DECIMAL_BASE = 10;
 constexpr const char* const SCROLL_JANK = "SCROLL_JANK";
 constexpr const char* const MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
 constexpr const char* const BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
+using InitAsyncStackFn = bool(*)();
 }
 
 std::mutex WatchdogInner::lockFfrt_;
@@ -199,10 +200,11 @@ static bool IsInAppspwan()
     return false;
 }
 
-void WatchdogInner::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion)
+void WatchdogInner::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion, bool isSystemApp)
 {
     bundleName_ = bundleName;
     bundleVersion_ = bundleVersion;
+    isSystemApp_ = isSystemApp;
 }
 
 void WatchdogInner::SetForeground(const bool& isForeground)
@@ -497,6 +499,49 @@ bool WatchdogInner::EnableAppStartSample(AppStartContent& startContent, int64_t 
     }
     return AppStartSample(isScroll, startContent);
 }
+
+#if defined(__aarch64__)
+bool WatchdogInner::NeedOpenAsyncStack()
+{
+    if (isSystemApp_) {
+        const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
+        if (!(debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0)) {
+            return false;
+        }
+    }
+    if (!IsAsyncStackEnable() || IsAsyncStackBlockBundle(bundleName_)) {
+        return false;
+    }
+    return true;
+}
+
+void WatchdogInner::InitAsyncStackIfNeed()
+{
+    if (bundleName_.empty()) {
+        return;
+    }
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [this] {
+        XCOLLIE_LOGI("Start init Async Stack.");
+        if (!NeedOpenAsyncStack()) {
+            return;
+        }
+        static auto asyncStackLibHandle = dlopen("libasync_stack.z.so", RTLD_LAZY);
+        if (asyncStackLibHandle != nullptr) {
+            auto initAsyncStack = reinterpret_cast<InitAsyncStackFn>(dlsym(asyncStackLibHandle, "DfxInitAsyncStack"));
+            if (initAsyncStack != nullptr && initAsyncStack()) {
+                XCOLLIE_LOGI("Init async stack successfully.");
+            } else {
+                XCOLLIE_LOGE("Init async stack failed.");
+                // if dlsym libasync_stack.z.so successfully, do not need dlcose because it will be use later.
+                dlclose(asyncStackLibHandle);
+                asyncStackLibHandle = nullptr;
+            }
+        }
+        XCOLLIE_LOGI("Finish init Async Stack.");
+    });
+}
+#endif
 
 bool WatchdogInner::CheckSample(const TimePoint& endTime, int64_t durationTime)
 {
@@ -1347,6 +1392,9 @@ bool WatchdogInner::Start()
         if (__get_global_hook_flag() && __get_hook_flag()) {
             __set_hook_flag(false);
         }
+#if defined(__aarch64__)
+        InitAsyncStackIfNeed();
+#endif
         uint64_t now = GetCurrentTickMillseconds();
         WatchdogTask task;
         uint64_t leftTimeMill;

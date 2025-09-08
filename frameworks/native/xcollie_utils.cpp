@@ -217,6 +217,20 @@ bool IsBetaVersion()
     return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
 }
 
+bool IsAsyncStackEnable()
+{
+    const char *const asyncStackSwich = "persist.hiviewdfx.async_stack.switch";
+    bool isAsyncStackEnable = OHOS::system::GetParameter(asyncStackSwich, "enable") == "enable";
+    return isAsyncStackEnable;
+}
+
+bool IsAsyncStackBlockBundle(const std::string& bundleName)
+{
+    const char *const asyncStackBlockBundles = "persist.hiviewdfx.async_stack.block_bundles";
+    std::string blockBundlesName = OHOS::system::GetParameter(asyncStackBlockBundles, "");
+    return blockBundlesName.find(bundleName) != std::string::npos;
+}
+
 std::string GetProcessNameFromProcCmdline(int32_t pid)
 {
     if (pid > 0) {

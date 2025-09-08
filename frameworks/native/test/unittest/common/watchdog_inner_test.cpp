@@ -1097,5 +1097,31 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StopSample_001, TestSize.Level1)
     WatchdogInner::GetInstance().StopSample(sampleCount);
     WatchdogInner::GetInstance().SaveFreezeStackToFile(getpid());
 }
+
+#if defined(__aarch64__)
+/**
+ * @tc.name: WatchdogInner InitAsyncStack Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitAsyncStack, TestSize.Level1)
+{
+    ASSERT_TRUE(IsAsyncStackEnable());
+    std::string bundleName = "test";
+    ASSERT_FALSE(IsAsyncStackBlockBundle(bundleName));
+
+    WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0", true);
+    ASSERT_FALSE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
+    setenv("HAP_DEBUGGABLE", "true", 1);
+    ASSERT_TRUE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
+
+    WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0", false);
+    ASSERT_TRUE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
+    setenv("HAP_DEBUGGABLE", "false", 1);
+    ASSERT_TRUE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
+
+    WatchdogInner::GetInstance().InitAsyncStackIfNeed();
+}
+#endif
 } // namespace HiviewDFX
 } // namespace OHOS

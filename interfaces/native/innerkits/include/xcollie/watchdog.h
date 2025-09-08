@@ -99,7 +99,7 @@ public:
      * @brief Set bundle info.
      *
      */
-    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
+    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion, bool isSystemApp);
 
     /**
      *
