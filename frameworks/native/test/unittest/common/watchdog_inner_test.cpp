@@ -864,9 +864,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SetScrollState_001, TestSize.Level
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_UpdateReportTimes_002, TestSize.Level1)
 {
-    uint64_t taskId = 1;
-    const char *taskInfo = "Queue_Schedule_Timeout";
-    uint32_t delayedTaskCount = 0;
     OHOS::system::SetParameter("persist.hiview.jank.reporttimes",
         "WatchdogInnerUnitTest:120;com.sample.test:60");
     int32_t checkInterval = 0;
