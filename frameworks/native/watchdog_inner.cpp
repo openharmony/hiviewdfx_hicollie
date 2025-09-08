@@ -595,6 +595,7 @@ std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
         ResetFreezeSampleFlags();
         return "";
     }
+    XCOLLIE_LOGI("Start to collect stack, pid:%{public}d.", pid);
     std::string stack;
     std::string heaviestStack;
     if (!CollectStack(stack, heaviestStack, 0)) {
