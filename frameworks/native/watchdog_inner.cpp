@@ -41,6 +41,7 @@
 #include "dfx_dumprequest.h"
 #include "parameter.h"
 #include "file_ex.h"
+#include "xcollie_ffrt_task.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -126,6 +127,7 @@ static std::atomic_int g_freezeSampleCount {0};
 static std::atomic_bool g_freezeTaskFinished {false};
 static std::atomic_bool g_isReuseStack {false};
 static std::atomic_bool g_isDumpStack {false};
+static std::shared_ptr<XCollieFfrtTask> xcollieFfrtTask_ = nullptr;
 
 SigActionType WatchdogInner::threadSamplerSigHandler_ = nullptr;
 std::mutex WatchdogInner::threadSamplerSignalMutex_;
@@ -718,42 +720,25 @@ bool WatchdogInner::Deinit()
     return ret == 0;
 }
 
-void WatchdogInner::DumpTraceProfile(int32_t interval)
+void WatchdogInner::DumpTraceTask(int32_t interval)
 {
-    traceContent_.dumpCount = 0;
-    traceContent_.traceCount = 0;
-    auto traceTask = [this, interval]() {
-        if (traceContent_.traceCount == 0) {
-            uint64_t beforeTime = GetCurrentTickMillseconds();
-            appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
-            auto result = traceCollector_->CaptureDurationTrace(appCaller_);
-            XCOLLIE_LOGI("MainThread collect trace result: %{public}d interval: %{public}llu", result.retCode,
-                static_cast<unsigned long long>(GetCurrentTickMillseconds() - beforeTime));
-            if (result.retCode != 0) {
-                isMainThreadTraceEnabled_ = true;
-                traceContent_.traceState = DumpStackState::DEFAULT;
-                return;
+    traceContent_.traceCount++;
+    if (CheckEventTimer(GetTimeStamp(), traceContent_.reportBegin,
+        traceContent_.reportEnd, interval)) {
+        traceContent_.dumpCount++;
+    }
+    if (traceContent_.traceCount >= COLLECT_TRACE_MAX) {
+        if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
+            CreateDir(WATCHDOG_DIR);
+            appCaller_.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
+            appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
+            if (xcollieFfrtTask_) {
+                xcollieFfrtTask_->SubmitDumpTraceTask(appCaller_, traceCollector_);
+                XCOLLIE_LOGI("success to submit dump trace");
             }
         }
-        traceContent_.traceCount++;
-        if (CheckEventTimer(GetTimeStamp(), traceContent_.reportBegin,
-            traceContent_.reportEnd, interval)) {
-            traceContent_.dumpCount++;
-        }
-        if (traceContent_.traceCount >= COLLECT_TRACE_MAX) {
-            if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
-                CreateDir(WATCHDOG_DIR);
-                appCaller_.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-                appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
-                auto result = traceCollector_->CaptureDurationTrace(appCaller_);
-                XCOLLIE_LOGI("MainThread TraceCollector Dump result: %{public}d", result.retCode);
-            }
-            isMainThreadTraceEnabled_ = true;
-        }
-    };
-    WatchdogTask task("TraceCollector", traceTask, 0, interval, true);
-    std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked("TraceCollector", std::move(task));
+        isMainThreadTraceEnabled_ = true;
+    }
 }
 
 int32_t WatchdogInner::StartTraceProfile()
@@ -773,7 +758,23 @@ int32_t WatchdogInner::StartTraceProfile()
     appCaller_.happenTime = GetTimeStamp() / MILLISEC_TO_NANOSEC;
     appCaller_.beginTime = traceContent_.reportBegin / MILLISEC_TO_NANOSEC;
     appCaller_.endTime = traceContent_.reportEnd / MILLISEC_TO_NANOSEC;
-    DumpTraceProfile(DURATION_TIME);
+    appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
+    xcollieFfrtTask_ = std::make_shared<XCollieFfrtTask>(XCOLLIE_TASK_MAX_CONCURRENCY_NUM);
+    if (!xcollieFfrtTask_) {
+        XCOLLIE_LOGE("submit start trace failed.");
+        return -1;
+    }
+    xcollieFfrtTask_->InitFfrtTask();
+    xcollieFfrtTask_->SubmitStartTraceTask(appCaller_, traceCollector_);
+    traceContent_.dumpCount = 0;
+    traceContent_.traceCount = 0;
+    auto traceTask = [this] { this->DumpTraceTask(DURATION_TIME); };
+    WatchdogTask task("TraceCollector", traceTask, 0, DURATION_TIME, true);
+    {
+        std::unique_lock<std::mutex> lock(lock_);
+        InsertWatchdogTaskLocked("TraceCollector", std::move(task));
+    }
+    XCOLLIE_LOGI("success to submit start trace");
     return 0;
 }
 

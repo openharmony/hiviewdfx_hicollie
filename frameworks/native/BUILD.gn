@@ -32,6 +32,7 @@ ohos_source_set("libhicollie_source") {
     "watchdog_inner.cpp",
     "watchdog_task.cpp",
     "xcollie.cpp",
+    "xcollie_ffrt_task.cpp",
     "xcollie_utils.cpp",
   ]
   configs = [ ":hicollie_include" ]

@@ -309,7 +309,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
     int32_t interval = 150; // test value
     WatchdogInner::GetInstance().StartTraceProfile();
-    WatchdogInner::GetInstance().DumpTraceProfile(interval);
+    WatchdogInner::GetInstance().DumpTraceTask(interval);
     ret = IsFileNameFormat('1');
     EXPECT_TRUE(!ret);
     ret = IsFileNameFormat('b');
@@ -339,7 +339,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
     printf("ret=%d\n", WatchdogInner::GetInstance().ReportMainThreadEvent(gettid(),
         "BUSSINESS_THREAD_JANK"));
     WatchdogInner::GetInstance().StartTraceProfile();
-    WatchdogInner::GetInstance().DumpTraceProfile(150); // test value
+    WatchdogInner::GetInstance().DumpTraceTask(150); // test value
     FunctionOpen(nullptr, "test");
 }
 
