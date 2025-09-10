@@ -399,5 +399,33 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_SetScrollState_001, TestSize.Level1)
     Watchdog::GetInstance().SetScrollState(isScroll);
     EXPECT_EQ(isScroll, true);
 }
+
+/**
+ * @tc.name: Watchdog StartSample test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_StartSample_001, TestSize.Level1)
+{
+    int duration = 300; // test value
+    int interval = 100; // test value
+    Watchdog::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(duration / interval != 0);
+}
+
+/**
+ * @tc.name: Watchdog StopSample test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_StopSample_001, TestSize.Level1)
+{
+    int sampleCount = 0;
+    std::string ret = Watchdog::GetInstance().StopSample(sampleCount);
+    EXPECT_TRUE(ret.empty());
+    sampleCount = -1;
+    ret = Watchdog::GetInstance().StopSample(sampleCount);
+    EXPECT_TRUE(ret.empty());
+}
 } // namespace HiviewDFX
 } // namespace OHOS

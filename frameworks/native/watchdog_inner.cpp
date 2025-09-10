@@ -639,13 +639,13 @@ void WatchdogInner::StartSample(int duration, int interval)
         return;
     }
     if (duration <= 0 || interval <= 0) {
-        XCOLLIE_LOGW("Sample freeze failed, duration=%{public}d, interval=%{public}d.",
+        XCOLLIE_LOGE("Sample freeze failed, duration=%{public}d, interval=%{public}d.",
             duration, interval);
         return;
     }
     int targetCount = duration / interval;
     if (targetCount < DEFAULT_SAMPLE_VALUE) {
-        XCOLLIE_LOGW("Sample freeze failed, sampleCount=%{public}d", targetCount);
+        XCOLLIE_LOGE("Sample freeze failed, sampleCount=%{public}d", targetCount);
         return;
     }
     int32_t pid = getpid();
@@ -679,6 +679,10 @@ void WatchdogInner::StartSample(int duration, int interval)
 
 std::string WatchdogInner::StopSample(int sampleCount)
 {
+    if (sampleCount <= 0) {
+        XCOLLIE_LOGE("Stop freeze failed, sampleCount=%{public}d", sampleCount);
+        return "";
+    }
     int pid = getpid();
     if (g_freezeSampleCount.load() > 0 && g_freezeSampleCount.load() <= sampleCount) {
         return SaveFreezeStackToFile(pid);

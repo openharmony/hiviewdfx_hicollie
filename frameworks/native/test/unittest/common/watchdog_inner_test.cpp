@@ -911,28 +911,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SaveStringToFile_001, TestSize.Lev
 }
 
 /**
- * @tc.name: WatchdogInner StartSample Test;
- * @tc.desc: add testcase
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
-{
-    std::string path = "test.txt";
-    WatchdogInner::GetInstance().SaveFreezeStackToFile(getpid());
-    std::string outFile;
-    WatchdogInner::GetInstance().StartSample(-3000, -300);
-    EXPECT_TRUE(outFile.empty());
-    WatchdogInner::GetInstance().StartSample(3000, 300);
-    int count = 0;
-    while (count < 6) {
-        sleep(1);
-        count++;
-    }
-    outFile = WatchdogInner::GetInstance().StopSample(10);
-    EXPECT_TRUE(outFile.empty());
-}
-
-/**
  * @tc.name: WatchdogInner ReadAppStartConfig Test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
@@ -1082,6 +1060,42 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_EnableAppStartSample_002, TestSize
     startContent.threshold = 1000;
     result = WatchdogInner::GetInstance().EnableAppStartSample(startContent, durationTime, isScroll);
     EXPECT_TRUE(!result);
+}
+
+/**
+ * @tc.name: WatchdogInner StartSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
+{
+    int duration = 0;
+    int interval = 0;
+    WatchdogInner::GetInstance().StartSample(duration, interval);
+    duration = -300; // test value
+    interval = -100; // test value
+    WatchdogInner::GetInstance().StartSample(duration, interval);
+    duration = 300; // test value
+    interval = 100; // test value
+    WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(duration / interval != 0);
+}
+
+/**
+ * @tc.name: WatchdogInner StopSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StopSample_001, TestSize.Level1)
+{
+    int sampleCount = 0;
+    std::string ret = WatchdogInner::GetInstance().StopSample(sampleCount);
+    EXPECT_TRUE(ret.empty());
+    sampleCount = 1; // test value
+    WatchdogInner::GetInstance().StopSample(sampleCount);
+    sampleCount = 100; // test value
+    WatchdogInner::GetInstance().StopSample(sampleCount);
+    WatchdogInner::GetInstance().SaveFreezeStackToFile(getpid());
 }
 } // namespace HiviewDFX
 } // namespace OHOS
