@@ -684,7 +684,7 @@ std::string WatchdogInner::StopSample(int sampleCount)
         return SaveFreezeStackToFile(pid);
     }
     uint64_t curTime = GetCurrentTickMillseconds();
-    XCOLLIE_LOGW("get lastest freeze file: %{public}s, interval: %{public}llu.",
+    XCOLLIE_LOGW("get lastest freeze file: %{public}s, interval: %{public}" PRIu64 ".",
         sampleFreezeInfo_.freezeFile.c_str(), (curTime - sampleFreezeInfo_.lastSaveTime));
     return sampleFreezeInfo_.freezeFile;
 }
