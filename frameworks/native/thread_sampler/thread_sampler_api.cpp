@@ -60,5 +60,10 @@ void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context)
 {
     ThreadSampler::ThreadSamplerSignalHandler(sig, si, context);
 }
+
+SamplerResult ThreadSamplerGetResult()
+{
+    return ThreadSampler::GetInstance().ThreadSamplerGetResult();
+}
 }  // namespace HiviewDFX
 }  // namespace OHOS

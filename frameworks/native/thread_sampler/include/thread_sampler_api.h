@@ -46,6 +46,9 @@ int ThreadSamplerDeinit();
 /* The signal handler function */
 void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
 
+/* The sampler result retrieval function */
+SamplerResult ThreadSamplerGetResult();
+
 #ifdef __cplusplus
 }
 #endif

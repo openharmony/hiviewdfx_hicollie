@@ -168,6 +168,11 @@ public:
      * @brief Stop freeze stack sample.
      */
     std::string StopSample(int sampleCount);
+
+    /**
+     * @brief Get sampler result.
+     */
+    void GetSamplerResult(uint64_t &samplerStartTime, uint64_t &samplerFinishTime, int32_t &samplerCount);
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

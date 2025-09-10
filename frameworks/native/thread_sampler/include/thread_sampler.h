@@ -47,6 +47,12 @@ struct ThreadUnwindContext {
     uint8_t buffer[STACK_BUFFER_SIZE] {0};   // 16K stack buffer
 };
 
+struct SamplerResult {
+    uint64_t samplerStartTime;
+    uint64_t samplerFinishTime;
+    int32_t samplerCount;
+};
+
 struct UnwindInfo {
     ThreadUnwindContext* context;
     DfxMaps* maps;
@@ -66,6 +72,7 @@ public:
     bool CollectStack(std::string& stack, bool treeFormat = true);
     bool Deinit();  // Release sampler
     std::string GetHeaviestStack() const;
+    SamplerResult ThreadSamplerGetResult();
 
 private:
     bool InitRecordBuffer();
@@ -113,6 +120,8 @@ private:
     MAYBE_UNUSED uint64_t requestCount_ {0};
     MAYBE_UNUSED uint64_t signalTimeCost_ {0};
     MAYBE_UNUSED uint64_t processCount_ {0};
+    MAYBE_UNUSED uint64_t processStartTime_ {0};
+    MAYBE_UNUSED uint64_t processFinishTime_ {0};
 
     std::vector<TimeStampedPcs> timeStampedPcsList_;
 };

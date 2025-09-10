@@ -53,6 +53,12 @@ const int XCOLLIE_TASK_MAX_CONCURRENCY_NUM = 1;
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 
+struct SamplerResult {
+    uint64_t samplerStartTime;
+    uint64_t samplerFinishTime;
+    int32_t samplerCount;
+};
+
 typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
 typedef void (*WatchdogInnerEndFunc)(const char* eventName);
 typedef int (*ThreadSamplerInitFunc)(int);
@@ -60,6 +66,7 @@ typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef int (*ThreadSamplerDeinitFunc)();
 typedef void (*SigActionType)(int, siginfo_t*, void*);
+typedef SamplerResult (*ThreadSamplerGetResultFunc)();
 
 struct TimeContent {
     int64_t curBegin;

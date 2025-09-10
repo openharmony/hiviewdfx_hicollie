@@ -83,6 +83,7 @@ public:
     void StartSample(int duration, int interval);
     std::string StopSample(int sampleCount);
     bool CheckSample(const TimePoint& endTime, int64_t durationTime);
+    SamplerResult GetSamplerResult();
 
 public:
     std::string currentScene_;
@@ -155,6 +156,8 @@ private:
     ThreadSamplerSampleFunc threadSamplerSampleFunc_ {nullptr};
     ThreadSamplerCollectFunc threadSamplerCollectFunc_ {nullptr};
     ThreadSamplerDeinitFunc threadSamplerDeinitFunc_ {nullptr};
+    ThreadSamplerGetResultFunc threadSamplerGetResultFunc_ {nullptr};
+    SamplerResult samplerResult_ {0, 0, 0};
     uint64_t watchdogStartTime_ {0};
     static std::mutex threadSamplerSignalMutex_;
 

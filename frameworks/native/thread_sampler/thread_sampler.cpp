@@ -142,7 +142,7 @@ bool ThreadSampler::Init(int collectStackCount)
         Deinit();
         return false;
     }
-
+    processStartTime_ = GetCurrentTimeNanoseconds();
     init_ = true;
     return true;
 }
@@ -383,9 +383,9 @@ void ThreadSampler::ProcessStackBuffer()
 
         uint64_t ts = GetCurrentTimeNanoseconds();
 
+        processCount_++;
 #if defined(CONSUME_STATISTICS)
         processTimeCost_ += ts - unwindStart;
-        processCount_++;
         unwindCount_++;
         unwindTimeCost_ += unwindEnd - unwindStart;
 #endif  //#if defined(CONSUME_STATISTICS)
@@ -407,18 +407,19 @@ int32_t ThreadSampler::Sample()
 #endif
     SendSampleRequest();
     ProcessStackBuffer();
+    processFinishTime_ = GetCurrentTimeNanoseconds();
     return 0;
 }
 
 void ThreadSampler::ResetConsumeInfo()
 {
+    processCount_ = 0;
 #if defined(CONSUME_STATISTICS)
     sampleCount_ = 0;
     requestCount_ = 0;
     copyStackCount_ = 0;
     copyStackTimeCost_ = 0;
     processTimeCost_ = 0;
-    processCount_ = 0;
     unwindCount_ = 0;
     unwindTimeCost_ = 0;
     signalTimeCost_ = 0;
@@ -486,8 +487,19 @@ bool ThreadSampler::Deinit()
     stackPrinter_.reset();
     DestroyUnwinder();
     ReleaseRecordBuffer();
+    processFinishTime_ = GetCurrentTimeNanoseconds();
     init_ = false;
     return !init_;
+}
+
+SamplerResult ThreadSampler::ThreadSamplerGetResult()
+{
+    constexpr uint64_t nanoSecToMilliSec = 1000000;
+    return SamplerResult{
+        .samplerStartTime = processStartTime_ / nanoSecToMilliSec,
+        .samplerFinishTime = processFinishTime_ / nanoSecToMilliSec,
+        .samplerCount = static_cast<int32_t>(processCount_),
+    };
 }
 }  // end of namespace HiviewDFX
 }  // end of namespace OHOS

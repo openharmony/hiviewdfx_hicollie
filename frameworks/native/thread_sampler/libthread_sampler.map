@@ -6,6 +6,7 @@
       ThreadSamplerCollect;
       ThreadSamplerDeinit;
       ThreadSamplerSigHandler;
+      ThreadSamplerGetResult;
     };
   local:
     *;
