@@ -15,6 +15,7 @@
 
 #include "handler_checker.h"
 #include "ipc_skeleton.h"
+#include "musl_preinit_common.h"
 #include "xcollie_utils.h"
 
 namespace OHOS {
@@ -35,6 +36,9 @@ void HandlerChecker::ScheduleCheck()
         auto self = weak.lock();
         if (self) {
             if (self->name_ == IPC_FULL_TASK) {
+                if (__get_global_hook_flag() && __get_hook_flag()) {
+                    __set_hook_flag(false);
+                }
                 IPCDfx::BlockUntilThreadAvailable();
             }
             self->isCompleted_.store(true);
