@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -49,6 +49,7 @@ const int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
 const int XCOLLIE_CALLBACK_TIMEWIN_MAX = 60;
 const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
 constexpr int64_t APP_START_LIMIT = 7 * 24 * 60 * 60 * 1000; // 7 days
+const int XCOLLIE_TASK_MAX_CONCURRENCY_NUM = 1;
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 
