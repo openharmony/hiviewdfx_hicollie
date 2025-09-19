@@ -22,9 +22,9 @@ namespace {
 constexpr int SUCCESS = 0;
 constexpr int FAIL = -1;
 }  // namespace
-int ThreadSamplerInit(int collectStackCount)
+int ThreadSamplerInit(int collectStackCount, int recordSubmitterStack)
 {
-    return ThreadSampler::GetInstance().Init(collectStackCount) ? SUCCESS : FAIL;
+    return ThreadSampler::GetInstance().Init(collectStackCount, recordSubmitterStack == 1) ? SUCCESS : FAIL;
 }
 
 int32_t ThreadSamplerSample()

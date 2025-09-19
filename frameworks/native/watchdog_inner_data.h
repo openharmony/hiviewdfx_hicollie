@@ -61,7 +61,7 @@ struct SamplerResult {
 
 typedef void (*WatchdogInnerBeginFunc)(const char* eventName);
 typedef void (*WatchdogInnerEndFunc)(const char* eventName);
-typedef int (*ThreadSamplerInitFunc)(int);
+typedef int (*ThreadSamplerInitFunc)(int, int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef int (*ThreadSamplerDeinitFunc)();

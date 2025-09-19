@@ -66,7 +66,7 @@ public:
     static void ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* context);
 
     // Initial sampler, include uwinder, recorde buffer etc.
-    bool Init(int collectStackCount);
+    bool Init(int collectStackCount, bool recordSubmitterStack);
     int32_t Sample();  // Interface of sample, to send sample request.
     // Collect stack info, can be formed into tree format or not. Unsafe in multi-thread environments
     bool CollectStack(std::string& stack, bool treeFormat = true);
@@ -110,6 +110,7 @@ private:
     // name of the mmap of uniqueStackTable
     std::string uniTableMMapName_ {"hicollie_buf"};
     std::string heaviestStack_ {0};
+    bool recordSubmitterStack_ {false};
 
     MAYBE_UNUSED uint64_t copyStackCount_ {0};
     MAYBE_UNUSED uint64_t copyStackTimeCost_ {0};
@@ -124,6 +125,9 @@ private:
     MAYBE_UNUSED uint64_t processFinishTime_ {0};
 
     std::vector<TimeStampedPcs> timeStampedPcsList_;
+    std::unique_ptr<uint64_t[]> submitterStackIds_ {nullptr};
+    size_t submitterStackIdIndex_ {0};
+    uint64_t submitterStackIdsMaxSize_ {0};
 };
 }  // end of namespace HiviewDFX
 }  // end of namespace OHOS

@@ -235,6 +235,7 @@ ohos_unittest("ThreadSamplerTest") {
     "googletest:gtest_main",
     "hicollie:libhicollie",
     "hilog:libhilog",
+    "libuv:uv",
   ]
   defines = []
   if (defined(global_parts_info.hiviewdfx_hisysevent)) {

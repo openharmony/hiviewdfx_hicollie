@@ -311,7 +311,7 @@ void WatchdogInner::UninstallThreadSamplerSignal()
     threadSamplerSigHandler_ = nullptr;
 }
 
-bool WatchdogInner::CheckThreadSampler()
+bool WatchdogInner::CheckThreadSampler(bool recordSubmitterStack)
 {
     XCOLLIE_LOGD("ThreadSampler 1st in ThreadSamplerTask.\n");
     if (!InitThreadSamplerFuncs()) {
@@ -324,7 +324,7 @@ bool WatchdogInner::CheckThreadSampler()
         return false;
     }
 
-    int initThreadSamplerRet = threadSamplerInitFunc_(COLLECT_STACK_COUNT);
+    int initThreadSamplerRet = threadSamplerInitFunc_(COLLECT_STACK_COUNT, (recordSubmitterStack ? 1 : 0));
     if (initThreadSamplerRet != 0) {
         XCOLLIE_LOGE("Thread sampler init failed. ret %{public}d\n", initThreadSamplerRet);
         return false;
@@ -430,7 +430,8 @@ bool WatchdogInner::AppStartSample(bool isScroll, AppStartContent& startContent)
             startContent.isFinishStartSample = true;
             return;
         }
-        if ((startContent.collectCount.load() == 0 && !CheckThreadSampler()) || threadSamplerSampleFunc_ == nullptr) {
+        if ((startContent.collectCount.load() == 0 && !CheckThreadSampler(false)) ||
+             threadSamplerSampleFunc_ == nullptr) {
             g_isDumpStack.store(false);
             startContent.isFinishStartSample = true;
             return;
@@ -531,6 +532,7 @@ void WatchdogInner::InitAsyncStackIfNeed()
             auto initAsyncStack = reinterpret_cast<InitAsyncStackFn>(dlsym(asyncStackLibHandle, "DfxInitAsyncStack"));
             if (initAsyncStack != nullptr && initAsyncStack()) {
                 XCOLLIE_LOGI("Init async stack successfully.");
+                initAsyncStack_ = true;
             } else {
                 XCOLLIE_LOGE("Init async stack failed.");
                 // if dlsym libasync_stack.z.so successfully, do not need dlcose because it will be use later.
@@ -568,7 +570,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
     int64_t tid = getproctid();
     g_scrollSampleCount.store(0);
     auto sampleTask = [this, sampleInterval, tid, isScroll]() {
-        if (g_scrollSampleCount.load() == 0 && (g_isDumpStack || !CheckThreadSampler())) {
+        if (g_scrollSampleCount.load() == 0 && (g_isDumpStack || !CheckThreadSampler(false))) {
             isMainThreadStackEnabled_ = true;
             return;
         }
@@ -608,7 +610,7 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
     int64_t tid = getproctid();
     auto sampleTask = [this, sampleInterval, sampleCount, tid]() {
         if ((stackContent_.detectorCount == 0 && stackContent_.collectCount == 0 &&
-            (g_isDumpStack || !CheckThreadSampler())) || threadSamplerSampleFunc_ == nullptr) {
+            (g_isDumpStack || !CheckThreadSampler(false))) || threadSamplerSampleFunc_ == nullptr) {
             isMainThreadStackEnabled_ = true;
             return;
         }
@@ -711,7 +713,8 @@ void WatchdogInner::StartSample(int duration, int interval)
             }
             return;
         }
-        if ((g_freezeSampleCount.load() == 0 && !CheckThreadSampler()) || threadSamplerSampleFunc_ == nullptr) {
+        if ((g_freezeSampleCount.load() == 0 && !CheckThreadSampler(initAsyncStack_)) ||
+             threadSamplerSampleFunc_ == nullptr) {
             ResetFreezeSampleFlags();
             return;
         }

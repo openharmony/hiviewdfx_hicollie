@@ -38,7 +38,11 @@ namespace HiviewDFX {
 #define XCOLLIE_LOGD(...) HILOG_DEBUG(LOG_CORE, ##__VA_ARGS__)
 
 uint64_t GetCurrentTimeNanoseconds();
+std::string TimeFormat(uint64_t time);
 void DoUnwind(const std::shared_ptr<Unwinder>& unwinder, UnwindInfo& unwindInfo);
+std::vector<uintptr_t> GetAsyncStackPcsByStackId(uint64_t stackId);
+std::string GetStackByPcs(const std::vector<uintptr_t>& pcVec, const std::shared_ptr<Unwinder>& unwinder,
+                          const std::shared_ptr<DfxMaps>& maps, uint64_t snapshotTime);
 }  // end of namespace HiviewDFX
 }  // end of namespace OHOS
 #endif
