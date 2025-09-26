@@ -27,6 +27,7 @@
 #include <sys/prctl.h>
 #include <syscall.h>
 
+#include "async_stack.h"
 #include "dfx_elf.h"
 #include "dfx_frame_formatter.h"
 #include "dfx_regs.h"
@@ -112,7 +113,7 @@ int ThreadSampler::GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void* 
     return unwindInfo->maps->FindMapByAddr(pc, map) ? 0 : -1;
 }
 
-bool ThreadSampler::Init(int collectStackCount)
+bool ThreadSampler::Init(int collectStackCount, bool recordSubmitterStack)
 {
     if (init_) {
         return true;
@@ -143,6 +144,12 @@ bool ThreadSampler::Init(int collectStackCount)
         return false;
     }
     processStartTime_ = GetCurrentTimeNanoseconds();
+    timeStampedPcsList_.reserve(collectStackCount);
+    submitterStackIds_ = std::make_unique<uint64_t[]>(collectStackCount);
+    submitterStackIdIndex_ = 0;
+    submitterStackIdsMaxSize_ = collectStackCount;
+    recordSubmitterStack_ = recordSubmitterStack;
+
     init_ = true;
     return true;
 }
@@ -272,21 +279,15 @@ ThreadUnwindContext* ThreadSampler::GetWriteContext()
 NO_SANITIZER void ThreadSampler::WriteContext(void* context)
 {
 #if defined(__aarch64__) || defined(__loongarch_lp64)
-    if (!init_) {
-        return;
-    }
-#if defined(CONSUME_STATISTICS)
-    uint64_t begin = GetCurrentTimeNanoseconds();
-#endif
-    if (mmapStart_ == MAP_FAILED) {
+    if (!init_ || mmapStart_ == MAP_FAILED) {
         return;
     }
     ThreadUnwindContext* contextArray = static_cast<ThreadUnwindContext*>(mmapStart_);
     int32_t index = writeIndex_;
 #if defined(CONSUME_STATISTICS)
+    uint64_t begin = GetCurrentTimeNanoseconds();
     signalTimeCost_ += begin - contextArray[index].requestTime;
 #endif
-    // current buffer has not been processed, stop copy
     if (contextArray[index].snapshotTime > 0 && contextArray[index].processTime == 0) {
         return;
     }
@@ -310,6 +311,10 @@ NO_SANITIZER void ThreadSampler::WriteContext(void* context)
     for (uintptr_t pos = 0; pos < cpySz; pos++) {
         reinterpret_cast<char*>(contextArray[index].buffer)[pos] =
             reinterpret_cast<const char*>(contextArray[index].sp)[pos];
+    }
+    if (recordSubmitterStack_ && submitterStackIdIndex_ < submitterStackIdsMaxSize_) {
+        submitterStackIds_[submitterStackIdIndex_] = DfxGetSubmitterStackId();
+        submitterStackIdIndex_++;
     }
     writeIndex_ = (index + 1) % SAMPLER_MAX_BUFFER_SZ;
     uint64_t end = GetCurrentTimeNanoseconds();
@@ -442,11 +447,7 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
         if (!LoadStringFromFile("/proc/self/wchan", fileStr)) {
             XCOLLIE_LOGE("read file failed.\n");
         }
-        stack += fileStr;
-        stack += "\n";
-#if defined(CONSUME_STATISTICS)
-        ResetConsumeInfo();
-#endif
+        stack += (fileStr + "\n");
         return false;
     }
 
@@ -454,12 +455,19 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     uint64_t collectStart = GetCurrentTimeNanoseconds();
 #endif
     if (!treeFormat) {
-        stack = stackPrinter_->GetFullStack(timeStampedPcsList_);
+        for (size_t i = 0; i < timeStampedPcsList_.size(); i++) {
+            stack += GetStackByPcs(timeStampedPcsList_[i].pcVec, unwinder_, maps_, timeStampedPcsList_[i].snapshotTime);
+            if (recordSubmitterStack_ && i < submitterStackIdsMaxSize_ && submitterStackIds_[i] != 0) {
+                stack += "========SubmitterStacktrace========\n";
+                std::vector<uintptr_t> submitterPcs = GetAsyncStackPcsByStackId(submitterStackIds_[i]);
+                stack += GetStackByPcs(submitterPcs, unwinder_, maps_, 0);
+            }
+            stack += "\n";
+        }
     } else {
         stack = stackPrinter_->GetTreeStack(pid_);
         heaviestStack_ = stackPrinter_->GetHeaviestStack(pid_);
     }
-    timeStampedPcsList_.clear();
 
 #if defined(CONSUME_STATISTICS)
     uint64_t collectEnd = GetCurrentTimeNanoseconds();
@@ -472,7 +480,6 @@ bool ThreadSampler::CollectStack(std::string& stack, bool treeFormat)
     XCOLLIE_LOGI("Average process time:%{public}llu ns\n", (unsigned long long)processTimeCost_ / processCount_);
     XCOLLIE_LOGI("Average unwind time:%{public}llu ns\n", (unsigned long long)unwindTimeCost_ / unwindCount_);
     XCOLLIE_LOGI("FormatStack time:%{public}llu ns\n", (unsigned long long)elapse);
-    ResetConsumeInfo();
 #endif
     return true;
 }
@@ -488,14 +495,22 @@ bool ThreadSampler::Deinit()
     DestroyUnwinder();
     ReleaseRecordBuffer();
     processFinishTime_ = GetCurrentTimeNanoseconds();
+    recordSubmitterStack_ = false;
+    timeStampedPcsList_.clear();
+    submitterStackIds_.reset();
+    submitterStackIdIndex_ = 0;
+    submitterStackIdsMaxSize_ = 0;
     init_ = false;
+#if defined(CONSUME_STATISTICS)
+    ResetConsumeInfo();
+#endif
     return !init_;
 }
 
 SamplerResult ThreadSampler::ThreadSamplerGetResult()
 {
     constexpr uint64_t nanoSecToMilliSec = 1000000;
-    return SamplerResult{
+    return SamplerResult {
         .samplerStartTime = processStartTime_ / nanoSecToMilliSec,
         .samplerFinishTime = processFinishTime_ / nanoSecToMilliSec,
         .samplerCount = static_cast<int32_t>(processCount_),

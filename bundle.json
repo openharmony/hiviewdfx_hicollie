@@ -39,7 +39,8 @@
                 "init",
                 "hiview",
                 "storage_service",
-                "samgr"
+                "samgr",
+                "libuv"
             ],
             "third_party": []
         },

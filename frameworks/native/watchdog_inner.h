@@ -117,7 +117,7 @@ private:
     void DumpTraceTask(int32_t interval);
     int32_t StartTraceProfile();
     void UpdateTime(int64_t& reportBegin, int64_t& reportEnd, TimePoint& lastEndTime, const TimePoint& endTime);
-    bool CheckThreadSampler();
+    bool CheckThreadSampler(bool recordSubmitterStack);
     bool InitThreadSamplerFuncs();
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
@@ -188,6 +188,7 @@ private:
     AppStartContent startSlowContent_;
     AppStartContent scrollSlowContent_;
     SampleFreezeInfo sampleFreezeInfo_;
+    bool initAsyncStack_ {false};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

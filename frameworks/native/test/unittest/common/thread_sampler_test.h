@@ -20,7 +20,7 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-typedef int (*ThreadSamplerInitFunc)(int);
+typedef int (*ThreadSamplerInitFunc)(int, int);
 typedef int32_t (*ThreadSamplerSampleFunc)();
 typedef int (*ThreadSamplerCollectFunc)(char*, char*, size_t, size_t, int);
 typedef int (*ThreadSamplerDeinitFunc)();
