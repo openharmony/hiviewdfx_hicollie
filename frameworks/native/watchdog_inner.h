@@ -74,6 +74,7 @@ public:
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
+    int ConfigEventPolicy(std::map<std::string, std::string> paramsMap);
     bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes, int ignoreTime,
         bool isScroll = false);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
@@ -92,9 +93,9 @@ public:
     StackContent stackContent_;
     TraceContent traceContent_;
     std::map<std::string, int> jankParamsMap = {
-        {KEY_SAMPLE_INTERVAL, SAMPLE_DEFULE_INTERVAL}, {KEY_IGNORE_STARTUP_TIME, DEFAULT_IGNORE_STARTUP_TIME},
-        {KEY_SAMPLE_COUNT, SAMPLE_DEFULE_COUNT}, {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFULE_REPORT_TIMES},
-        {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}, {KEY_CHECKER_INTERVAL, 0}
+        {KEY_SAMPLE_INTERVAL, SAMPLE_DEFAULT_INTERVAL}, {KEY_IGNORE_STARTUP_TIME, DEFAULT_IGNORE_STARTUP_TIME},
+        {KEY_SAMPLE_COUNT, SAMPLE_DEFAULT_COUNT}, {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFAULT_REPORT_TIMES},
+        {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}, {KEY_CHECKER_INTERVAL, 0}, {KEY_AUTO_STOP_SAMPLING, 0}
     };
     bool isScroll_ {false};
 
@@ -121,9 +122,9 @@ private:
     bool InitThreadSamplerFuncs();
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
-    void UpdateJankParam(int sampleInterval, int ignoreStartUpTime, int sampleCount, int logType, int reportTimes);
-    int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key);
-    bool CheckSampleParam(std::map<std::string, std::string> paramsMap);
+    void UpdateJankParam(SampleJankParams& params);
+    int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key, int defaultValue = -1);
+    bool CheckSampleParam(std::map<std::string, std::string> paramsMap, bool keyNeedExist = true);
     std::string SaveFreezeStackToFile(int32_t pid);
     bool AppStartSample(bool isScroll, AppStartContent& startContent);
     void ClearParam(bool& isFinished);

@@ -18,38 +18,40 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-constexpr const char* const KEY_SAMPLE_INTERVAL = "sample_interval";
-constexpr const char* const KEY_SAMPLE_COUNT = "sample_count";
-constexpr const char* const KEY_SAMPLE_REPORT_TIMES = "report_times_per_app";
-constexpr const char* const KEY_LOG_TYPE = "log_type";
-constexpr const char* const KEY_SET_TIMES_FLAG = "set_report_times_flag";
-constexpr const char* const KEY_IGNORE_STARTUP_TIME = "ignore_startup_time";
-constexpr const char* const KEY_CHECKER_INTERVAL = "checker_interval";
-constexpr const char* const APP_START_CONFIG = "/data/storage/el2/log/xperf_config";
-constexpr const char* const EVENT_APP_START_SLOW = "APP_START_SLOW";
-constexpr const char* const EVENT_SLIDING_JANK = "SLIDING_JANK";
-constexpr const char* const KEY_EVENT_NAME = "event_name";
-constexpr const char* const KEY_THRESHOLD = "threshold";
-constexpr const char* const KEY_TRIGGER_INTERVAL = "trigger_interval";
-constexpr const char* const KEY_COLLECT_TIMES = "collect_times";
-constexpr const char* const KEY_REPORT_TIMES = "report_times";
-constexpr const char* const KEY_START_TIME = "start_time";
-constexpr const char* const KEY_STARTUP_DURATION = "startup_duration";
-constexpr const char* const EVENT_APP_START_SCROLL_JANK = "APP_START_SCROLL_JANK";
-constexpr const char* const EVENT_APP_START_JANK = "APP_START_JANK";
-constexpr const char* const APP_START_SAMPLE = "AppStartSample";
-const int SAMPLE_DEFULE_INTERVAL = 150;
-const int SAMPLE_DEFULE_COUNT = 10;
-const int SAMPLE_DEFULE_REPORT_TIMES = 1;
-const int SET_TIMES_FLAG = 1;
-const int DEFAULT_IGNORE_STARTUP_TIME = 10; // 10s
-const int ENABLE_TREE_FORMAT = 1;
-const int APP_START_PARAM_SIZE = 5;
-const int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
-const int XCOLLIE_CALLBACK_TIMEWIN_MAX = 60;
-const unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
+constexpr const char* KEY_SAMPLE_INTERVAL = "sample_interval";
+constexpr const char* KEY_SAMPLE_COUNT = "sample_count";
+constexpr const char* KEY_SAMPLE_REPORT_TIMES = "report_times_per_app";
+constexpr const char* KEY_LOG_TYPE = "log_type";
+constexpr const char* KEY_SET_TIMES_FLAG = "set_report_times_flag";
+constexpr const char* KEY_IGNORE_STARTUP_TIME = "ignore_startup_time";
+constexpr const char* KEY_CHECKER_INTERVAL = "checker_interval";
+constexpr const char* KEY_AUTO_STOP_SAMPLING = "auto_stop_sampling";
+constexpr const char* APP_START_CONFIG = "/data/storage/el2/log/xperf_config";
+constexpr const char* EVENT_APP_START_SLOW = "APP_START_SLOW";
+constexpr const char* EVENT_SLIDING_JANK = "SLIDING_JANK";
+constexpr const char* KEY_EVENT_NAME = "event_name";
+constexpr const char* KEY_THRESHOLD = "threshold";
+constexpr const char* KEY_TRIGGER_INTERVAL = "trigger_interval";
+constexpr const char* KEY_COLLECT_TIMES = "collect_times";
+constexpr const char* KEY_REPORT_TIMES = "report_times";
+constexpr const char* KEY_START_TIME = "start_time";
+constexpr const char* KEY_STARTUP_DURATION = "startup_duration";
+constexpr const char* EVENT_APP_START_SCROLL_JANK = "APP_START_SCROLL_JANK";
+constexpr const char* EVENT_APP_START_JANK = "APP_START_JANK";
+constexpr const char* APP_START_SAMPLE = "AppStartSample";
+constexpr int SAMPLE_DEFAULT_INTERVAL = 150;
+constexpr int SAMPLE_DEFAULT_COUNT = 10;
+constexpr int SAMPLE_DEFAULT_REPORT_TIMES = 1;
+constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
+constexpr int APP_START_PARAM_SIZE = 5;
+constexpr int DEFAULT_IGNORE_STARTUP_TIME = 10; // 10s
+constexpr int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
+constexpr int XCOLLIE_CALLBACK_TIMEWIN_MAX = 60;
+constexpr unsigned int MAX_WATCH_NUM = 128; // 128: max handler thread
+constexpr int XCOLLIE_TASK_MAX_CONCURRENCY_NUM = 1;
 constexpr int64_t APP_START_LIMIT = 7 * 24 * 60 * 60 * 1000; // 7 days
-const int XCOLLIE_TASK_MAX_CONCURRENCY_NUM = 1;
+constexpr int SET_TIMES_FLAG = 1;
+constexpr int ENABLE_TREE_FORMAT = 1;
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 
@@ -77,8 +79,8 @@ struct StackContent {
     bool isStartSampleEnabled {true};
     int detectorCount {0};
     int collectCount {0};
-    int reportTimes {SAMPLE_DEFULE_REPORT_TIMES};
-    int scrollTimes {SAMPLE_DEFULE_REPORT_TIMES};
+    int reportTimes {SAMPLE_DEFAULT_REPORT_TIMES};
+    int scrollTimes {SAMPLE_DEFAULT_REPORT_TIMES};
     int64_t reportBegin {0};
     int64_t reportEnd {0};
     TimePoint lastEndTime;
@@ -100,7 +102,7 @@ struct AppStartContent {
     int64_t threshold {0};
     std::atomic_int collectCount {0};
     int targetCount {0};
-    int reportTimes {SAMPLE_DEFULE_REPORT_TIMES};
+    int reportTimes {SAMPLE_DEFAULT_REPORT_TIMES};
     bool isStartSampleEnabled {true};
     bool isFinishStartSample {false};
     std::atomic_bool enableStartSample {false};
@@ -109,6 +111,16 @@ struct AppStartContent {
 struct SampleFreezeInfo {
     uint64_t lastSaveTime {0};
     std::string freezeFile;
+};
+
+struct SampleJankParams {
+    int logType {0};
+    int ignoreStartUpTime {DEFAULT_IGNORE_STARTUP_TIME};
+    int sampleInterval {SAMPLE_DEFAULT_INTERVAL};
+    int sampleCount {SAMPLE_DEFAULT_COUNT};
+    int reportTimes {SAMPLE_REPORT_TIMES_MIN};
+    int autoStopSampling {0};
+    int eventType {0};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

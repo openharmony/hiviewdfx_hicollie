@@ -54,7 +54,6 @@ enum DumpStackState {
     SAMPLE_COMPLETE = 2
 };
 enum CatchLogType {
-    LOGTYPE_DEFAULT = -1,
     LOGTYPE_NONE = 0,
     LOGTYPE_SAMPLE_STACK = 1,
     LOGTYPE_COLLECT_TRACE = 2
@@ -65,15 +64,15 @@ constexpr const char* const FREEZE_SAMPLE = "FreezeSampler";
 constexpr int ONE_DAY_LIMIT = 24 * 60 * 60 * 1000;
 constexpr int ONE_HOUR_LIMIT = 60 * 60 * 1000;
 constexpr int MILLISEC_TO_NANOSEC = 1000 * 1000;
-const int FFRT_BUFFER_SIZE = 512 * 1024;
-const int DETECT_STACK_COUNT = 2;
-const int COLLECT_STACK_COUNT = 10;
-const int COLLECT_TRACE_MIN = 1;
-const int COLLECT_TRACE_MAX = 20;
-const int DURATION_TIME = 150;
-const int DISTRIBUTE_TIME = 2000;
-const int DUMPTRACE_TIME = 450;
-constexpr const char* const KEY_SCB_STATE = "com.ohos.sceneboard";
+constexpr int FFRT_BUFFER_SIZE = 512 * 1024;
+constexpr int DETECT_STACK_COUNT = 2;
+constexpr int COLLECT_STACK_COUNT = 10;
+constexpr int COLLECT_TRACE_MIN = 1;
+constexpr int COLLECT_TRACE_MAX = 20;
+constexpr int DURATION_TIME = 150;
+constexpr int DISTRIBUTE_TIME = 2000;
+constexpr int DUMPTRACE_TIME = 450;
+constexpr const char* KEY_SCB_STATE = "com.ohos.sceneboard";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
@@ -83,16 +82,16 @@ constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
 constexpr uint32_t FOUNDATION_UID = 5523;
 constexpr uint32_t RENDER_SERVICE_UID = 1003;
 constexpr int SERVICE_WARNING = 1;
-const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
-const char* HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
-const char* ON_KICK_TIME = "on,72";
-const char* ON_KICK_TIME_EXTRA = "on,10,foundation";
-const char* KICK_TIME = "kick";
-const char* KICK_TIME_EXTRA = "kick,foundation";
-const int32_t NOT_OPEN = -1;
-const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
+constexpr const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
+constexpr const char* HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
+constexpr const char* ON_KICK_TIME = "on,72";
+constexpr const char* ON_KICK_TIME_EXTRA = "on,10,foundation";
+constexpr const char* KICK_TIME = "kick";
+constexpr const char* KICK_TIME_EXTRA = "kick,foundation";
+constexpr int32_t NOT_OPEN = -1;
+constexpr const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
-constexpr uint64_t DEFAULE_SLEEP_TIME = 2 * 1000;
+constexpr uint64_t DEFAULT_SLEEP_TIME = 2 * 1000;
 constexpr uint32_t JOIN_IPC_FULL_UIDS[] = {
     AUDIO_SERVER_UID, DATA_MANAGE_SERVICE_UID,
     FOUNDATION_UID, RENDER_SERVICE_UID
@@ -105,16 +104,15 @@ constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
 constexpr int SAMPLE_INTERVAL_MAX = 500; // 500ms
 constexpr int SAMPLE_COUNT_MIN = 1;
-constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
 constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
 constexpr int SAMPLE_EXTRA_COUNT = 4;
 constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 constexpr int SCROLL_INTERVAL = 50; // 50ms
 constexpr int DEFAULT_SAMPLE_VALUE = 1;
 constexpr int CPU_FREQ_DECIMAL_BASE = 10;
-constexpr const char* const SCROLL_JANK = "SCROLL_JANK";
-constexpr const char* const MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
-constexpr const char* const BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
+constexpr const char* SCROLL_JANK = "SCROLL_JANK";
+constexpr const char* MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
+constexpr const char* BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
 using InitAsyncStackFn = bool(*)();
 }
 
@@ -220,14 +218,11 @@ bool WatchdogInner::GetForeground()
 bool WatchdogInner::ReportMainThreadEvent(int64_t tid, std::string eventName, bool isScroll,
     bool appStart)
 {
-    std::string stack = "";
-    std::string heaviestStack = "";
-    if (!CollectStack(stack, heaviestStack)) {
-        stack = "";
-        heaviestStack = "";
-    }
+    std::string stack;
+    std::string heaviestStack;
+    CollectStack(stack, heaviestStack);
 
-    std::string path = "";
+    std::string path;
     int32_t pid = getprocpid();
     bool isOverLimit = false;
     if (!WriteStackToFd(pid, path, stack, eventName, isOverLimit)) {
@@ -271,13 +266,16 @@ bool WatchdogInner::ReportMainThreadEvent(int64_t tid, std::string eventName, bo
 
 bool WatchdogInner::CheckEventTimer(int64_t currentTime, int64_t reportBegin, int64_t reportEnd, int interval)
 {
-    if (reportBegin == timeContent_.curBegin &&
-        reportEnd == timeContent_.curEnd) {
+    if (reportBegin == timeContent_.curBegin && reportEnd == timeContent_.curEnd) {
         return false;
     }
-    return (timeContent_.curEnd <= timeContent_.curBegin &&
-        (currentTime - timeContent_.curBegin >= interval * MILLISEC_TO_NANOSEC)) ||
-        (timeContent_.curEnd - timeContent_.curBegin > interval * MILLISEC_TO_NANOSEC);
+
+    int64_t intervalNanos = static_cast<int64_t>(interval) * MILLISEC_TO_NANOSEC;
+    bool isTimeExpired = timeContent_.curEnd <= timeContent_.curBegin &&
+        (currentTime - timeContent_.curBegin >= intervalNanos);
+    bool isDurationExceeded = (timeContent_.curEnd - timeContent_.curBegin) > intervalNanos;
+
+    return isTimeExpired || isDurationExceeded;
 }
 
 void WatchdogInner::ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context)
@@ -561,7 +559,7 @@ bool WatchdogInner::CheckSample(const TimePoint& endTime, int64_t durationTime)
 bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
 {
     bool isScroll = true;
-    if (!SampleStackDetect(endTime, stackContent_.scrollTimes, SAMPLE_DEFULE_REPORT_TIMES,
+    if (!SampleStackDetect(endTime, stackContent_.scrollTimes, SAMPLE_DEFAULT_REPORT_TIMES,
         DEFAULT_IGNORE_STARTUP_TIME, isScroll)) {
         return false;
     }
@@ -616,6 +614,11 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
         }
         if (stackContent_.collectCount > DumpStackState::DEFAULT &&
             stackContent_.collectCount < sampleCount) {
+            if (jankParamsMap[KEY_AUTO_STOP_SAMPLING] && !CheckEventTimer(GetTimeStamp(), stackContent_.reportBegin,
+                stackContent_.reportEnd, sampleInterval)) {
+                stackContent_.collectCount = sampleCount;
+                return;
+            }
             g_isDumpStack.store(true);
             threadSamplerSampleFunc_();
             stackContent_.collectCount++;
@@ -635,12 +638,10 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
                 stackContent_.detectorCount++;
             }
         }
-        if (stackContent_.detectorCount == DETECT_STACK_COUNT) {
-            isMainThreadStackEnabled_ = true;
-        }
+        isMainThreadStackEnabled_ = stackContent_.detectorCount == DETECT_STACK_COUNT ? true :
+            isMainThreadStackEnabled_;
     };
-    WatchdogTask task("ThreadSampler", sampleTask, 0, sampleInterval, true);
-    InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
+    InsertWatchdogTaskLocked("ThreadSampler", WatchdogTask("ThreadSampler", sampleTask, 0, sampleInterval, true));
 }
 
 std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
@@ -654,8 +655,6 @@ std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
     std::string stack;
     std::string heaviestStack;
     if (!CollectStack(stack, heaviestStack, 0)) {
-        stack = "";
-        heaviestStack = "";
         XCOLLIE_LOGI("Collect freeze sample stack failed.");
         return "";
     }
@@ -760,19 +759,23 @@ bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack,
     if (threadSamplerCollectFunc_ == nullptr) {
         return false;
     }
-    char* stk = new char[STACK_LENGTH]();
-    char* heaviest = new char[STACK_LENGTH]();
-    int collectRet = threadSamplerCollectFunc_(stk, heaviest, STACK_LENGTH, STACK_LENGTH, treeFormat);
-    if (collectRet != 0) {
-        XCOLLIE_LOGE("threadSampler collect stack failed.");
-        delete[] stk;
-        delete[] heaviest;
+
+    auto stk = std::make_unique<char[]>(STACK_LENGTH);
+    auto heaviest = std::make_unique<char[]>(STACK_LENGTH);
+    if (!stk || !heaviest) {
+        XCOLLIE_LOGE("Memory allocation failed for stack collection");
         return false;
     }
-    stack = stk;
-    heaviestStack = heaviest;
-    delete[] stk;
-    delete[] heaviest;
+    std::fill(stk.get(), stk.get() + STACK_LENGTH, 0);
+    std::fill(heaviest.get(), heaviest.get() + STACK_LENGTH, 0);
+
+    int collectRet = threadSamplerCollectFunc_(stk.get(), heaviest.get(), STACK_LENGTH, STACK_LENGTH, treeFormat);
+    if (collectRet != 0) {
+        XCOLLIE_LOGE("threadSampler collect stack failed, ret: %{public}d", collectRet);
+        return false;
+    }
+    stack.assign(stk.get(), std::min(strlen(stk.get()), STACK_LENGTH - 1));
+    heaviestStack.assign(heaviest.get(), std::min(strlen(heaviest.get()), STACK_LENGTH - 1));
     return true;
 }
 
@@ -1132,48 +1135,31 @@ void IPCProxyLimitCallback(uint64_t num)
 void WatchdogInner::UpdateAppStartContent(const std::map<std::string, int64_t>& paramsMap,
     AppStartContent& startContent)
 {
-    auto it = paramsMap.find(KEY_THRESHOLD);
-    if (it == paramsMap.end() || it->second <= 0) {
-        XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", KEY_THRESHOLD, it->second);
+    auto getRequiredParam = [&paramsMap](const std::string& key, auto& output) -> bool {
+        auto it = paramsMap.find(key);
+        if (it == paramsMap.end() || it->second <= 0) {
+            XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", key.c_str(), it->second);
+            return false;
+        }
+        output = static_cast<std::remove_reference_t<decltype(output)>>(it->second);
+        return true;
+    };
+    if (!getRequiredParam(KEY_THRESHOLD, startContent.threshold) ||
+        !getRequiredParam(KEY_TRIGGER_INTERVAL, startContent.sampleInterval) ||
+        !getRequiredParam(KEY_COLLECT_TIMES, startContent.targetCount) ||
+        !getRequiredParam(KEY_REPORT_TIMES, startContent.reportTimes) ||
+        !getRequiredParam(KEY_START_TIME, startContent.startTime)) {
         return;
     }
-    startContent.threshold = it->second;
 
-    it = paramsMap.find(KEY_TRIGGER_INTERVAL);
-    if (it == paramsMap.end() || it->second <= 0) {
-        XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", KEY_TRIGGER_INTERVAL, it->second);
-        return;
-    }
-    startContent.sampleInterval = it->second;
-
-    it = paramsMap.find(KEY_COLLECT_TIMES);
-    if (it == paramsMap.end() || it->second <= 0) {
-        XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", KEY_COLLECT_TIMES, it->second);
-        return;
-    }
-    startContent.targetCount = it->second;
-
-    it = paramsMap.find(KEY_REPORT_TIMES);
-    if (it == paramsMap.end() || it->second <= 0) {
-        XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", KEY_REPORT_TIMES, it->second);
-        return;
-    }
-    startContent.reportTimes = it->second;
-
-    it = paramsMap.find(KEY_START_TIME);
-    if (it == paramsMap.end() || it->second <= 0) {
-        XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", KEY_START_TIME, it->second);
-        return;
-    }
-    startContent.startTime = it->second;
-
-    it = paramsMap.find(KEY_STARTUP_DURATION);
+    auto it = paramsMap.find(KEY_STARTUP_DURATION);
     if (it != paramsMap.end() && it->second > 0) {
         startContent.startUpDuration = it->second;
     }
     startContent.enableStartSample.store(true);
+    
     XCOLLIE_LOGW("UpdateAppStartContent threshold=%{public}" PRId64", sampleInterval=%{public}" PRId64
-        ", targetCount=%{public}d, ""reportTimes=%{public}d, startTime=%{public}" PRId64", "
+        ", targetCount=%{public}d, reportTimes=%{public}d, startTime=%{public}" PRId64", "
         "enableStartSample=%{public}d, startUpDuration=%{public}" PRId64".",
         startContent.threshold, startContent.sampleInterval, startContent.targetCount, startContent.reportTimes,
         startContent.startTime, startContent.enableStartSample.load(), startContent.startUpDuration);
@@ -1183,12 +1169,12 @@ void WatchdogInner::ParseAppStartParams(const std::string& line, const std::stri
 {
     std::map<std::string, int64_t> keyValueMap;
     std::stringstream iss(line);
+    std::string key;
+    std::string value;
     std::string tokens;
     while (getline(iss, tokens, ',') && !tokens.empty()) {
-        std::string key;
-        std::string value;
-        if (value.size() > std::to_string(INT64_MAX).length() ||
-            !GetKeyValueByStr(tokens, key, value, ':')) {
+        if (!GetKeyValueByStr(tokens, key, value, ':') ||
+            value.size() > std::to_string(INT64_MAX).length()) {
             XCOLLIE_LOGE("ParseAppStartParams failed, key:%{public}s value:%{public}s",
                 key.c_str(), value.c_str());
             continue;
@@ -1226,13 +1212,10 @@ void WatchdogInner::ReadAppStartConfig(const std::string& filePath)
             continue;
         }
         if (line.find(EVENT_SLIDING_JANK) != std::string::npos) {
-            eventName = EVENT_SLIDING_JANK;
+            ParseAppStartParams(line, EVENT_SLIDING_JANK);
         } else if (line.find(EVENT_APP_START_SLOW) != std::string::npos) {
-            eventName = EVENT_APP_START_SLOW;
-        } else {
-            continue;
+            ParseAppStartParams(line, EVENT_APP_START_SLOW);
         }
-        ParseAppStartParams(line, eventName);
     }
 }
 
@@ -1272,7 +1255,7 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
     CalculateTimes(bootTimeStart, monoTimeStart);
     uint64_t bootTimeDetal = GetNumsDiffAbs(bootTimeStart, queuedTaskCheck.bootTimeStart);
     uint64_t monoTimeDetal = GetNumsDiffAbs(monoTimeStart, queuedTaskCheck.monoTimeStart);
-    if (GetNumsDiffAbs(bootTimeDetal, monoTimeDetal) >= DEFAULE_SLEEP_TIME) {
+    if (GetNumsDiffAbs(bootTimeDetal, monoTimeDetal) >= DEFAULT_SLEEP_TIME) {
         XCOLLIE_LOGI("Current Thread has been sleep, pid: %{public}d", getprocpid());
         return true;
     }
@@ -1555,8 +1538,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     {
         std::unique_lock<std::mutex> lock(lockFfrt_);
         auto &map = WatchdogInner::GetInstance().taskIdCnt;
-        auto search = map.find(taskId);
-        if (search != map.end()) {
+        if (map.find(taskId) != map.end()) {
             isExist = true;
         } else {
             map[taskId] = SERVICE_WARNING;
@@ -1564,7 +1546,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     }
 
     if (isExist) {
-        description += ", report twice instead of exiting process."; // 1s = 1000ms
+        description += ", report twice instead of exiting process.";
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
         WatchdogInner::KillPeerBinderProcess(description);
@@ -1790,36 +1772,46 @@ bool WatchdogInner::GetAppDebug()
     return isAppDebug_;
 }
 
-void WatchdogInner::UpdateJankParam(int sampleInterval, int ignoreStartUpTime, int sampleCount,
-    int logType, int reportTimes)
+void WatchdogInner::UpdateJankParam(SampleJankParams& params)
 {
-    jankParamsMap[KEY_LOG_TYPE] = logType;
-    jankParamsMap[KEY_SAMPLE_INTERVAL] = sampleInterval;
-    jankParamsMap[KEY_IGNORE_STARTUP_TIME] = ignoreStartUpTime;
-    jankParamsMap[KEY_SAMPLE_COUNT] = sampleCount;
-    if (logType == CatchLogType::LOGTYPE_COLLECT_TRACE) {
+    jankParamsMap[KEY_LOG_TYPE] = params.logType;
+    if (params.logType == CatchLogType::LOGTYPE_COLLECT_TRACE) {
         XCOLLIE_LOGI("Set thread only dump trace success.");
         return;
     }
+
+    jankParamsMap[KEY_SAMPLE_INTERVAL] = params.sampleInterval;
+    jankParamsMap[KEY_IGNORE_STARTUP_TIME] = params.ignoreStartUpTime;
+    jankParamsMap[KEY_SAMPLE_COUNT] = params.sampleCount;
+    jankParamsMap[KEY_AUTO_STOP_SAMPLING] = params.autoStopSampling;
     if (jankParamsMap[KEY_SET_TIMES_FLAG] == SET_TIMES_FLAG) {
-        UpdateReportTimes(bundleName_, reportTimes, jankParamsMap[KEY_CHECKER_INTERVAL]);
-        jankParamsMap[KEY_SAMPLE_REPORT_TIMES] = reportTimes;
-        stackContent_.reportTimes = reportTimes;
+        if (params.eventType == 1) {
+            jankParamsMap[KEY_CHECKER_INTERVAL] = DEFAULT_TIMEOUT;
+        } else {
+            UpdateReportTimes(bundleName_, params.reportTimes, jankParamsMap[KEY_CHECKER_INTERVAL]);
+        }
+        jankParamsMap[KEY_SAMPLE_REPORT_TIMES] = params.reportTimes;
+        stackContent_.reportTimes = params.reportTimes;
         jankParamsMap[KEY_SET_TIMES_FLAG] = 0;
     }
     XCOLLIE_LOGI("Set thread sampler params success. logType: %{public}d, sample interval: %{public}d, "
-        "ignore startUp interval: %{public}d, count: %{public}d, reportTimes: %{public}d.",
-        logType, sampleInterval, ignoreStartUpTime, sampleCount, stackContent_.reportTimes);
+        "ignore startUp interval: %{public}d, count: %{public}d, reportTimes: %{public}d, "
+        "autoStopSampling: %{public}d", params.logType, params.sampleInterval, params.ignoreStartUpTime,
+        params.sampleCount, stackContent_.reportTimes, params.autoStopSampling);
 }
 
-int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key)
+int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key,
+    int defaultValue)
 {
-    int num = -1;
     auto it = paramsMap.find(key);
     if (it == paramsMap.end()) {
-        XCOLLIE_LOGE("Set the thread sampler param error, %{public}s is not exist.", key.c_str());
-        return num;
+        if (defaultValue < 0) {
+            XCOLLIE_LOGE("Set the thread sampler param error, %{public}s is not exist.", key.c_str());
+            return -1;
+        }
+        return defaultValue;
     }
+    int num = -1;
     std::string str = it->second;
     if (!str.empty() && str.size() < std::to_string(INT32_MAX).length()) {
         if (std::all_of(std::begin(str), std::end(str), [] (const char &c) {
@@ -1835,27 +1827,24 @@ int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap,
     return num;
 }
 
-bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMap)
+bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMap, bool keyNeedExist)
 {
-    int sampleInterval = ConvertStrToNum(paramsMap, KEY_SAMPLE_INTERVAL);
-    if (sampleInterval < 0) {
-        return false;
-    } else if (sampleInterval < SAMPLE_INTERVAL_MIN || sampleInterval > SAMPLE_INTERVAL_MAX) {
+    int sampleInterval = ConvertStrToNum(paramsMap, KEY_SAMPLE_INTERVAL, keyNeedExist ? -1 : SAMPLE_DEFAULT_INTERVAL);
+    if (sampleInterval < SAMPLE_INTERVAL_MIN || sampleInterval > SAMPLE_INTERVAL_MAX) {
         XCOLLIE_LOGE("Set the range of sample stack is from %{public}d to %{public}d, "
             "interval: %{public}d.", SAMPLE_INTERVAL_MIN, SAMPLE_INTERVAL_MAX, sampleInterval);
         return false;
     }
 
-    int ignoreStartUpTime = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_TIME);
-    if (ignoreStartUpTime < 0) {
-        return false;
-    } else if (ignoreStartUpTime < IGNORE_STARTUP_TIME_MIN) {
+    int ignoreStartUpTime = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_TIME, keyNeedExist ? -1 :
+        DEFAULT_IGNORE_STARTUP_TIME);
+    if (ignoreStartUpTime < IGNORE_STARTUP_TIME_MIN) {
         XCOLLIE_LOGE("Set the minimum of ignore startup interval is %{public}d s, "
             "interval: %{public}d.", IGNORE_STARTUP_TIME_MIN, ignoreStartUpTime);
         return false;
     }
 
-    int sampleCount = ConvertStrToNum(paramsMap, KEY_SAMPLE_COUNT);
+    int sampleCount = ConvertStrToNum(paramsMap, KEY_SAMPLE_COUNT, keyNeedExist ? -1 : SAMPLE_DEFAULT_COUNT);
     if (sampleCount < 0) {
         return false;
     }
@@ -1866,15 +1855,27 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
         return false;
     }
 
-    int reportTimes = ConvertStrToNum(paramsMap, KEY_SAMPLE_REPORT_TIMES);
-    if (reportTimes < 0) {
-        return false;
-    } else if (reportTimes < SAMPLE_REPORT_TIMES_MIN || reportTimes > SAMPLE_REPORT_TIMES_MAX) {
+    int reportTimes = ConvertStrToNum(paramsMap, KEY_SAMPLE_REPORT_TIMES, keyNeedExist ? -1 :
+        SAMPLE_DEFAULT_REPORT_TIMES);
+    if (reportTimes < SAMPLE_REPORT_TIMES_MIN || reportTimes > SAMPLE_REPORT_TIMES_MAX) {
         XCOLLIE_LOGE("Set the range of sample reportTimes is from %{public}d to %{public}d, "
             "reportTimes: %{public}d", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, reportTimes);
         return false;
     }
-    UpdateJankParam(sampleInterval, ignoreStartUpTime, sampleCount, CatchLogType::LOGTYPE_SAMPLE_STACK, reportTimes);
+
+    auto it = paramsMap.find(KEY_AUTO_STOP_SAMPLING);
+    std::string autoStopSamplingStr = (it != paramsMap.end()) ? it->second : "";
+    if (!autoStopSamplingStr.empty() && autoStopSamplingStr != "true" && autoStopSamplingStr != "false") {
+        XCOLLIE_LOGE("Set the auto_stop_sampling can only be true or false, value: %{public}s.",
+            autoStopSamplingStr.c_str());
+        return false;
+    }
+    int autoStopSampling = (autoStopSamplingStr == "true") ? 1 : 0;
+    int eventType = keyNeedExist ? 0 : 1;
+
+    SampleJankParams params = {CatchLogType::LOGTYPE_SAMPLE_STACK, ignoreStartUpTime, sampleInterval, sampleCount,
+        reportTimes, autoStopSampling, eventType};
+    UpdateJankParam(params);
     return true;
 }
 
@@ -1884,11 +1885,10 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
         XCOLLIE_LOGE("Set the thread sampler param map is null.");
         return -1;
     }
+    
     int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE);
     size_t size = paramsMap.size();
     switch (logType) {
-        case CatchLogType::LOGTYPE_DEFAULT:
-            return -1;
         case CatchLogType::LOGTYPE_NONE:
         case CatchLogType::LOGTYPE_COLLECT_TRACE: {
             if (size != SAMPLE_TRACE_MAP_SIZE) {
@@ -1896,8 +1896,9 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
                     "map size: %{public}zu", size);
                 return -1;
             }
-            UpdateJankParam(SAMPLE_DEFULE_INTERVAL, DEFAULT_IGNORE_STARTUP_TIME, SAMPLE_DEFULE_COUNT,
-                logType, SAMPLE_REPORT_TIMES_MIN);
+            SampleJankParams params;
+            params.logType = logType;
+            UpdateJankParam(params);
             break;
         }
         case CatchLogType::LOGTYPE_SAMPLE_STACK: {
@@ -1914,7 +1915,33 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
             XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}d", logType);
             return -1;
         }
-    };
+    }
+    return 0;
+}
+
+int WatchdogInner::ConfigEventPolicy(std::map<std::string, std::string> paramsMap)
+{
+    int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE, 0);
+    switch (logType) {
+        case CatchLogType::LOGTYPE_NONE:
+        case CatchLogType::LOGTYPE_COLLECT_TRACE: {
+            SampleJankParams params;
+            params.logType = logType;
+            params.eventType = 1;
+            UpdateJankParam(params);
+            break;
+        }
+        case CatchLogType::LOGTYPE_SAMPLE_STACK: {
+            if (!CheckSampleParam(paramsMap, false)) {
+                return -1;
+            }
+            break;
+        }
+        default: {
+            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}d", logType);
+            return -1;
+        }
+    }
     return 0;
 }
 
