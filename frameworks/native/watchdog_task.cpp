@@ -326,8 +326,10 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     std::string stack;
     std::string processName = GetSelfProcName();
     if (uid <= UID_TYPE_THRESHOLD) {
-        eventName = std::find(std::begin(CORE_PROCS), std::end(CORE_PROCS), processName) != std::end(CORE_PROCS)
-            ? "SERVICE_TIMEOUT" : "SERVICE_TIMEOUT_WARNING";
+        eventName = (std::find(std::begin(CORE_PROCS), std::end(CORE_PROCS), processName) != std::end(CORE_PROCS) &&
+            (flag & XCOLLIE_FLAG_RECOVERY))
+            ? "SERVICE_TIMEOUT"
+            : "SERVICE_TIMEOUT_WARNING";
         stack = GetProcessStacktrace();
     } else if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
         XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);
