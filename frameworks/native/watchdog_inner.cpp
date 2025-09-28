@@ -200,11 +200,25 @@ static bool IsInAppspwan()
     return false;
 }
 
-void WatchdogInner::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion, bool isSystemApp)
+void WatchdogInner::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion)
 {
     bundleName_ = bundleName;
     bundleVersion_ = bundleVersion;
+}
+
+void WatchdogInner::SetSystemApp(bool isSystemApp)
+{
     isSystemApp_ = isSystemApp;
+}
+
+bool WatchdogInner::GetSystemApp()
+{
+    return isSystemApp_;
+}
+
+std::string WatchdogInner::GetBundleName()
+{
+    return bundleName_;
 }
 
 void WatchdogInner::SetForeground(const bool& isForeground)
@@ -597,8 +611,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
 
 void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
 {
-    std::unique_lock<std::mutex> lock(lock_);
-    if (!SampleStackDetect(endTime, stackContent_.reportTimes,
+    if ((GetSystemApp() && GetBundleName() != KEY_SCB_STATE) || !SampleStackDetect(endTime, stackContent_.reportTimes,
         jankParamsMap[KEY_SAMPLE_REPORT_TIMES], jankParamsMap[KEY_IGNORE_STARTUP_TIME])) {
         return;
     }
@@ -640,6 +653,7 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
         }
     };
     WatchdogTask task("ThreadSampler", sampleTask, 0, sampleInterval, true);
+    std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
 }
 
@@ -686,10 +700,12 @@ void WatchdogInner::ResetFreezeSampleFlags()
 
 void WatchdogInner::StartSample(int duration, int interval)
 {
-    std::unique_lock<std::mutex> lock(lock_);
-    if (IsTaskExistLocked(FREEZE_SAMPLE)) {
-        XCOLLIE_LOGW("Sample freeze task already exit, skip this task.");
-        return;
+    {
+        std::unique_lock<std::mutex> lock(lock_);
+        if (IsTaskExistLocked(FREEZE_SAMPLE)) {
+            XCOLLIE_LOGW("Sample freeze task already exit, skip this task.");
+            return;
+        }
     }
     if (duration <= 0 || interval <= 0) {
         XCOLLIE_LOGE("Sample freeze failed, duration=%{public}d, interval=%{public}d.",
@@ -728,6 +744,7 @@ void WatchdogInner::StartSample(int duration, int interval)
         g_freezeSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
     };
     WatchdogTask task(FREEZE_SAMPLE, sampleTask, 0, interval, false);
+    std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task));
 }
 
@@ -846,7 +863,7 @@ int32_t WatchdogInner::StartTraceProfile()
 
 void WatchdogInner::CollectTraceDetect(const TimePoint& endTime, int64_t durationTime)
 {
-    if (IsBetaVersion()) {
+    if (IsBetaVersion() || GetSystemApp()) {
         return;
     }
     if (traceContent_.traceState == DumpStackState::COMPLETE) {

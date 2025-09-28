@@ -66,7 +66,9 @@ public:
     void StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
     bool CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat = ENABLE_TREE_FORMAT);
     bool Deinit();
-    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion, bool isSystemApp);
+    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
+    void SetSystemApp(bool isSystemApp);
+    bool GetSystemApp();
     void SetForeground(const bool& isForeground);
     bool GetForeground();
     void RemoveInnerTask(const std::string& name);
@@ -131,6 +133,7 @@ private:
     void ParseAppStartParams(const std::string& line, const std::string& eventName);
     void ReadAppStartConfig(const std::string& filePath);
     bool EnableAppStartSample(AppStartContent& startContent, int64_t durationTime, bool isScroll);
+    std::string GetBundleName();
 #if defined(__aarch64__)
     void InitAsyncStackIfNeed();
     bool NeedOpenAsyncStack();
@@ -169,7 +172,7 @@ private:
     bool isMainThreadTraceEnabled_ {false};
     std::string bundleName_;
     std::string bundleVersion_;
-    bool isSystemApp_ { true };
+    bool isSystemApp_ { false };
     bool isForeground_ {false};
     bool isAppDebug_ {false};
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector_;

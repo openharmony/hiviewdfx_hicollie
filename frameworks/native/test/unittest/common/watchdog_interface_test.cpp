@@ -357,7 +357,8 @@ HWTEST_F(WatchdogInterfaceTest, WatchdogAppDebugTest_001, TestSize.Level1)
 HWTEST_F(WatchdogInterfaceTest, Watchdog_AddTreadTest_001, TestSize.Level1)
 {
     Watchdog::GetInstance().SetForeground(true);
-    Watchdog::GetInstance().SetBundleInfo("test", "1.1.0", true);
+    Watchdog::GetInstance().SetBundleInfo("test", "1.1.0");
+    Watchdog::GetInstance().SetSystemApp(true);
     constexpr int blockTime = 2;
     constexpr int checkPeriod = 1000;
     auto blockFunc = []() {
