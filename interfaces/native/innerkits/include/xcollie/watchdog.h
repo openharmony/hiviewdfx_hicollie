@@ -150,6 +150,11 @@ public:
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
 
     /**
+     * @brief Set sample jank params.
+     */
+    int ConfigEventPolicy(std::map<std::string, std::string> paramsMap);
+
+    /**
      * @brief Set specified process name.
      */
     void SetSpecifiedProcessName(const std::string& name);
