@@ -108,6 +108,11 @@ int Watchdog::SetEventConfig(std::map<std::string, std::string> paramsMap)
     return WatchdogInner::GetInstance().SetEventConfig(paramsMap);
 }
 
+int Watchdog::ConfigEventPolicy(std::map<std::string, std::string> paramsMap)
+{
+    return WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+}
+
 void Watchdog::SetSpecifiedProcessName(const std::string& name)
 {
     WatchdogInner::GetInstance().SetSpecifiedProcessName(name);
