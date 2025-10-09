@@ -58,9 +58,14 @@ void Watchdog::InitFfrtWatchdog()
     return WatchdogInner::GetInstance().InitFfrtWatchdog();
 }
 
-void Watchdog::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion, bool isSystemApp)
+void Watchdog::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion)
 {
-    return WatchdogInner::GetInstance().SetBundleInfo(bundleName, bundleVersion, isSystemApp);
+    return WatchdogInner::GetInstance().SetBundleInfo(bundleName, bundleVersion);
+}
+
+void Watchdog::SetSystemApp(bool isSystemApp)
+{
+    return WatchdogInner::GetInstance().SetSystemApp(isSystemApp);
 }
 
 void Watchdog::SetForeground(const bool& isForeground)
