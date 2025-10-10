@@ -40,7 +40,8 @@
                 "hiview",
                 "storage_service",
                 "samgr",
-                "libuv"
+                "libuv",
+                "ability_runtime"
             ],
             "third_party": []
         },

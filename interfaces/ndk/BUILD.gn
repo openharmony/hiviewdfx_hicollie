@@ -19,14 +19,13 @@ ohos_shared_library("ohhicollie") {
     "../native/innerkits/include/xcollie",
     "../../frameworks/native",
   ]
-  sources = [
-    "hicollie.cpp",
-    "report_data.cpp",
-  ]
+
+  sources = [ "hicollie.cpp" ]
 
   deps = [ "../native/innerkits:libhicollie" ]
 
   external_deps = [
+    "ability_runtime:app_manager",
     "c_utils:utils",
     "hilog:libhilog",
     "ipc:ipc_core",

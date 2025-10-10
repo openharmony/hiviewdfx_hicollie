@@ -20,17 +20,15 @@
 #include <string>
 #include <sys/syscall.h>
 #include "watchdog.h"
-#include "report_data.h"
 #include "xcollie.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
-#include "iservice_registry.h"
-#include "iremote_object.h"
+#include "fault_data.h"
+#include "app_mgr_client.h"
 
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
-DECLARE_INTERFACE_DESCRIPTOR(u"ohos.appexecfwk.AppMgr");
 #ifdef SUPPORT_ASAN
     constexpr uint32_t CHECK_INTERVAL_TIME = 45000;
 #else
@@ -39,8 +37,6 @@ DECLARE_INTERFACE_DESCRIPTOR(u"ohos.appexecfwk.AppMgr");
     constexpr uint32_t MAX_TIMEOUT = 15000;
 #endif
     constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
-    constexpr uint32_t NOTIFY_APP_FAULT = 38;
-    constexpr uint32_t APP_MGR_SERVICE_ID = 501;
     constexpr uint32_t RATIO = 2;
     constexpr int32_t BACKGROUND_REPORT_COUNT_MAX = 5;
 }
@@ -58,38 +54,6 @@ bool IsAppMainThread()
         return true;
     }
     return false;
-}
-
-int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
-{
-    XCOLLIE_LOGD("called.");
-    auto systemAbilityMgr = OHOS::SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
-    if (systemAbilityMgr == nullptr) {
-        XCOLLIE_LOGE("ReportData failed to get system ability manager.");
-        return -1;
-    }
-    auto appMgrService = systemAbilityMgr->GetSystemAbility(APP_MGR_SERVICE_ID);
-    if (appMgrService == nullptr) {
-        XCOLLIE_LOGE("ReportData failed to find APP_MGR_SERVICE_ID.");
-        return -1;
-    }
-    OHOS::MessageParcel data;
-    OHOS::MessageParcel reply;
-    OHOS::MessageOption option;
-    if (!data.WriteInterfaceToken(GetDescriptor())) {
-        XCOLLIE_LOGE("ReportData failed to WriteInterfaceToken.");
-        return -1;
-    }
-    if (!data.WriteParcelable(&reportData)) {
-        XCOLLIE_LOGE("ReportData write reportData failed.");
-        return -1;
-    }
-    auto ret = appMgrService->SendRequest(NOTIFY_APP_FAULT, data, reply, option);
-    if (ret != OHOS::NO_ERROR) {
-        XCOLLIE_LOGE("ReportData Send request failed with error code: %{public}d", ret);
-        return -1;
-    }
-    return reply.ReadInt32();
 }
 
 bool CheckInBackGround(bool* isSixSecond)
@@ -121,12 +85,12 @@ int Report(bool* isSixSecond)
     }
     g_backgroundReportCount++;
 
-    OHOS::HiviewDFX::ReportData reportData;
-    reportData.faultType = OHOS::HiviewDFX::FaultDataType::APP_FREEZE;
+    AppExecFwk::FaultData faultData;
+    faultData.faultType = OHOS::AppExecFwk::FaultDataType::APP_FREEZE;
     int stuckTimeout = g_stuckTimeout;
     if (*isSixSecond) {
-        reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
-        reportData.forceExit = true;
+        faultData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
+        faultData.forceExit = true;
         *isSixSecond = false;
         stuckTimeout = g_stuckTimeout * RATIO;
         std::ifstream statmStream("/proc/" + std::to_string(g_pid) + "/statm");
@@ -134,25 +98,25 @@ int Report(bool* isSixSecond)
             std::string procStatm;
             std::getline(statmStream, procStatm);
             statmStream.close();
-            reportData.procStatm = procStatm;
+            faultData.procStatm = procStatm;
         }
     } else {
-        reportData.errorObject.name = "BUSSINESS_THREAD_BLOCK_3S";
-        reportData.forceExit = false;
+        faultData.errorObject.name = "BUSSINESS_THREAD_BLOCK_3S";
+        faultData.forceExit = false;
         *isSixSecond = true;
     }
     std::string timeStamp = "\nFaultTime:" + FormatTime("%Y-%m-%d %H:%M:%S") + "\n";
-    reportData.errorObject.message = timeStamp +
+    faultData.errorObject.message = timeStamp +
         "Bussiness thread is not response, timeout " + std::to_string(stuckTimeout) + "ms.\n";
-    reportData.timeoutMarkers = "";
-    reportData.errorObject.stack = "";
-    reportData.notifyApp = false;
-    reportData.waitSaveState = false;
-    reportData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
-    reportData.stuckTimeout = g_stuckTimeout;
-    auto result = NotifyAppFault(reportData);
+    faultData.timeoutMarkers = "";
+    faultData.errorObject.stack = "";
+    faultData.notifyApp = false;
+    faultData.waitSaveState = false;
+    faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
+    faultData.stuckTimeout = g_stuckTimeout;
+    auto result = DelayedSingleton<AppExecFwk::AppMgrClient>::GetInstance()->NotifyAppFault(faultData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
-        result, reportData.tid, reportData.stuckTimeout);
+        result, faultData.tid, faultData.stuckTimeout);
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
         system_clock::now().time_since_epoch()).count();
     if ((now - g_lastWatchTime) < 0 || (now - g_lastWatchTime) >= (g_stuckTimeout / RATIO)) {
