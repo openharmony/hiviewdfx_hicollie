@@ -38,7 +38,7 @@
 #include "ipc_skeleton.h"
 #include "xcollie_utils.h"
 #include "dfx_define.h"
-#include "dfx_dumprequest.h"
+#include "dfx_signal_handler.h"
 #include "parameter.h"
 #include "file_ex.h"
 #include "xcollie_ffrt_task.h"
@@ -1252,8 +1252,8 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
-                // Enable kernel snapshot, and disable it on DFX unwind success
-                DFX_EnableNativeCrashKernelSnapshot();
+                // notify faultloggerd watchdog start
+                DfxNotifyWatchdogThreadStart();
                 SetThreadSignalMask(SIGDUMP, true, true);
             }
             XCOLLIE_LOGD("Watchdog is running!");
