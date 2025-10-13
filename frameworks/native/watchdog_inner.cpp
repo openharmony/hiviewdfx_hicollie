@@ -60,7 +60,7 @@ enum CatchLogType {
 };
 constexpr char STACK_CHECKER[] = "ThreadSampler";
 constexpr char TRACE_CHECKER[] = "TraceCollector";
-constexpr const char* const FREEZE_SAMPLE = "FreezeSampler";
+constexpr const char* FREEZE_SAMPLE = "FreezeSampler";
 constexpr int ONE_DAY_LIMIT = 24 * 60 * 60 * 1000;
 constexpr int ONE_HOUR_LIMIT = 60 * 60 * 1000;
 constexpr int MILLISEC_TO_NANOSEC = 1000 * 1000;
@@ -100,10 +100,12 @@ constexpr uint64_t MIN_IPC_CHECK_INTERVAL = 10;
 constexpr uint64_t MAX_IPC_CHECK_INTERVAL = 30;
 constexpr uint64_t SAMPLE_STACK_MAP_SIZE = 5;
 constexpr uint64_t SAMPLE_TRACE_MAP_SIZE = 1;
+constexpr int AUTO_STOP_EVENT_TYPE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
 constexpr int SAMPLE_INTERVAL_MAX = 500; // 500ms
 constexpr int SAMPLE_COUNT_MIN = 1;
+constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
 constexpr int SAMPLE_REPORT_TIMES_MAX = 3;
 constexpr int SAMPLE_EXTRA_COUNT = 4;
 constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
@@ -780,10 +782,6 @@ bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack,
 
     auto stk = std::make_unique<char[]>(STACK_LENGTH);
     auto heaviest = std::make_unique<char[]>(STACK_LENGTH);
-    if (!stk || !heaviest) {
-        XCOLLIE_LOGE("Memory allocation failed for stack collection");
-        return false;
-    }
     std::fill(stk.get(), stk.get() + STACK_LENGTH, 0);
     std::fill(heaviest.get(), heaviest.get() + STACK_LENGTH, 0);
 
@@ -1156,7 +1154,7 @@ void WatchdogInner::UpdateAppStartContent(const std::map<std::string, int64_t>& 
     auto getRequiredParam = [&paramsMap](const std::string& key, auto& output) -> bool {
         auto it = paramsMap.find(key);
         if (it == paramsMap.end() || it->second <= 0) {
-            XCOLLIE_LOGE("Set %{public}s param error, value=%{public}" PRId64".", key.c_str(), it->second);
+            XCOLLIE_LOGE("Set %{public}s param error.", key.c_str());
             return false;
         }
         output = static_cast<std::remove_reference_t<decltype(output)>>(it->second);
@@ -1803,7 +1801,7 @@ void WatchdogInner::UpdateJankParam(SampleJankParams& params)
     jankParamsMap[KEY_SAMPLE_COUNT] = params.sampleCount;
     jankParamsMap[KEY_AUTO_STOP_SAMPLING] = params.autoStopSampling;
     if (jankParamsMap[KEY_SET_TIMES_FLAG] == SET_TIMES_FLAG) {
-        if (params.eventType == 1) {
+        if (params.eventType == AUTO_STOP_EVENT_TYPE) {
             jankParamsMap[KEY_CHECKER_INTERVAL] = DEFAULT_TIMEOUT;
         } else {
             UpdateReportTimes(bundleName_, params.reportTimes, jankParamsMap[KEY_CHECKER_INTERVAL]);
@@ -1818,7 +1816,7 @@ void WatchdogInner::UpdateJankParam(SampleJankParams& params)
         params.sampleCount, stackContent_.reportTimes, params.autoStopSampling);
 }
 
-int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key,
+int WatchdogInner::ConvertStrToNum(const std::map<std::string, std::string>& paramsMap, const std::string& key,
     int defaultValue)
 {
     auto it = paramsMap.find(key);
@@ -1829,8 +1827,13 @@ int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap,
         }
         return defaultValue;
     }
-    int num = -1;
+
     std::string str = it->second;
+    if (str.empty() && defaultValue >= 0) {
+        return defaultValue;
+    }
+
+    int num = -1;
     if (!str.empty() && str.size() < std::to_string(INT32_MAX).length()) {
         if (std::all_of(std::begin(str), std::end(str), [] (const char &c) {
             return isdigit(c);
@@ -1845,7 +1848,20 @@ int WatchdogInner::ConvertStrToNum(std::map<std::string, std::string> paramsMap,
     return num;
 }
 
-bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMap, bool keyNeedExist)
+bool WatchdogInner::GetAutoStopSampling(const std::map<std::string, std::string>& paramsMap, int& autoStopSampling)
+{
+    auto it = paramsMap.find(KEY_AUTO_STOP_SAMPLING);
+    std::string autoStopSamplingStr = (it != paramsMap.end()) ? it->second : "";
+    if (!autoStopSamplingStr.empty() && autoStopSamplingStr != "true" && autoStopSamplingStr != "false") {
+        XCOLLIE_LOGE("Set the auto_stop_sampling can only be true or false, value: %{public}s.",
+            autoStopSamplingStr.c_str());
+        return false;
+    }
+    autoStopSampling = (autoStopSamplingStr == "true") ? 1 : 0;
+    return true;
+}
+
+bool WatchdogInner::CheckSampleParam(const std::map<std::string, std::string>& paramsMap, bool keyNeedExist)
 {
     int sampleInterval = ConvertStrToNum(paramsMap, KEY_SAMPLE_INTERVAL, keyNeedExist ? -1 : SAMPLE_DEFAULT_INTERVAL);
     if (sampleInterval < SAMPLE_INTERVAL_MIN || sampleInterval > SAMPLE_INTERVAL_MAX) {
@@ -1881,15 +1897,11 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
         return false;
     }
 
-    auto it = paramsMap.find(KEY_AUTO_STOP_SAMPLING);
-    std::string autoStopSamplingStr = (it != paramsMap.end()) ? it->second : "";
-    if (!autoStopSamplingStr.empty() && autoStopSamplingStr != "true" && autoStopSamplingStr != "false") {
-        XCOLLIE_LOGE("Set the auto_stop_sampling can only be true or false, value: %{public}s.",
-            autoStopSamplingStr.c_str());
+    int autoStopSampling;
+    if (!GetAutoStopSampling(paramsMap, autoStopSampling)) {
         return false;
     }
-    int autoStopSampling = (autoStopSamplingStr == "true") ? 1 : 0;
-    int eventType = keyNeedExist ? 0 : 1;
+    int eventType = keyNeedExist ? 0 : AUTO_STOP_EVENT_TYPE;
 
     SampleJankParams params = {CatchLogType::LOGTYPE_SAMPLE_STACK, ignoreStartUpTime, sampleInterval, sampleCount,
         reportTimes, autoStopSampling, eventType};
@@ -1897,7 +1909,7 @@ bool WatchdogInner::CheckSampleParam(std::map<std::string, std::string> paramsMa
     return true;
 }
 
-int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
+int WatchdogInner::SetEventConfig(const std::map<std::string, std::string>& paramsMap)
 {
     if (paramsMap.empty()) {
         XCOLLIE_LOGE("Set the thread sampler param map is null.");
@@ -1937,7 +1949,7 @@ int WatchdogInner::SetEventConfig(std::map<std::string, std::string> paramsMap)
     return 0;
 }
 
-int WatchdogInner::ConfigEventPolicy(std::map<std::string, std::string> paramsMap)
+int WatchdogInner::ConfigEventPolicy(const std::map<std::string, std::string>& paramsMap)
 {
     int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE, 0);
     switch (logType) {
@@ -1945,7 +1957,10 @@ int WatchdogInner::ConfigEventPolicy(std::map<std::string, std::string> paramsMa
         case CatchLogType::LOGTYPE_COLLECT_TRACE: {
             SampleJankParams params;
             params.logType = logType;
-            params.eventType = 1;
+            params.eventType = AUTO_STOP_EVENT_TYPE;
+            if (logType == CatchLogType::LOGTYPE_NONE && !GetAutoStopSampling(paramsMap, params.autoStopSampling)) {
+                return -1;
+            }
             UpdateJankParam(params);
             break;
         }

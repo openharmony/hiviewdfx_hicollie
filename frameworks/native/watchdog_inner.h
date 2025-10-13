@@ -75,8 +75,8 @@ public:
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
-    int SetEventConfig(std::map<std::string, std::string> paramsMap);
-    int ConfigEventPolicy(std::map<std::string, std::string> paramsMap);
+    int SetEventConfig(const std::map<std::string, std::string>& paramsMap);
+    int ConfigEventPolicy(const std::map<std::string, std::string>& paramsMap);
     bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes, int ignoreTime,
         bool isScroll = false);
     void CollectTraceDetect(const TimePoint& endTime, int64_t durationTime);
@@ -125,8 +125,10 @@ private:
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
     void UpdateJankParam(SampleJankParams& params);
-    int ConvertStrToNum(std::map<std::string, std::string> paramsMap, const std::string& key, int defaultValue = -1);
-    bool CheckSampleParam(std::map<std::string, std::string> paramsMap, bool keyNeedExist = true);
+    int ConvertStrToNum(const std::map<std::string, std::string>& paramsMap, const std::string& key,
+        int defaultValue = -1);
+    bool GetAutoStopSampling(const std::map<std::string, std::string>& paramsMap, int& autoStopSampling);
+    bool CheckSampleParam(const std::map<std::string, std::string>& paramsMap, bool keyNeedExist = true);
     std::string SaveFreezeStackToFile(int32_t pid);
     bool AppStartSample(bool isScroll, AppStartContent& startContent);
     void ClearParam(bool& isFinished);

@@ -42,7 +42,6 @@ constexpr const char* APP_START_SAMPLE = "AppStartSample";
 constexpr int SAMPLE_DEFAULT_INTERVAL = 150;
 constexpr int SAMPLE_DEFAULT_COUNT = 10;
 constexpr int SAMPLE_DEFAULT_REPORT_TIMES = 1;
-constexpr int SAMPLE_REPORT_TIMES_MIN = 1;
 constexpr int APP_START_PARAM_SIZE = 5;
 constexpr int DEFAULT_IGNORE_STARTUP_TIME = 10; // 10s
 constexpr int XCOLLIE_CALLBACK_HISTORY_MAX = 5;
@@ -118,7 +117,7 @@ struct SampleJankParams {
     int ignoreStartUpTime {DEFAULT_IGNORE_STARTUP_TIME};
     int sampleInterval {SAMPLE_DEFAULT_INTERVAL};
     int sampleCount {SAMPLE_DEFAULT_COUNT};
-    int reportTimes {SAMPLE_REPORT_TIMES_MIN};
+    int reportTimes {SAMPLE_DEFAULT_REPORT_TIMES};
     int autoStopSampling {0};
     int eventType {0};
 };

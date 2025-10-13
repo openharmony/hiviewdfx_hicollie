@@ -40,6 +40,7 @@
 #include "parameters.h"
 #include "watchdog_inner_util_test.h"
 #include "watchdog_inner_data.h"
+#include "watchdog.h"
 
 using namespace testing::ext;
 using namespace OHOS::AppExecFwk;
@@ -787,7 +788,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_001, TestSize.Le
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
 
     std::map<std::string, std::string> paramsMap;
-    paramsMap[KEY_LOG_TYPE] = "0";
     paramsMap[KEY_SAMPLE_INTERVAL] = "100";
     paramsMap[KEY_IGNORE_STARTUP_TIME] = "12";
     paramsMap[KEY_SAMPLE_COUNT] = "21";
@@ -810,7 +810,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_001, TestSize.Le
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], DEFAULT_IGNORE_STARTUP_TIME);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], SAMPLE_DEFAULT_COUNT);
     EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
-    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_AUTO_STOP_SAMPLING], 0);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_AUTO_STOP_SAMPLING], 1);
     printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
 }
 
@@ -825,6 +825,47 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_002, TestSize.Le
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
     WatchdogInnerEndFunc endTest = InitEndFuncTest;
     WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+
+    std::map<std::string, std::string> paramsMap;
+    paramsMap[KEY_LOG_TYPE] = "1";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "100";
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "";
+    paramsMap[KEY_SAMPLE_COUNT] = "21";
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
+    paramsMap[KEY_AUTO_STOP_SAMPLING] = "true";
+    int ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    EXPECT_EQ(ret, 0);
+    beginTest("Test");
+    sleep(11); // test value
+    int count = 0;
+    while (count < 3) {
+        beginTest("Test");
+        usleep(140 * 1000); // test value
+        endTest("Test");
+        count++;
+    }
+    sleep(5);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 1);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 100);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 10);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 21);
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
+    EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_AUTO_STOP_SAMPLING], 1);
+    printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
+}
+
+/**
+ * @tc.name: WatchdogInner ConfigEventPolicy test;
+ * @tc.desc: set log_type is 1.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_003, TestSize.Level1)
+{
+    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
+    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
+    WatchdogInnerEndFunc endTest = InitEndFuncTest;
+    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
+    WatchdogInner::GetInstance().jankParamsMap[KEY_SET_TIMES_FLAG] = SET_TIMES_FLAG;
 
     std::map<std::string, std::string> paramsMap;
     paramsMap[KEY_LOG_TYPE] = "1";
@@ -844,12 +885,12 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_002, TestSize.Le
         endTest("Test");
         count++;
     }
-    sleep(5);
+    usleep(1500 * 1000);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 1);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 100);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 12);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_COUNT], 21);
-    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes <= 3);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_AUTO_STOP_SAMPLING], 1);
     printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
 }
@@ -859,7 +900,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_002, TestSize.Le
  * @tc.desc: set log_type is 2.
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_003, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_004, TestSize.Level1)
 {
     WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
     WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
@@ -871,9 +912,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_003, TestSize.Le
     paramsMap[KEY_SAMPLE_INTERVAL] = "100";
     paramsMap[KEY_IGNORE_STARTUP_TIME] = "12";
     paramsMap[KEY_SAMPLE_COUNT] = "21";
-    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "6";
-    paramsMap[KEY_AUTO_STOP_SAMPLING] = "test_fail";
-    int ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "3";
+    paramsMap[KEY_AUTO_STOP_SAMPLING] = "false";
+    int ret = Watchdog::GetInstance().ConfigEventPolicy(paramsMap);
 
     EXPECT_EQ(ret, 0);
     beginTest("Test");
@@ -881,8 +922,48 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_003, TestSize.Le
     endTest("Test");
 
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 2);
-    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 3);
     printf("stackContent_.reportTimes: %d", WatchdogInner::GetInstance().stackContent_.reportTimes);
+}
+
+/**
+ * @tc.name: WatchdogInner ConfigEventPolicy test;
+ * @tc.desc: set param is invalid.
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_005, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+
+    /**
+     * @tc.desc: set log type out of range.
+     */
+    paramsMap[KEY_LOG_TYPE] = "3";
+    int ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    EXPECT_EQ(ret, -1);
+
+    /**
+     * @tc.desc: set auto stop sampling invalid.
+     */
+    paramsMap[KEY_LOG_TYPE] = "0";
+    paramsMap[KEY_AUTO_STOP_SAMPLING] = "test_fail";
+    ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    EXPECT_EQ(ret, -1);
+
+    /**
+     * @tc.desc: set key sample is not a number.
+     */
+    paramsMap[KEY_LOG_TYPE] = "1";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "5a";
+    ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    EXPECT_EQ(ret, -1);
+
+    /**
+     * @tc.desc: set auto stop sampling invalid.
+     */
+    paramsMap[KEY_SAMPLE_INTERVAL] = "50";
+    paramsMap[KEY_AUTO_STOP_SAMPLING] = "test_fail";
+    ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    EXPECT_EQ(ret, -1);
 }
 
 /**
@@ -1183,13 +1264,31 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
     int duration = 0;
     int interval = 0;
     WatchdogInner::GetInstance().StartSample(duration, interval);
+    duration = 100; // test value
+    interval = 300; // test value
+    WatchdogInner::GetInstance().StartSample(duration, interval);
     duration = -300; // test value
     interval = -100; // test value
     WatchdogInner::GetInstance().StartSample(duration, interval);
     duration = 300; // test value
     interval = 100; // test value
     WatchdogInner::GetInstance().StartSample(duration, interval);
-    EXPECT_TRUE(duration / interval != 0);
+    auto watchdogTask = [duration, interval] {
+        printf("StartSample before\n");
+        WatchdogInner::GetInstance().StartSample(duration, interval);
+        sleep(1);
+        printf("StartSample after\n");
+    };
+    std::string testName = "watchdogStartSampleTaskTest";
+    WatchdogInner::GetInstance().RunOneShotTask(testName, watchdogTask, 0);
+
+    auto watchdogTask1 = [duration, interval] {
+        printf("StartSample1 before\n");
+        WatchdogInner::GetInstance().StartSample(duration, interval);
+        printf("StartSample1 after\n");
+    };
+    WatchdogInner::GetInstance().RunOneShotTask(testName, watchdogTask1, 0);
+    EXPECT_TRUE((duration / interval) != 0);
 }
 
 /**

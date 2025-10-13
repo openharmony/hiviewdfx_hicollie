@@ -665,12 +665,12 @@ std::map<std::string, int> GetReportTimesMap()
     std::string reportTimes = system::GetParameter(KEY_REPORT_TIMES_TYPE, "");
     XCOLLIE_LOGD("get reporttimes value is %{public}s.", reportTimes.c_str());
     std::stringstream reportParams(reportTimes);
+    std::string key;
+    std::string value;
     std::string line;
     while (getline(reportParams, line, ';') && !line.empty()) {
-        std::string key;
-        std::string value;
-        if (value.size() > std::to_string(INT32_MAX).length() ||
-            !GetKeyValueByStr(line, key, value, ':')) {
+        if (!GetKeyValueByStr(line, key, value, ':') ||
+            value.size() > std::to_string(INT32_MAX).length()) {
             XCOLLIE_LOGE("Parse param failed, key:%{public}s value:%{public}s",
                 key.c_str(), value.c_str());
             continue;
