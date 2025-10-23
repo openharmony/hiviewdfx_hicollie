@@ -248,5 +248,35 @@ HWTEST_F(WatchdogTaskTest, WatchdogTask_WatchdogSkipCheckWhenSuspend_005, TestSi
 }
 
 #endif
+
+/**
+ * @tc.name: WatchdogTaskTest SendXCollieEvent
+ * @tc.desc: add testcase code coverage
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendXCollieEvent_001, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "WatchdogTaskTest_SendXCollieEvent_001";
+    WatchdogTask task(name, taskFunc, 0, 1000, true);
+    task.SendXCollieEvent("1234", "keyMsg", "1234567");
+    EXPECT_TRUE(!name.empty());
+}
+
+/**
+ * @tc.name: WatchdogTaskTest SendEvent
+ * @tc.desc: add testcase code coverage
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendEvent_001, TestSize.Level1)
+{
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    const std::string name = "WatchdogTaskTest_SendEvent_001";
+    WatchdogTask task(name, taskFunc, 0, 2111, true);
+    task.SendEvent("11", "keyMsg", "11111");
+    EXPECT_TRUE(!name.empty());
+}
 } // namespace HiviewDFX
 } // namespace OHOS

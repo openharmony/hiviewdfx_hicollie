@@ -1591,7 +1591,8 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     uint32_t gid = getgid();
     uint32_t uid = getuid();
     time_t curTime = time(nullptr);
-    std::string sendMsg = std::string((ctime(&curTime) == nullptr) ? "" : ctime(&curTime)) +
+    char* timeStr = ctime(&curTime);
+    std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) +
         "\n" + msg + "\n";
     char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
     buffer[FFRT_BUFFER_SIZE] = 0;

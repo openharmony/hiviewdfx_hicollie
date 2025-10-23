@@ -438,6 +438,19 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_001, TestSize.Level1
 }
 
 /**
+ * @tc.name: WatchdogInner SendFfrtEvent test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_002, TestSize.Level1)
+{
+    OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogInnerUnitTest12345");
+    EXPECT_FALSE(IsProcessDebug(getprocpid()));
+    std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
+    WatchdogInner::GetInstance().SendFfrtEvent("test", "SendFfrtEvent_002", "test", faultTimeStr);
+}
+
+/**
  * @tc.name: WatchdogInner LeftTimeExitProcess test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
