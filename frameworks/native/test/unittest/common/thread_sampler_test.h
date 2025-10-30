@@ -36,7 +36,7 @@ public:
     bool InitThreadSamplerFuncs();
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();
-    void UninstallThreadSamplerSignal();
+    void UninstallThreadSamplerSignal() const;
     bool InitThreadSampler();
 
     void* threadSamplerFuncHandler_  {nullptr};

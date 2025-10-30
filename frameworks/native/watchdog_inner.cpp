@@ -212,7 +212,7 @@ void WatchdogInner::SetForeground(const bool& isForeground)
     isForeground_ = isForeground;
 }
 
-bool WatchdogInner::GetForeground()
+bool WatchdogInner::GetForeground() const
 {
     return isForeground_;
 }
@@ -665,7 +665,7 @@ void WatchdogInner::StartSample(int duration, int interval, std::string& outFile
     }
 }
 
-bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat)
+bool WatchdogInner::CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat) const
 {
     if (threadSamplerCollectFunc_ == nullptr) {
         return false;
@@ -967,7 +967,7 @@ void WatchdogInner::TriggerTimerCountTask(const std::string &name, bool bTrigger
     }
 }
 
-bool WatchdogInner::IsTaskExistLocked(const std::string& name)
+bool WatchdogInner::IsTaskExistLocked(const std::string& name) const
 {
     return (taskNameSet_.find(name) != taskNameSet_.end());
 }
@@ -1167,7 +1167,7 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
 }
 
 
-bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
+bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck) const
 {
     if (IsInAppspwan() || queuedTaskCheck.bootTimeStart <= 0 || queuedTaskCheck.monoTimeStart <= 0) {
         return false;
@@ -1433,7 +1433,7 @@ bool WatchdogInner::WriteStringToFile(int32_t pid, const char *str)
         XCOLLIE_LOGI("failed to write file %{public}s, errno: %{public}d", file, errno);
         writeResult = false;
     }
-    if (fclose(fp)) {
+    if (fclose(fp) != 0) {
         XCOLLIE_LOGE("fclose is failed");
     }
     fp = nullptr;
@@ -1688,7 +1688,7 @@ void WatchdogInner::SetAppDebug(bool isAppDebug)
     isAppDebug_ = isAppDebug;
 }
 
-bool WatchdogInner::GetAppDebug()
+bool WatchdogInner::GetAppDebug() const
 {
     return isAppDebug_;
 }
