@@ -48,7 +48,7 @@ void XCollieTimeoutTest::TearDown(void)
 {
 }
 
-void XCollieTimeoutTest::TimerCallback(void *data)
+void XCollieTimeoutTest::TimerCallback()
 {
     callbackCnt_++;
 }
@@ -99,8 +99,8 @@ HWTEST_F(XCollieTimeoutTest, XCollieTimerNoTimeout_001, TestSize.Level2)
 HWTEST_F(XCollieTimeoutTest, XCollieTimerTimeout_002, TestSize.Level2)
 {
     SetCallbackCnt(0);
-    auto func = [this](void *data) {
-        this->TimerCallback(data);
+    auto func = [this]() {
+        this->TimerCallback();
     };
     /**
      * @tc.steps: step1.add timer
@@ -131,8 +131,8 @@ HWTEST_F(XCollieTimeoutTest, XCollieTimerAddTaskOverFlow_003, TestSize.Level3)
 {
     SetCallbackCnt(0);
     XCollieInner::GetInstance().SetRecoveryFlag(false);
-    auto func = [this](void *data) {
-        this->TimerCallback(data);
+    auto func = [this]() {
+        this->TimerCallback();
     };
     /**
      * @tc.steps: step1.add MAX_XCOLLIE_NUM timer
@@ -180,8 +180,8 @@ HWTEST_F(XCollieTimeoutTest, XCollieTimerRound_004, TestSize.Level4)
 
     SetCallbackCnt(0);
     XCollieInner::GetInstance().SetRecoveryFlag(false);
-    auto func = [this](void *data) {
-        this->TimerCallback(data);
+    auto func = [this]() {
+        this->TimerCallback();
     };
 
     /**
