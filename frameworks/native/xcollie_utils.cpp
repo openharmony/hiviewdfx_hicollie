@@ -132,7 +132,7 @@ void CalculateTimes(uint64_t &bootTimeStart, uint64_t &monoTimeStart)
     size_t index = 1;
 
     for (size_t i = 0; i < TIMES_ARR_SIZE; i++) {
-        timesArr[i] = (i & 1) ? GetCurrentTickMillseconds() : GetCurrentBootMillseconds();
+        timesArr[i] = ((i & 1) != 0) ? GetCurrentTickMillseconds() : GetCurrentBootMillseconds();
         if (i <= 1) {
             continue;
         }
@@ -142,8 +142,10 @@ void CalculateTimes(uint64_t &bootTimeStart, uint64_t &monoTimeStart)
             index = i - 1;
         }
     }
-    bootTimeStart = (index & 1) ? (timesArr[index - 1] + timesArr[index + 1]) / TIMES_AVE_PARAM : timesArr[index];
-    monoTimeStart = (index & 1) ? timesArr[index] : (timesArr[index - 1] + timesArr[index + 1]) / TIMES_AVE_PARAM;
+    bootTimeStart = ((index & 1) != 0) ? (timesArr[index - 1] + timesArr[index + 1]) / TIMES_AVE_PARAM :
+        timesArr[index];
+    monoTimeStart = ((index & 1) != 0) ? timesArr[index] :
+        (timesArr[index - 1] + timesArr[index + 1]) / TIMES_AVE_PARAM;
 }
 
 uint64_t GetNumsDiffAbs(const uint64_t& numOne, const uint64_t& numTwo)

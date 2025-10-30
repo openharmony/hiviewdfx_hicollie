@@ -64,15 +64,15 @@ public:
     static void KillPeerBinderProcess(const std::string &description);
     bool StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
     void StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
-    bool CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat = ENABLE_TREE_FORMAT);
+    bool CollectStack(std::string& stack, std::string& heaviestStack, int treeFormat = ENABLE_TREE_FORMAT) const;
     bool Deinit();
     void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
     void SetForeground(const bool& isForeground);
-    bool GetForeground();
+    bool GetForeground() const;
     void RemoveInnerTask(const std::string& name);
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     void SetAppDebug(bool isAppDebug);
-    bool GetAppDebug();
+    bool GetAppDebug() const;
     int SetEventConfig(std::map<std::string, std::string> paramsMap);
     bool SampleStackDetect(const TimePoint& endTime, int& reportTimes, int updateTimes, int ignoreTime,
         bool isScroll = false);
@@ -101,10 +101,10 @@ private:
     bool Stop();
     bool SendMsgToHungtask(const std::string& msg);
     bool KickWatchdog();
-    bool IsTaskExistLocked(const std::string& name);
+    bool IsTaskExistLocked(const std::string& name) const;
     bool IsExceedMaxTaskLocked();
     int64_t InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
-    bool IsInSleep(const WatchdogTask& queuedTaskCheck);
+    bool IsInSleep(const WatchdogTask& queuedTaskCheck) const;
     void CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask);
     bool CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck);
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);

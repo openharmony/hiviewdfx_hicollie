@@ -74,7 +74,7 @@ uint32_t GetMMapSizeAndName(const std::string& checkName, std::string& mmapName)
     std::ifstream mapsFile("/proc/self/maps");
     std::string line;
     int base = 16;
-    while (getline(mapsFile, line)) {
+    while (std::getline(mapsFile, line)) {
         std::istringstream iss(line);
         std::string addrs;
         std::string permissions;
@@ -126,7 +126,7 @@ bool ThreadSamplerTest::InstallThreadSamplerSignal()
     return true;
 }
 
-void ThreadSamplerTest::UninstallThreadSamplerSignal()
+void ThreadSamplerTest::UninstallThreadSamplerSignal() const
 {
     std::lock_guard<std::mutex> lock(threadSamplerSignalMutex_);
     threadSamplerSigHandler_ = nullptr;

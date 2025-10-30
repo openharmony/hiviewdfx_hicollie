@@ -92,7 +92,7 @@ int32_t NotifyAppFault(const OHOS::HiviewDFX::ReportData &reportData)
     return reply.ReadInt32();
 }
 
-bool CheckInBackGround(bool* isSixSecond)
+bool CheckInBackGround()
 {
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
         system_clock::now().time_since_epoch()).count();
@@ -116,7 +116,7 @@ bool CheckInBackGround(bool* isSixSecond)
 
 int Report(bool* isSixSecond)
 {
-    if (CheckInBackGround(isSixSecond)) {
+    if (CheckInBackGround()) {
         return 0;
     }
     g_backgroundReportCount++;
@@ -130,7 +130,7 @@ int Report(bool* isSixSecond)
         *isSixSecond = false;
         stuckTimeout = g_stuckTimeout * RATIO;
         std::ifstream statmStream("/proc/" + std::to_string(g_pid) + "/statm");
-        if (statmStream) {
+        if (statmStream.is_open()) {
             std::string procStatm;
             std::getline(statmStream, procStatm);
             statmStream.close();
