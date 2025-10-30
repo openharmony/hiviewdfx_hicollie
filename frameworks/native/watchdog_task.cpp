@@ -54,38 +54,87 @@ struct HstackVal {
     pid_t tid;
     char hstackLogBuff[BUFF_STACK_SIZE];
 };
+
+#ifdef SUSPEND_CHECK_ENABLE
+WatchdogTask::WatchdogTask(const WatchdogTask& other)
+    : name(other.name), message(other.message), task(other.task), timeOutCallback(other.timeOutCallback),
+    checker(other.checker), id(other.id), timeout(other.timeout), func(other.func), arg(other.arg),
+    flag(other.flag), checkInterval(other.checkInterval), nextTickTime(other.nextTickTime),
+    isOneshotTask(other.isOneshotTask), watchdogTid(other.watchdogTid), timeLimit(other.timeLimit),
+    countLimit(other.countLimit), triggerTimes(other.triggerTimes), reportCount(other.reportCount)
+{
+    CalculateTimes(bootTimeStart, monoTimeStart);
+}
+
+WatchdogTask &WatchdogTask::operator=(const WatchdogTask &other)
+{
+    if (this != &other) {
+        name = other.name;
+        message = other.message;
+        task = other.task;
+        timeOutCallback = other.timeOutCallback;
+        checker = other.checker;
+        id = other.id;
+        timeout = other.timeout;
+        func = other.func;
+        arg = other.arg;
+        flag = other.flag;
+        checkInterval = other.checkInterval;
+        nextTickTime = other.nextTickTime;
+        isOneshotTask = other.isOneshotTask;
+        watchdogTid = other.watchdogTid;
+        timeLimit = other.timeLimit;
+        countLimit = other.countLimit;
+        triggerTimes = other.triggerTimes;
+        reportCount = other.reportCount;
+        CalculateTimes(bootTimeStart, monoTimeStart);
+    }
+    return *this;
+}
+#endif
+
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
+      watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
+#ifdef SUSPEND_CHECK_ENABLE
+    CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 }
 
 WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag)
     : name(IPC_FULL_TASK), task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
-      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
+      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
+#ifdef SUSPEND_CHECK_ENABLE
+    bootTimeStart = 0;
+    monoTimeStart = 0;
+#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
-      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0),
-      reportCount(0)
+      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
     isOneshotTask = isOneshot;
+#ifdef SUSPEND_CHECK_ENABLE
+    bootTimeStart = 0;
+    monoTimeStart = 0;
+#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag)
@@ -97,17 +146,22 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isOneshotTask = true;
     watchdogTid = getproctid();
+#ifdef SUSPEND_CHECK_ENABLE
     CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit), bootTimeStart(0),
-      monoTimeStart(0), reportCount(0)
+      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit), reportCount(0)
 {
     id = ++curId;
     checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;
     nextTickTime = GetCurrentTickMillseconds();
+#ifdef SUSPEND_CHECK_ENABLE
+    bootTimeStart = 0;
+    monoTimeStart = 0;
+#endif
 }
 
 void WatchdogTask::DoCallback()

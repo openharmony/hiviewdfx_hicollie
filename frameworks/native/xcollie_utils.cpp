@@ -116,6 +116,7 @@ uint64_t GetCurrentTickMillseconds()
     return static_cast<uint64_t>((t.tv_sec) * SEC_TO_MANOSEC + t.tv_nsec) / SEC_TO_MICROSEC;
 }
 
+#ifdef SUSPEND_CHECK_ENABLE
 uint64_t GetCurrentBootMillseconds()
 {
     struct timespec t;
@@ -150,6 +151,7 @@ uint64_t GetNumsDiffAbs(const uint64_t& numOne, const uint64_t& numTwo)
 {
     return (numOne > numTwo) ? (numOne - numTwo) : (numTwo - numOne);
 }
+#endif
 
 bool IsFileNameFormat(char c)
 {

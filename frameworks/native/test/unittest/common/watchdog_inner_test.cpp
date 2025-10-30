@@ -995,6 +995,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetLimitedSizeName_001, TestSize.L
     EXPECT_TRUE(GetLimitedSizeName(name).size() <= limitValue);
 }
 
+#ifdef SUSPEND_CHECK_ENABLE
 /**
  * @tc.name: WatchdogInner IsInSleep test;
  * @tc.desc: add testcase
@@ -1026,6 +1027,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsInSleep_001, TestSize.Level1)
     ret = WatchdogInner::GetInstance().IsInSleep(task);
     EXPECT_TRUE(ret);
 }
+#endif
 
 /**
  * @tc.name: WatchdogInner GetAppStartTime test;
