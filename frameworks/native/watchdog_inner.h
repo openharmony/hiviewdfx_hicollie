@@ -109,7 +109,9 @@ private:
     bool IsTaskExistLocked(const std::string& name);
     bool IsExceedMaxTaskLocked();
     int64_t InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
+#ifdef SUSPEND_CHECK_ENABLE
     bool IsInSleep(const WatchdogTask& queuedTaskCheck);
+#endif
     void CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask);
     bool CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck);
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);

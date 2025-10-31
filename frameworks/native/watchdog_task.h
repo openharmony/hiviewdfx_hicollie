@@ -32,6 +32,10 @@ namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
 public:
+#ifdef SUSPEND_CHECK_ENABLE
+    WatchdogTask(const WatchdogTask& other);
+    WatchdogTask& operator=(const WatchdogTask& other);
+#endif
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval);
     WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag);
@@ -54,8 +58,10 @@ public:
           watchdogTid(0),
           timeLimit(0),
           countLimit(0),
+#ifdef SUSPEND_CHECK_ENABLE
           bootTimeStart(0),
           monoTimeStart(0),
+#endif
           reportCount(0) {};
     ~WatchdogTask() {};
 
@@ -95,8 +101,10 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
+#ifdef SUSPEND_CHECK_ENABLE
     uint64_t bootTimeStart;
     uint64_t monoTimeStart;
+#endif
     int reportCount;
 };
 } // end of namespace HiviewDFX
