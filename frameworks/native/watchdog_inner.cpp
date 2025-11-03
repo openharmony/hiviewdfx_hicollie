@@ -1828,7 +1828,6 @@ int WatchdogInner::ConvertStrToNum(const std::map<std::string, std::string>& par
     auto it = paramsMap.find(key);
     if (it == paramsMap.end()) {
         if (defaultValue < 0) {
-            XCOLLIE_LOGE("Set the thread sampler param error, %{public}s is not exist.", key.c_str());
             return -1;
         }
         return defaultValue;
@@ -1846,10 +1845,6 @@ int WatchdogInner::ConvertStrToNum(const std::map<std::string, std::string>& par
         })) {
             num = std::stoi(str);
         }
-    }
-    if (num < 0) {
-        XCOLLIE_LOGE("Set param error, %{public}s: %{public}s should be a number, "
-            "and greater than 0 and less than INT32_MAX.", key.c_str(), str.c_str());
     }
     return num;
 }
@@ -1885,9 +1880,6 @@ bool WatchdogInner::CheckSampleParam(const std::map<std::string, std::string>& p
     }
 
     int sampleCount = ConvertStrToNum(paramsMap, KEY_SAMPLE_COUNT, keyNeedExist ? -1 : SAMPLE_DEFAULT_COUNT);
-    if (sampleCount < 0) {
-        return false;
-    }
     int maxSampleCount = MAX_SAMPLE_STACK_TIMES / sampleInterval - SAMPLE_EXTRA_COUNT;
     if (sampleCount < SAMPLE_COUNT_MIN || sampleCount > maxSampleCount) {
         XCOLLIE_LOGE("Set the range of sample count, min value: %{public}d max value: %{public}d, count: %{public}d.",
