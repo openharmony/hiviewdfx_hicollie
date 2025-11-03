@@ -1,0 +1,31 @@
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+
+config("libapp_hicollie_pub_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+ohos_shared_library("libapp_hicollie") {
+  branch_protector_ret = "pac_ret"
+  public_configs = [ ":libapp_hicollie_pub_config" ]
+  deps = [ "//base/hiviewdfx/hicollie/frameworks/app:libapp_hicollie_source" ]
+
+  innerapi_tags = [ "platformsdk" ]
+  external_deps = [ "hilog:libhilog" ]
+  part_name = "hicollie"
+  subsystem_name = "hiviewdfx"
+  version_script = "libapp_hicollie.map"
+}

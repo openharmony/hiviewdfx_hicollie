@@ -47,12 +47,22 @@
         },
         "build": {
             "sub_component": [
+                "//base/hiviewdfx/hicollie/interfaces/app:libapp_hicollie",
                 "//base/hiviewdfx/hicollie/interfaces/native/innerkits:libhicollie",
                 "//base/hiviewdfx/hicollie/frameworks/native/thread_sampler:libthread_sampler",
                 "//base/hiviewdfx/hicollie/interfaces/rust:hicollie_rust",
                 "//base/hiviewdfx/hicollie/interfaces/ndk:ohhicollie"
             ],
             "inner_kits": [
+                {
+                    "name": "//base/hiviewdfx/hicollie/interfaces/app:libapp_hicollie",
+                    "header": {
+                        "header_base": "//base/hiviewdfx/hicollie/interfaces/app/include",
+                        "header_files": [
+                            "app_watchdog.h"
+                        ]
+                    }
+                },
                 {
                     "name": "//base/hiviewdfx/hicollie/interfaces/native/innerkits:libhicollie",
                     "header": {
@@ -74,6 +84,7 @@
                 }
             ],
             "test": [
+                "//base/hiviewdfx/hicollie/frameworks/app/test/unittest:unittest",
                 "//base/hiviewdfx/hicollie/frameworks/native/test/unittest/common:unittest",
                 "//base/hiviewdfx/hicollie/interfaces/ndk/test/unittest:unittest"
             ]
