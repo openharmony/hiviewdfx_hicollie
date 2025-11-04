@@ -100,6 +100,7 @@ constexpr uint64_t MIN_IPC_CHECK_INTERVAL = 10;
 constexpr uint64_t MAX_IPC_CHECK_INTERVAL = 30;
 constexpr uint64_t SAMPLE_STACK_MAP_SIZE = 5;
 constexpr uint64_t SAMPLE_TRACE_MAP_SIZE = 1;
+constexpr uint64_t KIT_WATCHDOG_MAX_INTERVAL = 30 * 1000;
 constexpr int AUTO_STOP_EVENT_TYPE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
@@ -120,6 +121,7 @@ using InitAsyncStackFn = bool(*)();
 
 std::mutex WatchdogInner::lockFfrt_;
 static uint64_t g_lastKickTime = GetCurrentTickMillseconds();
+static uint64_t g_uid = static_cast<uint64_t>(getuid());
 static int32_t g_fd = NOT_OPEN;
 static bool g_existFile = true;
 
@@ -185,15 +187,15 @@ WatchdogInner::~WatchdogInner()
 
 static bool IsInAppspwan()
 {
-    if (getuid() == 0 && GetSelfProcName().find("appspawn") != std::string::npos) {
+    if (g_uid == 0 && GetSelfProcName().find("appspawn") != std::string::npos) {
         return true;
     }
 
-    if (getuid() == 0 && GetSelfProcName().find("nativespawn") != std::string::npos) {
+    if (g_uid == 0 && GetSelfProcName().find("nativespawn") != std::string::npos) {
         return true;
     }
 
-    if (getuid() == 0 && GetSelfProcName().find("hybridspawn") != std::string::npos) {
+    if (g_uid == 0 && GetSelfProcName().find("hybridspawn") != std::string::npos) {
         return true;
     }
 
@@ -836,7 +838,7 @@ int32_t WatchdogInner::StartTraceProfile()
     }
     appCaller_.bundleName = bundleName_;
     appCaller_.bundleVersion = bundleVersion_;
-    appCaller_.uid = static_cast<int64_t>(getuid());
+    appCaller_.uid = g_uid;
     appCaller_.pid = getprocpid();
     appCaller_.threadName = GetSelfProcName();
     appCaller_.foreground = isForeground_;
@@ -1142,7 +1144,7 @@ bool WatchdogInner::IsCallbackLimit(unsigned int flag)
 void IPCProxyLimitCallback(uint64_t num)
 {
     XCOLLIE_LOGE("ipc proxy num %{public}" PRIu64 " exceed limit", num);
-    if (getuid() >= MIN_APP_UID && IsBetaVersion()) {
+    if (g_uid >= MIN_APP_UID && IsBetaVersion()) {
         XCOLLIE_LOGI("Process is going to exit, reason: ipc proxy num exceed limit");
         _exit(0);
     }
@@ -1243,7 +1245,7 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
                 mainRunner_ = AppExecFwk::EventRunner::GetMainEventRunner();
             }
             mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
-            if (getuid() >= MIN_APP_UID) {
+            if (g_uid >= MIN_APP_UID) {
                 ReadAppStartConfig(APP_START_CONFIG);
             }
             const uint64_t limitNum = 20000;
@@ -1281,7 +1283,7 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 
 void WatchdogInner::CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask)
 {
-    if (g_existFile && queuedTask.name == IPC_FULL_TASK && getuid() == FOUNDATION_UID &&
+    if (g_existFile && queuedTask.name == IPC_FULL_TASK && g_uid == FOUNDATION_UID &&
         now - g_lastKickTime > INTERVAL_KICK_TIME) {
         if (KickWatchdog()) {
             g_lastKickTime = now;
@@ -1359,7 +1361,11 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     const WatchdogTask& queuedTask = checkerQueue_.top();
     CheckKickWatchdog(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
-        return queuedTask.nextTickTime - now;
+        uint64_t leftTimeMill = queuedTask.nextTickTime - now;
+        if (leftTimeMill > KIT_WATCHDOG_MAX_INTERVAL && g_uid == FOUNDATION_UID) {
+            return KIT_WATCHDOG_MAX_INTERVAL;
+        }
+        return leftTimeMill;
     }
 
     currentScene_ = "thread DfxWatchdog: Current scenario is task name: " + queuedTask.name + "\n";
@@ -1494,9 +1500,8 @@ bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallba
             return false;
         }
         ipcCheckInit = true;
-        uint32_t uid = getuid();
         bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
-            [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
+            [uid = g_uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
         if (!isJoinIpcFullUid && GetSelfProcName() != KEY_SCB_STATE) {
             return false;
         }
@@ -1594,7 +1599,6 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
         return;
     }
     uint32_t gid = getgid();
-    uint32_t uid = getuid();
     time_t curTime = time(nullptr);
     char* timeStr = ctime(&curTime);
     std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) +
@@ -1609,7 +1613,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     sendMsg += faultTimeStr;
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
+        "PID", pid, "TID", tid, "TGID", gid, "UID", g_uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg, "STACK", isDumpStack ? GetProcessStacktrace() : "");
     if (ret == ERR_OVER_SIZE) {
         std::string stack = "";
@@ -1617,7 +1621,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
             GetBacktraceStringByTid(stack, tid, 0, true);
         }
         ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-            "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo,
+            "PID", pid, "TID", tid, "TGID", gid, "UID", g_uid, "MODULE_NAME", taskInfo,
             "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack);
     }
 
@@ -1705,7 +1709,7 @@ bool WatchdogInner::Stop()
 void WatchdogInner::KillPeerBinderProcess(const std::string &description)
 {
     bool result = false;
-    if (getuid() == FOUNDATION_UID) {
+    if (g_uid == FOUNDATION_UID) {
         result = KillProcessByPid(getprocpid());
     }
     if (!result) {
