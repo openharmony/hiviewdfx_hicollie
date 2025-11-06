@@ -38,13 +38,13 @@
 #include "ipc_skeleton.h"
 #include "xcollie_utils.h"
 #include "dfx_define.h"
-#include "dfx_signal_handler.h"
 #include "parameter.h"
 #include "file_ex.h"
 #include "xcollie_ffrt_task.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
+extern "C" int DfxNotifyWatchdogThreadStart(void) __attribute__((weak));
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
@@ -1173,7 +1173,7 @@ void WatchdogInner::UpdateAppStartContent(const std::map<std::string, int64_t>& 
         startContent.startUpDuration = it->second;
     }
     startContent.enableStartSample.store(true);
-    
+
     XCOLLIE_LOGW("UpdateAppStartContent threshold=%{public}" PRId64", sampleInterval=%{public}" PRId64
         ", targetCount=%{public}d, reportTimes=%{public}d, startTime=%{public}" PRId64", "
         "enableStartSample=%{public}d, startUpDuration=%{public}" PRId64".",
@@ -1250,9 +1250,11 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
-                // notify faultloggerd watchdog start
-                DfxNotifyWatchdogThreadStart();
                 SetThreadSignalMask(SIGDUMP, true, true);
+            }
+            // notify faultloggerd watchdog start
+            if (DfxNotifyWatchdogThreadStart != nullptr) {
+                DfxNotifyWatchdogThreadStart();
             }
             XCOLLIE_LOGD("Watchdog is running!");
         }
@@ -1921,7 +1923,7 @@ int WatchdogInner::SetEventConfig(const std::map<std::string, std::string>& para
         XCOLLIE_LOGE("Set the thread sampler param map is null.");
         return -1;
     }
-    
+
     int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE);
     size_t size = paramsMap.size();
     switch (logType) {

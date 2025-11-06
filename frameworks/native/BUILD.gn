@@ -39,7 +39,6 @@ ohos_source_set("libhicollie_source") {
 
   external_deps = [
     "c_utils:utils",
-    "faultloggerd:dfx_signalhandler",
     "faultloggerd:libbacktrace_local",
     "ffrt:libffrt",
     "hilog:libhilog",
