@@ -1,0 +1,12 @@
+{
+  global:
+  extern "C" {
+    };
+    extern "C++" {
+        "OHOS::HiviewDFX::AppWatchdog::AppWatchdog()";
+        "OHOS::HiviewDFX::AppWatchdog::~AppWatchdog()";
+        "OHOS::HiviewDFX::AppWatchdog::GetReservedTimeForLogging()";
+    };
+  local:
+    *;
+};
