@@ -1500,7 +1500,7 @@ bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallba
         }
         ipcCheckInit = true;
         uint32_t uid = getuid();
-        bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),	
+        bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
             [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
         if (!isJoinIpcFullUid && GetSelfProcName() != KEY_SCB_STATE) {
             return false;
