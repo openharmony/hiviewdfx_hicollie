@@ -100,6 +100,7 @@ constexpr uint64_t MIN_IPC_CHECK_INTERVAL = 10;
 constexpr uint64_t MAX_IPC_CHECK_INTERVAL = 30;
 constexpr uint64_t SAMPLE_STACK_MAP_SIZE = 5;
 constexpr uint64_t SAMPLE_TRACE_MAP_SIZE = 1;
+constexpr uint64_t KIT_WATCHDOG_MAX_INTERVAL = 30 * 1000;
 constexpr int AUTO_STOP_EVENT_TYPE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
@@ -1361,7 +1362,11 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     const WatchdogTask& queuedTask = checkerQueue_.top();
     CheckKickWatchdog(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
-        return queuedTask.nextTickTime - now;
+        uint64_t leftTimeMill = queuedTask.nextTickTime - now;
+        if (leftTimeMill > KIT_WATCHDOG_MAX_INTERVAL && getuid() == FOUNDATION_UID) {
+            return KIT_WATCHDOG_MAX_INTERVAL;
+        }
+        return leftTimeMill;
     }
 
     currentScene_ = "thread DfxWatchdog: Current scenario is task name: " + queuedTask.name + "\n";
