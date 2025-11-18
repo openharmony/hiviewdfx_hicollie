@@ -16,6 +16,8 @@
 #ifndef RELIABILITY_APP_WATCHDOG_INNER_H
 #define RELIABILITY_APP_WATCHDOG_INNER_H
 
+#include <atomic>
+#include <string>
 #include "singleton.h"
 
 namespace OHOS {
@@ -28,8 +30,29 @@ class AppWatchdogInner : public Singleton<AppWatchdogInner> {
     DECLARE_SINGLETON(AppWatchdogInner);
 public:
     int32_t GetReservedTimeForLogging();
+    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
+    void SetSystemApp(bool isSystemApp);
+    void SetForeground(bool isForeground);
+    void SetAppDebug(bool isAppDebug);
+    void SetSpecifiedProcessName(const std::string& name);
+    void SetScrollState(bool isScroll);
+
+    bool GetForeground();
+    bool GetSystemApp();
+    bool GetAppDebug();
+    bool GetScrollState();
+    std::string GetSpecifiedProcessName();
+    std::string GetBundleName();
+
 private:
     int reservedTime_ {DEFAULT_RESERVED_TIME};
+    std::string specifiedProcessName_;
+    std::string bundleName_;
+    std::string bundleVersion_;
+    std::atomic_bool isSystemApp_ { false };
+    std::atomic_bool isForeground_ {false};
+    std::atomic_bool isAppDebug_ {false};
+    std::atomic_bool isScroll_ {false};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

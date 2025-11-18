@@ -27,6 +27,84 @@ public:
      * @brief Get sampler result.
      */
     int32_t GetReservedTimeForLogging();
+    
+    /**
+     *
+     * @brief Set bundle info.
+     *
+     */
+    void SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion);
+
+    /**
+     *
+     * @brief Set system app.
+     *
+     */
+    void SetSystemApp(bool isSystemApp);
+
+    /**
+     *
+     * @brief Set foreground.
+     *
+     */
+    void SetForeground(bool isForeground);
+
+    /**
+     * @brief Set isAppDebug.
+     */
+    void SetAppDebug(bool isAppDebug);
+
+    /**
+     * @brief Set specified process name.
+     */
+    void SetSpecifiedProcessName(const std::string& name);
+
+    /**
+     * @brief Set scroll param.
+     */
+    void SetScrollState(bool isScroll);
+
+    /**
+     *
+     * @brief Get systemApp.
+     *
+     */
+    bool GetSystemApp();
+
+    /**
+     *
+     * @brief Get bundleName.
+     *
+     */
+    std::string GetBundleName();
+
+    /**
+     *
+     * @brief Get foreground.
+     *
+     */
+    bool GetForeground();
+
+    /**
+     *
+     * @brief Get specifiedProcessName.
+     *
+     */
+    std::string GetSpecifiedProcessName();
+
+    /**
+     *
+     * @brief Get scrollState.
+     *
+     */
+    bool GetScrollState();
+
+    /**
+     *
+     * @brief Get appDebug.
+     *
+     */
+    bool GetAppDebug();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
