@@ -35,5 +35,66 @@ int32_t AppWatchdogInner::GetReservedTimeForLogging()
     }
     return reservedTime_;
 }
+
+void AppWatchdogInner::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion)
+{
+    bundleName_ = bundleName;
+    bundleVersion_ = bundleVersion;
+}
+
+void AppWatchdogInner::SetSystemApp(bool isSystemApp)
+{
+    isSystemApp_.store(isSystemApp);
+}
+
+void AppWatchdogInner::SetAppDebug(bool isAppDebug)
+{
+    isAppDebug_.store(isAppDebug);
+}
+
+void AppWatchdogInner::SetForeground(bool isForeground)
+{
+    isForeground_.store(isForeground);
+}
+
+void AppWatchdogInner::SetScrollState(bool isScroll)
+{
+    isScroll_.store(isScroll);
+}
+
+void AppWatchdogInner::SetSpecifiedProcessName(const std::string& name)
+{
+    specifiedProcessName_ = name;
+}
+
+bool AppWatchdogInner::GetSystemApp()
+{
+    return isSystemApp_;
+}
+
+std::string AppWatchdogInner::GetBundleName()
+{
+    return bundleName_;
+}
+
+bool AppWatchdogInner::GetForeground()
+{
+    return isForeground_.load();
+}
+
+std::string AppWatchdogInner::GetSpecifiedProcessName()
+{
+    return specifiedProcessName_;
+}
+
+bool AppWatchdogInner::GetScrollState()
+{
+    return isScroll_.load();
+}
+
+bool AppWatchdogInner::GetAppDebug()
+{
+    return isAppDebug_.load();
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

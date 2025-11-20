@@ -62,5 +62,98 @@ HWTEST_F(AppWatchdogTest, AppWatchdog_GetReservedTimeForLogging_001, TestSize.Le
     ret = AppWatchdog::GetInstance().GetReservedTimeForLogging();
     EXPECT_TRUE(ret >= 3500);
 }
+
+/**
+ * @tc.name: AppWatchdog BundleName Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(AppWatchdogTest, AppWatchdogTest_BundleName_001, TestSize.Level1)
+{
+    std::string testValue = "AppWatchdogTest_BundleName_001";
+    AppWatchdog::GetInstance().SetBundleInfo(testValue, "1.1.0");
+    EXPECT_EQ(AppWatchdog::GetInstance().GetBundleName(), testValue);
+    testValue = "AppWatchdog";
+    AppWatchdog::GetInstance().SetBundleInfo(testValue, "1.1.0");
+    EXPECT_EQ(AppWatchdog::GetInstance().GetBundleName(), testValue);
+    testValue = "com.ohos.sceneboard";
+    AppWatchdog::GetInstance().SetBundleInfo(testValue, "1.1.0");
+    EXPECT_EQ(AppWatchdog::GetInstance().GetBundleName(), testValue);
+}
+
+/**
+ * @tc.name: AppWatchdog IsSystemApp Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(AppWatchdogTest, AppWatchdogTest_IsSystemApp_001, TestSize.Level1)
+{
+    bool isSystemApp = true;
+    AppWatchdog::GetInstance().SetSystemApp(isSystemApp);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetSystemApp(), isSystemApp);
+    isSystemApp = false;
+    AppWatchdog::GetInstance().SetSystemApp(isSystemApp);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetSystemApp(), isSystemApp);
+}
+
+/**
+ * @tc.name: AppWatchdog AppDebug Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(AppWatchdogTest, AppWatchdogTest_AppDebug_001, TestSize.Level1)
+{
+    bool isAppDebug = true;
+    AppWatchdog::GetInstance().SetAppDebug(isAppDebug);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetAppDebug(), isAppDebug);
+    isAppDebug = false;
+    AppWatchdog::GetInstance().SetAppDebug(isAppDebug);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetAppDebug(), isAppDebug);
+}
+
+/**
+ * @tc.name: AppWatchdog Foreground Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(AppWatchdogTest, AppWatchdogTest_Foreground_001, TestSize.Level1)
+{
+    bool isForeground = true;
+    AppWatchdog::GetInstance().SetForeground(isForeground);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetForeground(), isForeground);
+    isForeground = false;
+    AppWatchdog::GetInstance().SetForeground(isForeground);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetForeground(), isForeground);
+}
+
+/**
+ * @tc.name: AppWatchdog SpecifiedProcessName Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(AppWatchdogTest, AppWatchdogTest_SpecifiedProcessName_001, TestSize.Level1)
+{
+    std::string testValue = "AppWatchdogTest_SpecifiedProcessName_001";
+    AppWatchdog::GetInstance().SetSpecifiedProcessName(testValue);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetSpecifiedProcessName(), testValue);
+    testValue = "AppWatchdog";
+    AppWatchdog::GetInstance().SetSpecifiedProcessName(testValue);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetSpecifiedProcessName(), testValue);
+}
+
+/**
+ * @tc.name: AppWatchdog ScrollState Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(AppWatchdogTest, AppWatchdogTest_ScrollState_001, TestSize.Level1)
+{
+    bool isScroll = true;
+    AppWatchdog::GetInstance().SetScrollState(isScroll);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetScrollState(), isScroll);
+    isScroll = false;
+    AppWatchdog::GetInstance().SetScrollState(isScroll);
+    EXPECT_EQ(AppWatchdog::GetInstance().GetScrollState(), isScroll);
+}
 } // namespace HiviewDFX
 } // namespace OHOS

@@ -31,5 +31,65 @@ int32_t AppWatchdog::GetReservedTimeForLogging()
 {
     return AppWatchdogInner::GetInstance().GetReservedTimeForLogging();
 }
+
+void AppWatchdog::SetBundleInfo(const std::string& bundleName, const std::string& bundleVersion)
+{
+    AppWatchdogInner::GetInstance().SetBundleInfo(bundleName, bundleVersion);
+}
+
+void AppWatchdog::SetSystemApp(bool isSystemApp)
+{
+    AppWatchdogInner::GetInstance().SetSystemApp(isSystemApp);
+}
+
+void AppWatchdog::SetAppDebug(bool isAppDebug)
+{
+    AppWatchdogInner::GetInstance().SetAppDebug(isAppDebug);
+}
+
+void AppWatchdog::SetForeground(bool isForeground)
+{
+    AppWatchdogInner::GetInstance().SetForeground(isForeground);
+}
+
+void AppWatchdog::SetScrollState(bool isScroll)
+{
+    AppWatchdogInner::GetInstance().SetScrollState(isScroll);
+}
+
+void AppWatchdog::SetSpecifiedProcessName(const std::string& name)
+{
+    AppWatchdogInner::GetInstance().SetSpecifiedProcessName(name);
+}
+
+bool AppWatchdog::GetSystemApp()
+{
+    return AppWatchdogInner::GetInstance().GetSystemApp();
+}
+
+std::string AppWatchdog::GetBundleName()
+{
+    return AppWatchdogInner::GetInstance().GetBundleName();
+}
+
+bool AppWatchdog::GetForeground()
+{
+    return AppWatchdogInner::GetInstance().GetForeground();
+}
+
+std::string AppWatchdog::GetSpecifiedProcessName()
+{
+    return AppWatchdogInner::GetInstance().GetSpecifiedProcessName();
+}
+
+bool AppWatchdog::GetScrollState()
+{
+    return AppWatchdogInner::GetInstance().GetScrollState();
+}
+
+bool AppWatchdog::GetAppDebug()
+{
+    return AppWatchdogInner::GetInstance().GetAppDebug();
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
