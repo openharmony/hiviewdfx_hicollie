@@ -46,7 +46,7 @@ void HandlerChecker::ScheduleCheck()
     };
 
     std::string taskName = (name_ == IPC_FULL_TASK) ? "XCollie IpcCheck Task" : "XCollie Watchdog Task";
-    if (!handler_->PostTask(checkTask, taskName, 0, AppExecFwk::EventQueue::Priority::IMMEDIATE)) {
+    if (!handler_->PostTask(checkTask, taskName, 0, priority_)) {
         XCOLLIE_LOGE("post %{public}s false.", taskName.c_str());
     }
 }

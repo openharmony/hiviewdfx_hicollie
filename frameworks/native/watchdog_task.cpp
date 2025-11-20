@@ -94,12 +94,12 @@ WatchdogTask &WatchdogTask::operator=(const WatchdogTask &other)
 #endif
 
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-    TimeOutCallback timeOutCallback, uint64_t interval)
+    TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
       watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
-    checker = std::make_shared<HandlerChecker>(name, handler);
+    checker = std::make_shared<HandlerChecker>(name, handler, priority);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;

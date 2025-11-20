@@ -93,7 +93,8 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_003, TestSize.Level1)
 
     auto runner = EventRunner::Create(true);
     auto handler = std::make_shared<EventHandler>(runner);
-    WatchdogTask task1("WatchdogTaskTest_003", handler, nullptr, 5);
+    WatchdogTask task1("WatchdogTaskTest_003", handler, nullptr, 5,
+        AppExecFwk::EventQueue::Priority::IMMEDIATE);
     task1.RunHandlerCheckerTask();
     EXPECT_TRUE(task1.checker != nullptr);
     EXPECT_TRUE(task1.checker->GetCheckState() >= 0);

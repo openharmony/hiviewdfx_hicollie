@@ -428,5 +428,36 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_StopSample_001, TestSize.Level1)
     ret = Watchdog::GetInstance().StopSample(sampleCount);
     EXPECT_TRUE(ret.empty());
 }
+
+/**
+ * @tc.name: Watchdog AddThread Test
+ * @tc.desc: Verify
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_AddThreadTest_001, TestSize.Level1)
+{
+    constexpr int blockTime = 6;
+    auto blockFunc = []() {
+        printf("before block 70s in %d\n", getproctid());
+        Sleep(blockTime);
+        printf("after block 70s in %d\n", getproctid());
+    };
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<TestEventHandler>(runner);
+    int result = Watchdog::GetInstance().AddThread("TestBlock2s_1", handler, nullptr, 2);
+    ASSERT_EQ(result, 0);
+    result = Watchdog::GetInstance().AddThread("TestBlock2s_2", handler, nullptr, 1, 3);
+    ASSERT_EQ(result, 0);
+    result = Watchdog::GetInstance().AddThread("TestBlock2s_3", handler, nullptr, 1, 0);
+    ASSERT_EQ(result, 0);
+    result = Watchdog::GetInstance().AddThread("TestBlock2s_4", handler, nullptr, 1, -1);
+    ASSERT_EQ(result, -1);
+    result = Watchdog::GetInstance().AddThread("TestBlock2s_5", handler, nullptr, 1, 5);
+    ASSERT_EQ(result, -1);
+
+    printf("before block 70s in %d\n", getproctid());
+    Sleep(blockTime);
+    printf("after block 70s in %d\n", getproctid());
+}
 } // namespace HiviewDFX
 } // namespace OHOS

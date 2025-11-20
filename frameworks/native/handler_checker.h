@@ -41,6 +41,11 @@ public:
             handler_ = std::make_shared<AppExecFwk::EventHandler>(runner);
         }
     };
+    HandlerChecker(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
+        AppExecFwk::EventQueue::Priority priority)
+        : name_(name), handler_(handler), priority_(priority)
+    {
+    };
     ~HandlerChecker() {};
 
 public:
@@ -54,6 +59,7 @@ private:
     std::shared_ptr<AppExecFwk::EventHandler> handler_;
     std::atomic<bool> isCompleted_ = true;
     bool taskSlow_ = false;
+    AppExecFwk::EventQueue::Priority priority_ = AppExecFwk::EventQueue::Priority::IMMEDIATE;
 };
 
 class HandlerDumper : public AppExecFwk::Dumper {

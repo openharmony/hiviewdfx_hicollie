@@ -35,6 +35,7 @@ namespace HiviewDFX {
 class Watchdog : public Singleton<Watchdog> {
     DECLARE_SINGLETON(Watchdog);
     static const uint64_t WATCHDOG_TIMEVAL = 30000;
+    static const uint64_t PRIORITY_IMMEDIATE = 1;
 public:
 
     /**
@@ -44,11 +45,13 @@ public:
      * @param handler, the handler to be checked periodically
      * @param timeOutCallback, callback when timeout
      * @param interval, the period in millisecond
+     * @param priority, task priority
      * @return 0 if added
      *
      */
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-        TimeOutCallback timeOutCallback = nullptr, uint64_t interval = WATCHDOG_TIMEVAL);
+        TimeOutCallback timeOutCallback = nullptr, uint64_t interval = WATCHDOG_TIMEVAL,
+        uint32_t priority = PRIORITY_IMMEDIATE);
 
     /**
      * Add handler to watchdog thread with customized check interval
@@ -56,10 +59,12 @@ public:
      * @param name, the name of handler check task
      * @param handler, the handler to be checked periodically
      * @param interval, the period in millisecond
+     * @param priority, task priority
      * @return 0 if added
      *
      */
-    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,  uint64_t interval);
+    int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,  uint64_t interval,
+        uint32_t priority = PRIORITY_IMMEDIATE);
 
     /**
      * Run a onshot task in shared watchdog thread, the submitted task should never be time consuming
