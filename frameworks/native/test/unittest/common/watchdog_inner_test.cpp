@@ -295,7 +295,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     auto timeOutCallback = [](const std::string &name, int waitState) {
         printf("timeOutCallback name is %s, waitState is %d\n", name.c_str(), waitState);
     };
-    int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr, timeOutCallback, 10);
+    int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr, timeOutCallback, 10,
+        0);
     EXPECT_TRUE(result <= 0);
     int32_t pid = getprocpid();
     bool writeResult = WatchdogInner::WriteStringToFile(pid, "0");

@@ -37,7 +37,7 @@ public:
     WatchdogTask& operator=(const WatchdogTask& other);
 #endif
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-        TimeOutCallback timeOutCallback, uint64_t interval);
+        TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority);
     WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag);
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot);
     WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag);

@@ -41,6 +41,7 @@
 #include "parameter.h"
 #include "file_ex.h"
 #include "xcollie_ffrt_task.h"
+#include "event_handler.h"
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
@@ -113,6 +114,8 @@ constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 constexpr int SCROLL_INTERVAL = 50; // 50ms
 constexpr int DEFAULT_SAMPLE_VALUE = 1;
 constexpr int CPU_FREQ_DECIMAL_BASE = 10;
+const uint64_t PRIORITY_MIN = 0;
+const uint64_t PRIORITY_MAX = 4;
 constexpr const char* SCROLL_JANK = "SCROLL_JANK";
 constexpr const char* MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
 constexpr const char* BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
@@ -933,7 +936,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
 }
 
 int WatchdogInner::AddThread(const std::string &name,
-    std::shared_ptr<AppExecFwk::EventHandler> handler, TimeOutCallback timeOutCallback, uint64_t interval)
+    std::shared_ptr<AppExecFwk::EventHandler> handler, TimeOutCallback timeOutCallback, uint64_t interval,
+    uint32_t priority)
 {
     if (name.empty() || handler == nullptr) {
         XCOLLIE_LOGE("Add thread fail, invalid args!");
@@ -950,7 +954,12 @@ int WatchdogInner::AddThread(const std::string &name,
 
     IpcCheck();
 
-    if (!InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, handler, timeOutCallback, interval))) {
+    if (priority < PRIORITY_MIN || priority > PRIORITY_MAX) {
+        return -1;
+    }
+    auto taskPriority = static_cast<AppExecFwk::EventQueue::Priority>(priority);
+    if (!InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, handler, timeOutCallback, interval,
+        taskPriority))) {
         return -1;
     }
     return 0;
