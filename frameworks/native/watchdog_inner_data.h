@@ -51,6 +51,8 @@ constexpr int XCOLLIE_TASK_MAX_CONCURRENCY_NUM = 1;
 constexpr int64_t APP_START_LIMIT = 7 * 24 * 60 * 60 * 1000; // 7 days
 constexpr int SET_TIMES_FLAG = 1;
 constexpr int ENABLE_TREE_FORMAT = 1;
+constexpr int DEFAULT_RESERVED_TIME = 3500; // 3.5s
+constexpr int BETA_RESERVED_TIME = 6000; // 6s
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 

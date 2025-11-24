@@ -1398,5 +1398,18 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetBundleName_001, TestSize.Level1
     WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
     EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), testValue);
 }
+
+/**
+ * @tc.name: WatchdogInner GetReservedTimeForLogging Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInner_GetReservedTimeForLogging_001, TestSize.Level1)
+{
+    int ret = WatchdogInner::GetInstance().GetReservedTimeForLogging();
+    EXPECT_TRUE(ret >= 3500);
+    ret = WatchdogInner::GetInstance().GetReservedTimeForLogging();
+    EXPECT_TRUE(ret >= 3500);
+}
 } // namespace HiviewDFX
 } // namespace OHOS

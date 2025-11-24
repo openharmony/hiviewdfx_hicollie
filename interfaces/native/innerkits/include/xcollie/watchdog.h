@@ -190,6 +190,11 @@ public:
      * @brief Get sampler result.
      */
     void GetSamplerResult(uint64_t &samplerStartTime, uint64_t &samplerFinishTime, int32_t &samplerCount);
+
+    /**
+     * @brief Get sampler result.
+     */
+    int32_t GetReservedTimeForLogging();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

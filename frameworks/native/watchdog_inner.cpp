@@ -2006,5 +2006,15 @@ void WatchdogInner::SetScrollState(bool isScroll)
 {
     isScroll_ = isScroll;
 }
+
+int32_t WatchdogInner::GetReservedTimeForLogging()
+{
+    bool betaVersion = IsBetaVersion();
+    XCOLLIE_LOGD("Set reserved time, is betaVersion: %{public}d", betaVersion);
+    if (betaVersion) {
+        reservedTime_ = BETA_RESERVED_TIME;
+    }
+    return reservedTime_;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -141,5 +141,10 @@ void Watchdog::GetSamplerResult(uint64_t &samplerStartTime, uint64_t &samplerFin
     samplerFinishTime = result.samplerFinishTime;
     samplerCount = result.samplerCount;
 }
+
+int32_t Watchdog::GetReservedTimeForLogging()
+{
+    return WatchdogInner::GetInstance().GetReservedTimeForLogging();
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
