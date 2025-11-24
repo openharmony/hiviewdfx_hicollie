@@ -459,5 +459,18 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_AddThreadTest_001, TestSize.Level1)
     Sleep(blockTime);
     printf("after block 70s in %d\n", getproctid());
 }
+
+/**
+ * @tc.name: Watchdog GetReservedTimeForLogging Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_GetReservedTimeForLogging_001, TestSize.Level1)
+{
+    int ret = Watchdog::GetInstance().GetReservedTimeForLogging();
+    EXPECT_TRUE(ret >= 3500);
+    ret = Watchdog::GetInstance().GetReservedTimeForLogging();
+    EXPECT_TRUE(ret >= 3500);
+}
 } // namespace HiviewDFX
 } // namespace OHOS

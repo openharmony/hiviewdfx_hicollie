@@ -86,6 +86,7 @@ public:
     std::string StopSample(int sampleCount);
     bool CheckSample(const TimePoint& endTime, int64_t durationTime);
     SamplerResult GetSamplerResult();
+    int32_t GetReservedTimeForLogging();
 
 public:
     std::string currentScene_;
@@ -196,6 +197,7 @@ private:
     AppStartContent scrollSlowContent_;
     SampleFreezeInfo sampleFreezeInfo_;
     bool initAsyncStack_ {false};
+    int reservedTime_ {DEFAULT_RESERVED_TIME};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
