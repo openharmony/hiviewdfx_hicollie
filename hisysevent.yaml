@@ -68,6 +68,7 @@ MAIN_THREAD_JANK:
   APP_START_JIFFIES_TIME: {type: INT64, desc: app start jiffies time}
   HEAVIEST_STACK: {type: STRING, desc: heaviest stack}
   LOG_OVER_LIMIT: {type: BOOL, desc: log over limit}
+  TRACE_DUMP_CODE: {type: INT32, desc: app trace dump code}
 
 SCROLL_TIMEOUT:
   __BASE: {type: FAULT, level: CRITICAL, tag: STABILITY, desc: scroll timeout}
