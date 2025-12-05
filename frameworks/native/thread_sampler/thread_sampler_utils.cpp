@@ -16,6 +16,7 @@
 
 #include <cstdio>
 #include <ctime>
+#include <sstream>
 
 #include "dfx_frame_formatter.h"
 #include "unique_stack_table.h"
@@ -40,15 +41,10 @@ std::string TimeFormat(uint64_t time)
 {
     uint64_t nsec = time % NANOSEC_PER_SEC;
     time_t sec = static_cast<time_t>(time / NANOSEC_PER_SEC);
-    char timeChars[FORMAT_TIME_LEN];
+    char timeChars[FORMAT_TIME_LEN] = {0};
     struct tm localTime;
-    if (localtime_r(&sec, &localTime) == nullptr) {
-        return "";
-    }
-    size_t sz = strftime(timeChars, FORMAT_TIME_LEN, "%Y-%m-%d-%H-%M-%S", &localTime);
-    if (sz == 0) {
-        return "";
-    }
+    localtime_r(&sec, &localTime);
+    (void)strftime(timeChars, FORMAT_TIME_LEN, "%Y-%m-%d-%H-%M-%S", &localTime);
     std::string s = timeChars;
     uint64_t usec = nsec / NANOSEC_PER_MICROSEC;
     std::string usecStr = std::to_string(usec);
@@ -86,32 +82,28 @@ std::vector<uintptr_t> GetAsyncStackPcsByStackId(uint64_t stackId)
     std::vector<uintptr_t> pcVec;
     StackId stkId;
     stkId.value = stackId;
-    if (!UniqueStackTable::Instance()->GetPcsByStackId(stkId, pcVec)) {
-        XCOLLIE_LOGE("GetStackPcsByStackId failed, stackId %{public}" PRIu64 " not exist", stackId);
-    }
+    UniqueStackTable::Instance()->GetPcsByStackId(stkId, pcVec);
     return pcVec;
 }
 
 std::string GetStackByPcs(const std::vector<uintptr_t>& pcVec, const std::shared_ptr<Unwinder>& unwinder,
                           const std::shared_ptr<DfxMaps>& maps, uint64_t snapshotTime)
 {
-    std::string stack;
+    std::stringstream stack;
     if (unwinder == nullptr || maps == nullptr) {
-        XCOLLIE_LOGE("GetStackByPcs failed, unwinder or maps is nullptr");
-        return stack;
+        return stack.str();
     }
     if (snapshotTime != 0) {
-        stack += "Timestamp:";
-        stack += TimeFormat(snapshotTime) + "\n";
+        stack << "Timestamp:" << TimeFormat(snapshotTime) << "\n";
     }
     for (size_t i = 0; i < pcVec.size(); i++) {
         DfxFrame frame;
         unwinder->GetFrameByPc(pcVec[i], maps, frame);
         frame.index = i;
         auto frameStr = DfxFrameFormatter::GetFrameStr(frame);
-        stack += frameStr;
+        stack << frameStr;
     }
-    return stack;
+    return stack.str();
 }
 }  // end of namespace HiviewDFX
 }  // end of namespace OHOS

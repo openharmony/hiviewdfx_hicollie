@@ -113,7 +113,7 @@ int ThreadSampler::GetMapByPc(uintptr_t pc, std::shared_ptr<DfxMap>& map, void* 
     return unwindInfo->maps->FindMapByAddr(pc, map) ? 0 : -1;
 }
 
-bool ThreadSampler::Init(int collectStackCount, bool recordSubmitterStack)
+bool ThreadSampler::Init(size_t collectStackCount, bool recordSubmitterStack)
 {
     if (init_) {
         return true;
@@ -138,7 +138,7 @@ bool ThreadSampler::Init(int collectStackCount, bool recordSubmitterStack)
         return false;
     }
 
-    if (collectStackCount <= 0) {
+    if (collectStackCount == 0) {
         XCOLLIE_LOGE("Invalid collectStackCount\n");
         Deinit();
         return false;

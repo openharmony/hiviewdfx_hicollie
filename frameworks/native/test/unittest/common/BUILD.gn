@@ -226,10 +226,11 @@ ohos_unittest("ThreadSamplerTest") {
   module_out_path = module_output_path
   sources = [ "thread_sampler_test.cpp" ]
   configs = [ ":module_private_config" ]
-  deps = []
+  deps = [ "${hicollie_libthread_sampler}:libthread_sampler_static" ]
   external_deps = [
     "c_utils:utils",
     "faultloggerd:libasync_stack",
+    "faultloggerd:libstack_printer",
     "faultloggerd:libunwinder",
     "ffrt:libffrt",
     "googletest:gtest_main",

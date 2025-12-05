@@ -14,13 +14,19 @@
 import("//base/hiviewdfx/hicollie/hicollie.gni")
 import("//build/ohos.gni")
 
+config("thread_sampler_config") {
+  visibility = [ "*:*" ]
+
+  include_dirs = [ "include" ]
+}
+
 ohos_shared_library("libthread_sampler") {
   sources = [
     "thread_sampler.cpp",
     "thread_sampler_api.cpp",
     "thread_sampler_utils.cpp",
   ]
-  include_dirs = [ "${hicollie_libthread_sampler}/include" ]
+  public_configs = [ ":thread_sampler_config" ]
 
   external_deps = [
     "c_utils:utils",
@@ -40,4 +46,26 @@ ohos_shared_library("libthread_sampler") {
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"
   version_script = "libthread_sampler.map"
+}
+
+ohos_static_library("libthread_sampler_static") {
+  sources = [
+    "thread_sampler.cpp",
+    "thread_sampler_api.cpp",
+    "thread_sampler_utils.cpp",
+  ]
+  public_configs = [ ":thread_sampler_config" ]
+
+  external_deps = [
+    "c_utils:utils",
+    "faultloggerd:libasync_stack",
+    "faultloggerd:libstack_printer",
+    "faultloggerd:libunwinder",
+    "hilog:libhilog",
+  ]
+
+  defines = []
+
+  part_name = "hicollie"
+  subsystem_name = "hiviewdfx"
 }
