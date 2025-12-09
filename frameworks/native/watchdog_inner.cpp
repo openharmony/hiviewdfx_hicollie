@@ -522,9 +522,10 @@ bool WatchdogInner::EnableAppStartSample(AppStartContent& startContent, int64_t 
 #if defined(__aarch64__)
 bool WatchdogInner::NeedOpenAsyncStack()
 {
-    if (isSystemApp_) {
-        const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
-        if (!(debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0)) {
+    const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
+    bool isDebuggable = (debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0);
+    if (!isDebuggable) {
+        if (isSystemApp_ || !IsBetaVersion()) {
             return false;
         }
     }
