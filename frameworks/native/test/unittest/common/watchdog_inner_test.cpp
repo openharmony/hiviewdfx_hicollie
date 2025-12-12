@@ -101,6 +101,14 @@ void TestInitAppStartSample(AppStartContent& startContent)
     startContent.startUpDuration = 5000; // 5000: test value
 }
 
+void TestSleep(int second)
+{
+    int left = second;
+    while (left > 0) {
+        left = sleep(left);
+    }
+}
+
 /**
  * @tc.name: WatchdogInner TriggerTimerCountTask Test
  * @tc.desc: add teatcase
@@ -1410,6 +1418,43 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_GetReservedTimeForLogging_001, TestSiz
     EXPECT_TRUE(ret >= 3500);
     ret = WatchdogInner::GetInstance().GetReservedTimeForLogging();
     EXPECT_TRUE(ret >= 3500);
+}
+
+/**
+ * @tc.name: WatchdogInner IPCProxyLimitCallback Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInner_IPCProxyLimitCallback_001, TestSize.Level1)
+{
+    pid_t childPid = fork();
+    if (childPid < 0) {
+        printf("Failed to fork process.\n");
+    } else if (childPid == 0) {
+        uint64_t num = 15000;
+        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
+        int pid = getpid();
+        std::string procPath = "/proc/" + std::to_string(pid);
+        EXPECT_TRUE(OHOS::FileExists(procPath));
+        int second = 10;
+        TestSleep(10);
+        num = 16000;
+        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
+        EXPECT_TRUE(OHOS::FileExists(procPath));
+        TestSleep(10);
+        num = 20000;
+        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
+        TestSleep(15);
+        setuid(num);
+        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
+        EXPECT_TRUE(!OHOS::FileExists(procPath));
+        _exit(0);
+    } else {
+        if (waitpid(childPid, nullptr, 0) != childPid) {
+            printf("Failed to fork process, pid: %d, errno: %d.\n", childPid, errno);
+        }
+        printf("waitpid succcess, pid: %d.\n", childPid);
+    }
 }
 } // namespace HiviewDFX
 } // namespace OHOS
