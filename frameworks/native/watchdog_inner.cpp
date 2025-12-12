@@ -956,6 +956,7 @@ int WatchdogInner::AddThread(const std::string &name,
     IpcCheck();
 
     if (priority < PRIORITY_MIN || priority > PRIORITY_MAX) {
+        XCOLLIE_LOGE("Add thread fail, invalid priority!");
         return -1;
     }
     auto taskPriority = static_cast<AppExecFwk::EventQueue::Priority>(priority);
