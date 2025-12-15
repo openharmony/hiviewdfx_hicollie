@@ -148,6 +148,7 @@ private:
     bool InstallThreadSamplerSignal();
     void UninstallThreadSamplerSignal();
     void ResetFreezeSampleFlags();
+    void IPCProxyLimitCallback(uint64_t num);
 
     static SigActionType threadSamplerSigHandler_;
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -198,6 +199,7 @@ private:
     SampleFreezeInfo sampleFreezeInfo_;
     bool initAsyncStack_ {false};
     int reservedTime_ {DEFAULT_RESERVED_TIME};
+    uint64_t lastIpcCallbackTime_ {0};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

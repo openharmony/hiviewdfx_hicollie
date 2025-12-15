@@ -53,6 +53,8 @@ constexpr int SET_TIMES_FLAG = 1;
 constexpr int ENABLE_TREE_FORMAT = 1;
 constexpr int DEFAULT_RESERVED_TIME = 3500; // 3.5s
 constexpr int BETA_RESERVED_TIME = 6000; // 6s
+constexpr uint64_t IPC_CALLBACK_INTERVAL = 10 * 1000; // 10s
+constexpr uint64_t MAX_IPC_CALLBACK_LIMIT = 20000;
 
 using TimePoint = AppExecFwk::InnerEvent::TimePoint;
 

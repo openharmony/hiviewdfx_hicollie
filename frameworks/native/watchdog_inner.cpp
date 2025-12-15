@@ -1150,11 +1150,17 @@ bool WatchdogInner::IsCallbackLimit(unsigned int flag)
     return ret;
 }
 
-void IPCProxyLimitCallback(uint64_t num)
+void WatchdogInner::IPCProxyLimitCallback(uint64_t num)
 {
-    XCOLLIE_LOGE("ipc proxy num %{public}" PRIu64 " exceed limit", num);
-    if (getuid() >= MIN_APP_UID && IsBetaVersion()) {
-        XCOLLIE_LOGI("Process is going to exit, reason: ipc proxy num exceed limit");
+    uint64_t now = GetCurrentTickMillseconds();
+    if (now  - lastIpcCallbackTime_ > IPC_CALLBACK_INTERVAL) {
+        XCOLLIE_LOGE("ipc proxy num %{public}" PRIu64 " exceed limit", num);
+        lastIpcCallbackTime_ = now;
+    }
+    if (num >= MAX_IPC_CALLBACK_LIMIT && getuid() >= MIN_APP_UID && IsBetaVersion()) {
+        XCOLLIE_LOGI("Process is going to exit, reason: "
+            "ipc proxy num %{public}" PRIu64 " exceed limit %{public}" PRIu64 ", "
+            "only beta version.", num, MAX_IPC_CALLBACK_LIMIT);
         _exit(0);
     }
 }
@@ -1257,8 +1263,9 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             if (getuid() >= MIN_APP_UID) {
                 ReadAppStartConfig(APP_START_CONFIG);
             }
-            const uint64_t limitNum = 20000;
-            IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
+            const uint64_t limitNum = 15000;
+            IPCDfx::SetIPCProxyLimit(limitNum,
+                std::bind(&WatchdogInner::IPCProxyLimitCallback, this, std::placeholders::_1));
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
                 SetThreadSignalMask(SIGDUMP, true, true);
