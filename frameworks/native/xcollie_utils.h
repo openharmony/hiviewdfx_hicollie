@@ -110,7 +110,7 @@ bool IsDeveloperOpen();
 
 bool IsBetaVersion();
 
-bool IsAsyncStackEnable();
+bool IsFansStage();
 
 bool IsAsyncStackBlockBundle(const std::string& bundleName);
 
