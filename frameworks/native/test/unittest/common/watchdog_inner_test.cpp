@@ -1340,7 +1340,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StopSample_001, TestSize.Level1)
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitAsyncStack, TestSize.Level1)
 {
-    ASSERT_TRUE(IsAsyncStackEnable());
     std::string bundleName = "test";
     ASSERT_FALSE(IsAsyncStackBlockBundle(bundleName));
 

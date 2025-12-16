@@ -219,11 +219,10 @@ bool IsBetaVersion()
     return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
 }
 
-bool IsAsyncStackEnable()
+bool IsFansStage()
 {
-    const char *const asyncStackSwich = "persist.hiviewdfx.async_stack.switch";
-    bool isAsyncStackEnable = OHOS::system::GetParameter(asyncStackSwich, "enable") == "enable";
-    return isAsyncStackEnable;
+    const char *const fansStage = "const.product.dfx.fans.stage";
+    return OHOS::system::GetParameter(fansStage, "0") == "1";
 }
 
 bool IsAsyncStackBlockBundle(const std::string& bundleName)

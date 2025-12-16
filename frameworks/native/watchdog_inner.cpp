@@ -39,6 +39,7 @@
 #include "xcollie_utils.h"
 #include "dfx_define.h"
 #include "parameter.h"
+#include "parameters.h"
 #include "file_ex.h"
 #include "xcollie_ffrt_task.h"
 #include "event_handler.h"
@@ -522,17 +523,38 @@ bool WatchdogInner::EnableAppStartSample(AppStartContent& startContent, int64_t 
 #if defined(__aarch64__)
 bool WatchdogInner::NeedOpenAsyncStack()
 {
-    const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
-    bool isDebuggable = (debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0);
-    if (!isDebuggable) {
-        if (isSystemApp_ || !IsBetaVersion()) {
-            return false;
-        }
+    std::string stackSwitchRes = OHOS::system::GetParameter("persist.hiviewdfx.async_stack.switch", "enable");
+    // force open async stack
+    if (stackSwitchRes == "force") {
+        return true;
     }
-    if (!IsAsyncStackEnable() || IsAsyncStackBlockBundle(bundleName_)) {
+    // if not equal enable, do not open async stack
+    if (stackSwitchRes != "enable") {
         return false;
     }
-    return true;
+    // if bundle name in backlist, do not open async stack
+    if (IsAsyncStackBlockBundle(bundleName_)) {
+        return false;
+    }
+    const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
+    bool isDebuggable = (debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0);
+    // if debuggable hap, open async stack directly
+    if (isDebuggable) {
+        return true;
+    }
+    // system release hap, do not open async stack
+    if (isSystemApp_) {
+        return false;
+    }
+    // beta version or fans stage, open async stack
+    if (IsBetaVersion() || IsFansStage()) {
+        return true;
+    }
+    // other versions must have the 'const. dfx. sync_stack. enable' parameter set to true
+    if (OHOS::system::GetBoolParameter("const.dfx.async_stack.enable", false)) {
+        return true;
+    }
+    return false;
 }
 
 void WatchdogInner::InitAsyncStackIfNeed()
