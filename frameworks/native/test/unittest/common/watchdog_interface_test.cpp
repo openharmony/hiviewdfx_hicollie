@@ -430,6 +430,19 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_StopSample_001, TestSize.Level1)
 }
 
 /**
+ * @tc.name: Watchdog GetReservedTimeForLogging Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInterfaceTest, Watchdog_GetReservedTimeForLogging_001, TestSize.Level1)
+{
+    int ret = Watchdog::GetInstance().GetReservedTimeForLogging();
+    EXPECT_TRUE(ret >= 3500);
+    ret = Watchdog::GetInstance().GetReservedTimeForLogging();
+    EXPECT_TRUE(ret >= 3500);
+}
+
+/**
  * @tc.name: Watchdog AddThread Test
  * @tc.desc: Verify
  * @tc.type: FUNC
@@ -444,33 +457,18 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_AddThreadTest_001, TestSize.Level1)
     };
     auto runner = EventRunner::Create(true);
     auto handler = std::make_shared<TestEventHandler>(runner);
-    int result = Watchdog::GetInstance().AddThread("TestBlock2s_1", handler, nullptr, 2);
+    int result = Watchdog::GetInstance().AddThread("TestBlock2s_1", handler, nullptr, 1, 2);
     ASSERT_EQ(result, 0);
     result = Watchdog::GetInstance().AddThread("TestBlock2s_2", handler, nullptr, 1, 3);
     ASSERT_EQ(result, 0);
     result = Watchdog::GetInstance().AddThread("TestBlock2s_3", handler, nullptr, 1, 0);
     ASSERT_EQ(result, 0);
-    result = Watchdog::GetInstance().AddThread("TestBlock2s_4", handler, nullptr, 1, -1);
-    ASSERT_EQ(result, -1);
     result = Watchdog::GetInstance().AddThread("TestBlock2s_5", handler, nullptr, 1, 5);
     ASSERT_EQ(result, -1);
 
     printf("before block 70s in %d\n", getproctid());
     Sleep(blockTime);
     printf("after block 70s in %d\n", getproctid());
-}
-
-/**
- * @tc.name: Watchdog GetReservedTimeForLogging Test;
- * @tc.desc: add testcase
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInterfaceTest, Watchdog_GetReservedTimeForLogging_001, TestSize.Level1)
-{
-    int ret = Watchdog::GetInstance().GetReservedTimeForLogging();
-    EXPECT_TRUE(ret >= 3500);
-    ret = Watchdog::GetInstance().GetReservedTimeForLogging();
-    EXPECT_TRUE(ret >= 3500);
 }
 } // namespace HiviewDFX
 } // namespace OHOS

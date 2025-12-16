@@ -276,6 +276,12 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendEvent_001, TestSize.Level1)
     auto taskFunc = [&taskResult]() { taskResult = 1; };
     const std::string name = "WatchdogTaskTest_SendEvent_001";
     WatchdogTask task(name, taskFunc, 0, 2111, true);
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<EventHandler>(runner);
+    WatchdogTask task1("WatchdogTaskTest_003", handler, nullptr, 5,
+        AppExecFwk::EventQueue::Priority::IMMEDIATE);
+    task1.RunHandlerCheckerTask();
+    EXPECT_TRUE(task1.checker != nullptr);
     task.SendEvent("11", "keyMsg", "11111");
     EXPECT_TRUE(!name.empty());
 }

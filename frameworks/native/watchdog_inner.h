@@ -35,13 +35,14 @@
 
 namespace OHOS {
 namespace HiviewDFX {
-
 class WatchdogInner : public Singleton<WatchdogInner> {
     DECLARE_SINGLETON(WatchdogInner);
+
+    static const uint64_t PRIORITY_IMMEDIATE = 1;
 public:
     std::map<int64_t, int> taskIdCnt;
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
-        TimeOutCallback timeOutCallback, uint64_t interval, uint32_t priority);
+        TimeOutCallback timeOutCallback, uint64_t interval, uint32_t priority = PRIORITY_IMMEDIATE);
     void RunOneShotTask(const std::string& name, Task&& task, uint64_t delay);
     void RunPeriodicalTask(const std::string& name, Task&& task, uint64_t interval, uint64_t delay);
     int64_t RunXCollieTask(const std::string& name, uint64_t timeout, XCollieCallback func, void *arg,
