@@ -309,7 +309,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     int32_t pid = getprocpid();
     bool writeResult = WatchdogInner::WriteStringToFile(pid, "0");
     printf("writeResult %d\n", writeResult);
-    std::string eventName = WatchdogInner::GetInstance().buissnessThreadInfo_.empty() ?
+    std::string eventName = WatchdogInner::GetInstance().CheckBusinessEmpty() ?
         "MAIN_THREAD_JANK" : "BUSSINESS_THREAD_JANK";
     bool ret = WatchdogInner::GetInstance().ReportMainThreadEvent(gettid(), eventName);
     printf("ReportMainThreadEvent ret=%s\n", ret ? "true" : "fasle");
@@ -344,8 +344,10 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_004, TestSize.Level1)
 {
-    WatchdogInner::GetInstance().buissnessThreadInfo_.insert(getproctid());
-    EXPECT_TRUE(WatchdogInner::GetInstance().buissnessThreadInfo_.size() > 0);
+    int64_t tid = getproctid();
+    WatchdogInner::GetInstance().InsertOrRemoveInfo(tid);
+    bool result = WatchdogInner::GetInstance().CheckBusinessByTid(tid);
+    EXPECT_TRUE(result);
     printf("ret=%d\n", WatchdogInner::GetInstance().ReportMainThreadEvent(gettid(),
         "BUSSINESS_THREAD_JANK"));
     WatchdogInner::GetInstance().StartTraceProfile();

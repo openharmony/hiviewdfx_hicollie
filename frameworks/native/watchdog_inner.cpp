@@ -666,7 +666,7 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
             stackContent_.collectCount++;
         } else if (stackContent_.collectCount == sampleCount) {
             g_isDumpStack.store(false);
-            std::string eventName = buissnessThreadInfo_.empty() ? MAIN_THREAD_JANK : BUSSINESS_THREAD_JANK;
+            std::string eventName = CheckBusinessEmpty() ? MAIN_THREAD_JANK : BUSSINESS_THREAD_JANK;
             ReportMainThreadEvent(tid, eventName);
             stackContent_.reportTimes--;
             isMainThreadStackEnabled_ = true;
@@ -843,7 +843,7 @@ void WatchdogInner::DumpTraceTask(int32_t interval)
         if (traceContent_.dumpCount >= COLLECT_TRACE_MIN) {
             CreateDir(WATCHDOG_DIR);
             appCaller_.actionId = UCollectClient::ACTION_ID_DUMP_TRACE;
-            appCaller_.isBusinessJank = !buissnessThreadInfo_.empty();
+            appCaller_.isBusinessJank = !CheckBusinessEmpty();
             if (xcollieFfrtTask_) {
                 xcollieFfrtTask_->SubmitDumpTraceTask(appCaller_, traceCollector_);
                 XCOLLIE_LOGI("success to submit dump trace");
@@ -1806,12 +1806,34 @@ void InitEndFunc(const char* name)
     DistributeEnd(nameStr, WatchdogInner::GetInstance().bussinessBeginTime_);
 }
 
+bool WatchdogInner::CheckBusinessByTid(int64_t tid)
+{
+    std::lock_guard<std::mutex> lock(businessLock_);
+    return buissnessThreadInfo_.find(tid) != buissnessThreadInfo_.end();
+}
+
+bool WatchdogInner::CheckBusinessEmpty()
+{
+    std::lock_guard<std::mutex> lock(businessLock_);
+    return buissnessThreadInfo_.empty();
+}
+
+void WatchdogInner::InsertOrRemoveInfo(int64_t tid, bool isRemove)
+{
+    std::lock_guard<std::mutex> lock(businessLock_);
+    if (isRemove) {
+        buissnessThreadInfo_.erase(tid);
+    } else {
+        buissnessThreadInfo_.insert(tid);
+    }
+}
+
 void WatchdogInner::InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc,
     WatchdogInnerEndFunc* endFunc)
 {
     int64_t tid = getproctid();
     if (beginFunc && endFunc) {
-        if (buissnessThreadInfo_.find(tid) != buissnessThreadInfo_.end()) {
+        if (CheckBusinessByTid(tid)) {
             XCOLLIE_LOGI("Tid =%{public}" PRId64 "already exits, "
                 "no repeated initialization.", tid);
             return;
@@ -1821,12 +1843,12 @@ void WatchdogInner::InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc,
         }
         *beginFunc = InitBeginFunc;
         *endFunc = InitEndFunc;
-        buissnessThreadInfo_.insert(tid);
+        InsertOrRemoveInfo(tid);
     } else {
-        if (buissnessThreadInfo_.find(tid) != buissnessThreadInfo_.end()) {
+        if (CheckBusinessByTid(tid)) {
             XCOLLIE_LOGI("Remove already init tid=%{public}." PRId64, tid);
             mainRunner_->SetMainLooperWatcher(DistributeStart, DistributeEnd);
-            buissnessThreadInfo_.erase(tid);
+            InsertOrRemoveInfo(tid, true);
         }
     }
 }
