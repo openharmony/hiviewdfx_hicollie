@@ -140,6 +140,9 @@ private:
     void ReadAppStartConfig(const std::string& filePath);
     bool EnableAppStartSample(AppStartContent& startContent, int64_t durationTime, bool isScroll);
     std::string GetBundleName();
+    bool CheckBusinessByTid(int64_t tid);
+    bool CheckBusinessEmpty();
+    void InsertOrRemoveInfo(int64_t tid, bool isRemove = false);
 #if defined(__aarch64__)
     void InitAsyncStackIfNeed();
     bool NeedOpenAsyncStack();
@@ -160,6 +163,7 @@ private:
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
     std::set<std::string> taskNameSet_;
+    std::mutex businessLock_;
     std::set<int64_t> buissnessThreadInfo_;
     std::shared_ptr<AppExecFwk::EventRunner> mainRunner_;
     int cntCallback_;
