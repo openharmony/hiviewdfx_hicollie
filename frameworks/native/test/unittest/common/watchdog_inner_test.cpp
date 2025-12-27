@@ -1457,5 +1457,95 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_IPCProxyLimitCallback_001, TestSize.Le
         printf("waitpid succcess, pid: %d.\n", childPid);
     }
 }
+
+/**
+ * @tc.name: WatchdogInner ConfigEventPolicy or SetEventConfig Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInner_SetValue_001, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    int ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
+    EXPECT_EQ(ret, -1);
+    ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
+    EXPECT_EQ(ret, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ConvertStrToNum Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInner_ConvertStrToNum_001, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    std::string value = "";
+    int defaultValue = -10;
+    std::string key = KEY_SAMPLE_INTERVAL;
+    int ret = WatchdogInner::GetInstance().ConvertStrToNum(paramsMap, key, value, defaultValue);
+    EXPECT_EQ(ret, -1);
+    EXPECT_EQ(value, "-1");
+    defaultValue = 10;
+    ret = WatchdogInner::GetInstance().ConvertStrToNum(paramsMap, key, value, defaultValue);
+    EXPECT_EQ(ret, 10);
+    EXPECT_EQ(value, "10");
+    paramsMap[KEY_LOG_TYPE] = "1";
+    paramsMap[KEY_SAMPLE_INTERVAL] = "49";
+    ret = WatchdogInner::GetInstance().ConvertStrToNum(paramsMap, key, value, defaultValue);
+    EXPECT_EQ(ret, 49);
+    EXPECT_EQ(value, "49");
+}
+
+/**
+ * @tc.name: WatchdogInner CheckSampleParam Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInner_CheckSampleParam_001, TestSize.Level1)
+{
+    std::map<std::string, std::string> paramsMap;
+    bool  ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap, true);
+    EXPECT_TRUE(ret);
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_LOG_TYPE] = "1";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_INTERVAL] = "49";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_INTERVAL] = "501";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_INTERVAL] = "100";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "-2";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "-3";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_IGNORE_STARTUP_TIME] = "10";
+    paramsMap[KEY_SAMPLE_COUNT] = "0";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_COUNT] = "500";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_COUNT] = "10";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "0";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "11";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(!ret);
+    paramsMap[KEY_SAMPLE_REPORT_TIMES] = "2";
+    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    EXPECT_TRUE(ret);
+}
 } // namespace HiviewDFX
 } // namespace OHOS

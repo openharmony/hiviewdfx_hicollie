@@ -1892,8 +1892,9 @@ void WatchdogInner::UpdateJankParam(SampleJankParams& params)
 }
 
 int WatchdogInner::ConvertStrToNum(const std::map<std::string, std::string>& paramsMap, const std::string& key,
-    int defaultValue)
+    std::string& value, int defaultValue)
 {
+    value = std::to_string(defaultValue);
     auto it = paramsMap.find(key);
     if (it == paramsMap.end()) {
         if (defaultValue < 0) {
@@ -1902,17 +1903,17 @@ int WatchdogInner::ConvertStrToNum(const std::map<std::string, std::string>& par
         return defaultValue;
     }
 
-    std::string str = it->second;
-    if (str.empty() && defaultValue >= 0) {
+    value = it->second;
+    if (value.empty() && defaultValue >= 0) {
         return defaultValue;
     }
 
     int num = -1;
-    if (!str.empty() && str.size() < std::to_string(INT32_MAX).length()) {
-        if (std::all_of(std::begin(str), std::end(str), [] (const char &c) {
+    if (!value.empty() && value.size() < std::to_string(INT32_MAX).length()) {
+        if (std::all_of(std::begin(value), std::end(value), [] (const char &c) {
             return isdigit(c);
         })) {
-            num = std::stoi(str);
+            num = std::stoi(value);
         }
     }
     return num;
@@ -1933,34 +1934,36 @@ bool WatchdogInner::GetAutoStopSampling(const std::map<std::string, std::string>
 
 bool WatchdogInner::CheckSampleParam(const std::map<std::string, std::string>& paramsMap, bool keyNeedExist)
 {
-    int sampleInterval = ConvertStrToNum(paramsMap, KEY_SAMPLE_INTERVAL, keyNeedExist ? -1 : SAMPLE_DEFAULT_INTERVAL);
+    std::string value = "";
+    int sampleInterval = ConvertStrToNum(paramsMap, KEY_SAMPLE_INTERVAL, value, keyNeedExist ? -1 :
+        SAMPLE_DEFAULT_INTERVAL);
     if (sampleInterval < SAMPLE_INTERVAL_MIN || sampleInterval > SAMPLE_INTERVAL_MAX) {
         XCOLLIE_LOGE("Set the range of sample stack is from %{public}d to %{public}d, "
-            "interval: %{public}d.", SAMPLE_INTERVAL_MIN, SAMPLE_INTERVAL_MAX, sampleInterval);
+            "sampleInterval: %{public}s.", SAMPLE_INTERVAL_MIN, SAMPLE_INTERVAL_MAX, value.c_str());
         return false;
     }
 
-    int ignoreStartUpTime = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_TIME, keyNeedExist ? -1 :
+    int ignoreStartUpTime = ConvertStrToNum(paramsMap, KEY_IGNORE_STARTUP_TIME, value, keyNeedExist ? -1 :
         DEFAULT_IGNORE_STARTUP_TIME);
     if (ignoreStartUpTime < IGNORE_STARTUP_TIME_MIN) {
         XCOLLIE_LOGE("Set the minimum of ignore startup interval is %{public}d s, "
-            "interval: %{public}d.", IGNORE_STARTUP_TIME_MIN, ignoreStartUpTime);
+            "ignoreStartUpTime: %{public}s.", IGNORE_STARTUP_TIME_MIN, value.c_str());
         return false;
     }
 
-    int sampleCount = ConvertStrToNum(paramsMap, KEY_SAMPLE_COUNT, keyNeedExist ? -1 : SAMPLE_DEFAULT_COUNT);
+    int sampleCount = ConvertStrToNum(paramsMap, KEY_SAMPLE_COUNT, value, keyNeedExist ? -1 : SAMPLE_DEFAULT_COUNT);
     int maxSampleCount = MAX_SAMPLE_STACK_TIMES / sampleInterval - SAMPLE_EXTRA_COUNT;
     if (sampleCount < SAMPLE_COUNT_MIN || sampleCount > maxSampleCount) {
-        XCOLLIE_LOGE("Set the range of sample count, min value: %{public}d max value: %{public}d, count: %{public}d.",
-            SAMPLE_COUNT_MIN, maxSampleCount, sampleCount);
+        XCOLLIE_LOGE("Set the range of sample count, min value: %{public}d max value: %{public}d, "
+            "sampleCount: %{public}s.", SAMPLE_COUNT_MIN, maxSampleCount, value.c_str());
         return false;
     }
 
-    int reportTimes = ConvertStrToNum(paramsMap, KEY_SAMPLE_REPORT_TIMES, keyNeedExist ? -1 :
+    int reportTimes = ConvertStrToNum(paramsMap, KEY_SAMPLE_REPORT_TIMES, value, keyNeedExist ? -1 :
         SAMPLE_DEFAULT_REPORT_TIMES);
     if (reportTimes < SAMPLE_REPORT_TIMES_MIN || reportTimes > SAMPLE_REPORT_TIMES_MAX) {
         XCOLLIE_LOGE("Set the range of sample reportTimes is from %{public}d to %{public}d, "
-            "reportTimes: %{public}d", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, reportTimes);
+            "reportTimes: %{public}s", SAMPLE_REPORT_TIMES_MIN, SAMPLE_REPORT_TIMES_MAX, value.c_str());
         return false;
     }
 
@@ -1983,7 +1986,8 @@ int WatchdogInner::SetEventConfig(const std::map<std::string, std::string>& para
         return -1;
     }
 
-    int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE);
+    std::string value = "";
+    int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE, value);
     size_t size = paramsMap.size();
     switch (logType) {
         case CatchLogType::LOGTYPE_NONE:
@@ -2009,7 +2013,7 @@ int WatchdogInner::SetEventConfig(const std::map<std::string, std::string>& para
             break;
         }
         default: {
-            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}d", logType);
+            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}s", value.c_str());
             return -1;
         }
     }
@@ -2018,7 +2022,8 @@ int WatchdogInner::SetEventConfig(const std::map<std::string, std::string>& para
 
 int WatchdogInner::ConfigEventPolicy(const std::map<std::string, std::string>& paramsMap)
 {
-    int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE, 0);
+    std::string value = "";
+    int logType = ConvertStrToNum(paramsMap, KEY_LOG_TYPE, value, 0);
     switch (logType) {
         case CatchLogType::LOGTYPE_NONE:
         case CatchLogType::LOGTYPE_COLLECT_TRACE: {
@@ -2038,7 +2043,7 @@ int WatchdogInner::ConfigEventPolicy(const std::map<std::string, std::string>& p
             break;
         }
         default: {
-            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}d", logType);
+            XCOLLIE_LOGE("Set the log_type can only be 0 1 2, logType: %{public}s", value.c_str());
             return -1;
         }
     }
