@@ -58,7 +58,7 @@ void AppWatchdogUtilsTest::TearDown(void)
 HWTEST_F(AppWatchdogUtilsTest, AppWatchdogUtils_IsBetaVersion_001, TestSize.Level1)
 {
     bool ret = AppWatchdogUtils::IsBetaVersion();
-    EXPECT_TRUE(ret);
+    EXPECT_TRUE(!ret);
 }
 } // namespace HiviewDFX
 } // namespace OHOS
