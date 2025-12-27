@@ -129,7 +129,7 @@ private:
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
     void UpdateJankParam(SampleJankParams& params);
     int ConvertStrToNum(const std::map<std::string, std::string>& paramsMap, const std::string& key,
-        int defaultValue = -1);
+        std::string& value, int defaultValue = -1);
     bool GetAutoStopSampling(const std::map<std::string, std::string>& paramsMap, int& autoStopSampling);
     bool CheckSampleParam(const std::map<std::string, std::string>& paramsMap, bool keyNeedExist = true);
     std::string SaveFreezeStackToFile(int32_t pid);
