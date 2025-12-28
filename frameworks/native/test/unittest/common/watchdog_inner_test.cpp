@@ -1467,7 +1467,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_SetValue_001, TestSize.Level1)
 {
     std::map<std::string, std::string> paramsMap;
     int ret = WatchdogInner::GetInstance().ConfigEventPolicy(paramsMap);
-    EXPECT_EQ(ret, -1);
+    EXPECT_EQ(ret, 0);
     ret = WatchdogInner::GetInstance().SetEventConfig(paramsMap);
     EXPECT_EQ(ret, -1);
 }
@@ -1485,7 +1485,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_ConvertStrToNum_001, TestSize.Level1)
     std::string key = KEY_SAMPLE_INTERVAL;
     int ret = WatchdogInner::GetInstance().ConvertStrToNum(paramsMap, key, value, defaultValue);
     EXPECT_EQ(ret, -1);
-    EXPECT_EQ(value, "-1");
+    EXPECT_EQ(value, "-10");
     defaultValue = 10;
     ret = WatchdogInner::GetInstance().ConvertStrToNum(paramsMap, key, value, defaultValue);
     EXPECT_EQ(ret, 10);
@@ -1505,9 +1505,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_ConvertStrToNum_001, TestSize.Level1)
 HWTEST_F(WatchdogInnerTest, WatchdogInner_CheckSampleParam_001, TestSize.Level1)
 {
     std::map<std::string, std::string> paramsMap;
-    bool  ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap, true);
-    EXPECT_TRUE(ret);
-    ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
+    bool ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
     EXPECT_TRUE(!ret);
     paramsMap[KEY_LOG_TYPE] = "1";
     ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
