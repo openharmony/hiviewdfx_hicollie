@@ -123,7 +123,7 @@ WatchdogTask::WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, u
 #endif
 }
 
-WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval,  bool isOneshot)
+WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
       arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {

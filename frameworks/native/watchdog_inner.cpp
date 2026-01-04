@@ -75,21 +75,23 @@ constexpr int DURATION_TIME = 150;
 constexpr int DISTRIBUTE_TIME = 2000;
 constexpr int DUMPTRACE_TIME = 450;
 constexpr const char* KEY_SCB_STATE = "com.ohos.sceneboard";
+constexpr const char* MEDIA_SERVICE = "media_service";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
-constexpr int INTERVAL_KICK_TIME = 6 * 1000;
 constexpr uint32_t AUDIO_SERVER_UID = 1041;
 constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
 constexpr uint32_t FOUNDATION_UID = 5523;
 constexpr uint32_t RENDER_SERVICE_UID = 1003;
+constexpr uint32_t MEDIA_SERVICE_UID = 1013;
 constexpr int SERVICE_WARNING = 1;
+constexpr const char* KICK_WATCHDOG_TASK = "Kick_Watchdog_Task";
 constexpr const char* SYS_KERNEL_HUNGTASK_USERLIST = "/sys/kernel/hungtask/userlist";
 constexpr const char* HUNGTASK_USERLIST = "/proc/sys/hguard/user_list";
 constexpr const char* ON_KICK_TIME = "on,72";
-constexpr const char* ON_KICK_TIME_EXTRA = "on,10,foundation";
+constexpr const char* ON_KICK_TIME_EXTRA = "on,10,";
 constexpr const char* KICK_TIME = "kick";
-constexpr const char* KICK_TIME_EXTRA = "kick,foundation";
+constexpr const char* KICK_TIME_EXTRA = "kick,";
 constexpr int32_t NOT_OPEN = -1;
 constexpr const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
@@ -102,7 +104,7 @@ constexpr uint64_t MIN_IPC_CHECK_INTERVAL = 10;
 constexpr uint64_t MAX_IPC_CHECK_INTERVAL = 30;
 constexpr uint64_t SAMPLE_STACK_MAP_SIZE = 5;
 constexpr uint64_t SAMPLE_TRACE_MAP_SIZE = 1;
-constexpr uint64_t KIT_WATCHDOG_MAX_INTERVAL = 30 * 1000;
+constexpr uint64_t KICK_WATCHDOG_INTERVAL = 30 * 1000;
 constexpr int AUTO_STOP_EVENT_TYPE = 1;
 constexpr int MAX_SAMPLE_STACK_TIMES = 2500; // 2.5s
 constexpr int SAMPLE_INTERVAL_MIN = 50; // 50ms
@@ -114,6 +116,7 @@ constexpr int SAMPLE_EXTRA_COUNT = 4;
 constexpr int IGNORE_STARTUP_TIME_MIN = 3; // 3s
 constexpr int SCROLL_INTERVAL = 50; // 50ms
 constexpr int DEFAULT_SAMPLE_VALUE = 1;
+constexpr int AUTO_STOP_CHECKER_INTERVAL = 60 * 1000; // 60S
 constexpr int CPU_FREQ_DECIMAL_BASE = 10;
 const uint64_t PRIORITY_MIN = 0;
 const uint64_t PRIORITY_MAX = 4;
@@ -124,9 +127,8 @@ using InitAsyncStackFn = bool(*)();
 }
 
 std::mutex WatchdogInner::lockFfrt_;
-static uint64_t g_lastKickTime = GetCurrentTickMillseconds();
 static int32_t g_fd = NOT_OPEN;
-static bool g_existFile = true;
+static bool g_kickWatchdog = false;
 
 static std::atomic_int g_scrollSampleCount {0};
 static std::atomic_int g_freezeSampleCount {0};
@@ -586,6 +588,13 @@ void WatchdogInner::InitAsyncStackIfNeed()
 }
 #endif
 
+void WatchdogInner::InitDefaultTask()
+{
+    IpcCheck();
+    AddKickWatchdog();
+    XCOLLIE_LOGI("init default task finished.");
+}
+
 bool WatchdogInner::CheckSample(const TimePoint& endTime, int64_t durationTime)
 {
     bool isScroll = isScroll_;
@@ -973,15 +982,13 @@ int WatchdogInner::AddThread(const std::string &name,
 
     std::string limitedName = GetLimitedSizeName(name);
     XCOLLIE_LOGI("Add thread %{public}s to watchdog.", limitedName.c_str());
-    std::unique_lock<std::mutex> lock(lock_);
-
-    IpcCheck();
 
     if (priority < PRIORITY_MIN || priority > PRIORITY_MAX) {
         XCOLLIE_LOGE("Add thread fail, invalid priority!");
         return -1;
     }
     auto taskPriority = static_cast<AppExecFwk::EventQueue::Priority>(priority);
+    std::unique_lock<std::mutex> lock(lock_);
     if (!InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, handler, timeOutCallback, interval,
         taskPriority))) {
         return -1;
@@ -1000,8 +1007,8 @@ void WatchdogInner::RunOneShotTask(const std::string& name, Task&& task, uint64_
         return;
     }
 
-    std::unique_lock<std::mutex> lock(lock_);
     std::string limitedName = GetLimitedSizeName(name);
+    std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, std::move(task), delay, 0, true));
 }
 
@@ -1017,9 +1024,8 @@ int64_t WatchdogInner::RunXCollieTask(const std::string& name, uint64_t timeout,
         return INVALID_ID;
     }
 
-    std::unique_lock<std::mutex> lock(lock_);
-    IpcCheck();
     std::string limitedName = GetLimitedSizeName(name);
+    std::unique_lock<std::mutex> lock(lock_);
     return InsertWatchdogTaskLocked(limitedName, WatchdogTask(limitedName, timeout, func, arg, flag));
 }
 
@@ -1322,16 +1328,6 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 }
 #endif
 
-void WatchdogInner::CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask)
-{
-    if (g_existFile && queuedTask.name == IPC_FULL_TASK && getuid() == FOUNDATION_UID &&
-        now - g_lastKickTime > INTERVAL_KICK_TIME) {
-        if (KickWatchdog()) {
-            g_lastKickTime = now;
-        }
-    }
-}
-
 bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
 {
     if (queuedTaskCheck.name.empty()) {
@@ -1400,15 +1396,13 @@ uint64_t WatchdogInner::FetchNextTask(uint64_t now, WatchdogTask& task)
     }
 
     const WatchdogTask& queuedTask = checkerQueue_.top();
-    CheckKickWatchdog(now, queuedTask);
     if (queuedTask.nextTickTime > now) {
         uint64_t leftTimeMill = queuedTask.nextTickTime - now;
-        if (leftTimeMill > KIT_WATCHDOG_MAX_INTERVAL && getuid() == FOUNDATION_UID) {
-            return KIT_WATCHDOG_MAX_INTERVAL;
+        if ((queuedTask.name == KICK_WATCHDOG_TASK) && (leftTimeMill > KICK_WATCHDOG_INTERVAL) && g_kickWatchdog) {
+            return KICK_WATCHDOG_INTERVAL;
         }
-        return leftTimeMill;
+        return queuedTask.nextTickTime - now;
     }
-
     currentScene_ = "thread DfxWatchdog: Current scenario is task name: " + queuedTask.name + "\n";
     task = queuedTask;
     checkerQueue_.pop();
@@ -1421,8 +1415,8 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
         return;
     }
 
-    std::unique_lock<std::mutex> lock(lock_);
     task.nextTickTime = task.nextTickTime + task.checkInterval;
+    std::unique_lock<std::mutex> lock(lock_);
     checkerQueue_.push(task);
 }
 
@@ -1438,6 +1432,7 @@ bool WatchdogInner::Start()
         SetThreadInfoCallback(ThreadInfo);
         XCOLLIE_LOGD("Watchdog Set Thread Info Callback");
     }
+    InitDefaultTask();
     while (!isNeedStop_) {
         if (__get_global_hook_flag() && __get_hook_flag()) {
             __set_hook_flag(false);
@@ -1494,31 +1489,6 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
     return true;
 }
 
-bool WatchdogInner::KickWatchdog()
-{
-    if (g_fd == NOT_OPEN) {
-        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
-        if (g_fd < 0) {
-            g_fd = open(HUNGTASK_USERLIST, O_WRONLY);
-            if (g_fd < 0) {
-                XCOLLIE_KLOGE("can't open hungtask file, errno:%{public}d", errno);
-                g_existFile = false;
-                return false;
-            }
-            XCOLLIE_KLOGE("hmos kernel");
-            isHmos = true;
-        } else {
-            XCOLLIE_KLOGE("linux kernel");
-        }
-
-        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_EXTRA : ON_KICK_TIME)) {
-            XCOLLIE_KLOGI("kick watchdog send msg to hungtask fail");
-            return false;
-        }
-    }
-    return SendMsgToHungtask(isHmos ? KICK_TIME_EXTRA : KICK_TIME);
-}
-
 bool WatchdogInner::AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg)
 {
     if (interval < MIN_IPC_CHECK_INTERVAL || interval > MAX_IPC_CHECK_INTERVAL) {
@@ -1529,18 +1499,12 @@ bool WatchdogInner::AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCall
         return false;
     }
 
-    std::unique_lock<std::mutex> lock(lock_);
     return IpcCheck(interval, flag, func, arg, false);
 }
 
 bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg, bool defaultType)
 {
     if (defaultType) {
-        static bool ipcCheckInit = false;
-        if (ipcCheckInit) {
-            return false;
-        }
-        ipcCheckInit = true;
         uint32_t uid = getuid();
         bool isJoinIpcFullUid = std::any_of(std::begin(JOIN_IPC_FULL_UIDS), std::end(JOIN_IPC_FULL_UIDS),
             [uid](const uint32_t joinIpcFullUid) { return uid == joinIpcFullUid; });
@@ -1549,11 +1513,7 @@ bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallba
         }
     }
 
-    if (IsTaskExistLocked(IPC_FULL_TASK)) {
-        XCOLLIE_LOGE("ipc full task aleady exists");
-        return false;
-    }
-
+    std::unique_lock<std::mutex> lock(lock_);
     bool result = InsertWatchdogTaskLocked(IPC_FULL_TASK, WatchdogTask(interval * TO_MILLISECOND_MULTPLE, func, arg,
         flag)) > 0;
     if (result) {
@@ -1562,6 +1522,42 @@ bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallba
         XCOLLIE_LOGE("add ipc full task falied");
     }
     return result;
+}
+
+void WatchdogInner::AddKickWatchdog()
+{
+    static std::string processName = GetSelfProcName();
+    g_kickWatchdog = (getuid() == FOUNDATION_UID) ||
+        (getuid() == MEDIA_SERVICE_UID && processName == MEDIA_SERVICE);
+    if (!g_kickWatchdog) {
+        return;
+    }
+
+    static bool isHmos = false;
+    auto task = [] {
+        if (g_fd != NOT_OPEN) {
+            SendMsgToHungtask(isHmos ? KICK_TIME_EXTRA + processName : KICK_TIME);
+            return;
+        };
+
+        g_fd = open(SYS_KERNEL_HUNGTASK_USERLIST, O_WRONLY);
+        if (g_fd < 0) {
+            g_fd = open(HUNGTASK_USERLIST, O_WRONLY);
+            if (g_fd < 0) {
+                XCOLLIE_KLOGE("can't open hungtask file, errno:%{public}d", errno);
+                return;
+            }
+            XCOLLIE_KLOGE("hmos kernel");
+            isHmos = true;
+        } else {
+            XCOLLIE_KLOGE("linux kernel");
+        }
+
+        if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_EXTRA + processName : ON_KICK_TIME)) {
+            XCOLLIE_KLOGI("kick watchdog send msg to hungtask fail");
+        }
+    };
+    RunPeriodicalTask(KICK_WATCHDOG_TASK, std::move(task), KICK_WATCHDOG_INTERVAL, 0);
 }
 
 bool WatchdogInner::WriteStringToFile(int32_t pid, const char *str)
@@ -1628,8 +1624,6 @@ void WatchdogInner::InitFfrtWatchdog()
     CreateWatchdogThreadIfNeed();
     ffrt_task_timeout_set_cb(FfrtCallback);
     ffrt_task_timeout_set_threshold(FFRT_CALLBACK_TIME);
-    std::unique_lock<std::mutex> lock(lock_);
-    IpcCheck();
 }
 
 void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo,
@@ -1877,7 +1871,7 @@ void WatchdogInner::UpdateJankParam(SampleJankParams& params)
     jankParamsMap[KEY_AUTO_STOP_SAMPLING] = params.autoStopSampling;
     if (jankParamsMap[KEY_SET_TIMES_FLAG] == SET_TIMES_FLAG) {
         if (params.eventType == AUTO_STOP_EVENT_TYPE) {
-            jankParamsMap[KEY_CHECKER_INTERVAL] = DEFAULT_TIMEOUT;
+            jankParamsMap[KEY_CHECKER_INTERVAL] = AUTO_STOP_CHECKER_INTERVAL;
         } else {
             UpdateReportTimes(bundleName_, params.reportTimes, jankParamsMap[KEY_CHECKER_INTERVAL]);
         }
