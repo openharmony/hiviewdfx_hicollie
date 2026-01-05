@@ -126,6 +126,23 @@ int Report(bool* isSixSecond)
     }
     return result;
 }
+
+int ReportInputBlock()
+{
+    AppExecFwk::FaultData faultData;
+    faultData.faultType = OHOS::AppExecFwk::FaultDataType::APP_FREEZE;
+    faultData.errorObject.name = "BUSINESS_INPUT_BLOCK";
+    std::string timeStamp = "\nFaultTime:" + FormatTime("%Y-%m-%d %H:%M:%S") + "\n";
+    faultData.errorObject.message = timeStamp + "Business thread is not response，dialog popup.\n";
+    faultData.timeoutMarkers = "";
+    faultData.errorObject.stack = "";
+    faultData.notifyApp = false;
+    faultData.waitSaveState = false;
+    faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
+    auto result = DelayedSingleton<AppExecFwk::AppMgrClient>::GetInstance()->NotifyAppFault(faultData);
+    XCOLLIE_LOGI("OH_HiCollie_ReportInputBlock result: %{public}d, current tid: %{public}d", result, faultData.tid);
+    return result;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 
@@ -197,6 +214,18 @@ HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
         return HICOLLIE_SUCCESS;
     }
     if (OHOS::HiviewDFX::Report(isSixSecond) != 0) {
+        return HICOLLIE_REMOTE_FAILED;
+    }
+    return HICOLLIE_SUCCESS;
+}
+
+HiCollie_ErrorCode OH_HiCollie_ReportInputBlock()
+{
+    if (OHOS::HiviewDFX::Watchdog::GetInstance().GetAppDebug()) {
+        XCOLLIE_LOGD("Bussiness Input Block: Get appDebug state is true");
+        return HICOLLIE_SUCCESS;
+    }
+    if (OHOS::HiviewDFX::ReportInputBlock() != 0) {
         return HICOLLIE_REMOTE_FAILED;
     }
     return HICOLLIE_SUCCESS;

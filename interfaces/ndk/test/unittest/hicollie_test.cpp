@@ -150,6 +150,23 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_Report_1, TestSize.Level1)
 }
 
 /**
+ * @tc.name: OH_HiCollie_ReportInputBlock
+ * @tc.desc: test OH_HiCollie_ReportInputBlock
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_ReportInputBlock_1, TestSize.Level1)
+{
+    OHOS::HiviewDFX::Watchdog::GetInstance().SetForeground(true);
+    OHOS::HiviewDFX::Watchdog::GetInstance().SetAppDebug(false);
+    int result = OH_HiCollie_ReportInputBlock();
+    printf("OH_HiCollie_ReportInputBlock debug disable, result: %d\n", result);
+    OHOS::HiviewDFX::Watchdog::GetInstance().SetAppDebug(true);
+    result = OH_HiCollie_ReportInputBlock();
+    printf("OH_HiCollie_ReportInputBlock debug enable, result: %d\n", result);
+    EXPECT_EQ(result, HICOLLIE_SUCCESS);
+}
+
+/**
  * @tc.name: OH_HiCollie_SetTimer
  * @tc.desc: test OH_HiCollie_SetTimer
  * @tc.type: FUNC
