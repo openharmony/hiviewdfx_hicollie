@@ -94,7 +94,7 @@ std::string GetStackByPcs(const std::vector<uintptr_t>& pcVec, const std::shared
         return stack.str();
     }
     if (snapshotTime != 0) {
-        stack << "Timestamp:" << TimeFormat(snapshotTime) << "\n";
+        stack << "SnapshotTime:" << TimeFormat(snapshotTime) << "\n";
     }
     for (size_t i = 0; i < pcVec.size(); i++) {
         DfxFrame frame;
