@@ -55,6 +55,7 @@ public:
     bool IsCallbackLimit(unsigned int flag);
     bool IpcCheck(uint64_t interval = DEFAULT_IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
         IpcFullCallback func = nullptr, void *arg = nullptr, bool defaultType = true);
+    void AddKickWatchdog();
     void InitFfrtWatchdog();
     static bool WriteStringToFile(int32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
@@ -105,15 +106,13 @@ public:
 private:
     bool Start();
     bool Stop();
-    bool SendMsgToHungtask(const std::string& msg);
-    bool KickWatchdog();
+    static bool SendMsgToHungtask(const std::string& msg);
     bool IsTaskExistLocked(const std::string& name);
     bool IsExceedMaxTaskLocked();
     int64_t InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
 #ifdef SUSPEND_CHECK_ENABLE
     bool IsInSleep(const WatchdogTask& queuedTaskCheck);
 #endif
-    void CheckKickWatchdog(uint64_t now, const WatchdogTask& queuedTask);
     bool CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck);
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
@@ -147,6 +146,7 @@ private:
     void InitAsyncStackIfNeed();
     bool NeedOpenAsyncStack();
 #endif
+    void InitDefaultTask();
 
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();
@@ -168,7 +168,6 @@ private:
     std::shared_ptr<AppExecFwk::EventRunner> mainRunner_;
     int cntCallback_;
     time_t timeCallback_;
-    bool isHmos = false;
     void* threadSamplerFuncHandler_  {nullptr};
     ThreadSamplerInitFunc threadSamplerInitFunc_ {nullptr};
     ThreadSamplerSampleFunc threadSamplerSampleFunc_ {nullptr};

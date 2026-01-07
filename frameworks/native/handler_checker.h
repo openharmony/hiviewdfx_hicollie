@@ -43,13 +43,7 @@ public:
     };
     HandlerChecker(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         AppExecFwk::EventQueue::Priority priority)
-        : name_(name), handler_(handler), priority_(priority)
-    {
-        if (!handler) {
-            auto runner = AppExecFwk::EventRunner::Create(name);
-            handler_ = std::make_shared<AppExecFwk::EventHandler>(runner);
-        }
-    };
+        : name_(name), handler_(handler), priority_(priority) {};
     ~HandlerChecker() {};
 
 public:
