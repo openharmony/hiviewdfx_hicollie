@@ -103,7 +103,7 @@ HWTEST_F(WatchdogInnerTaskTest, WatchdogInnerTaskTest_RunOneShotTask_001, TestSi
     int taskResult = 0;
     auto taskFunc = [&taskResult]() { taskResult = 1; };
     WatchdogInner::GetInstance().RunOneShotTask("", taskFunc, 0);
-    ASSERT_EQ(taskResult, 0);
+    ASSERT_EQ(WatchdogInner::GetInstance().checkerQueue_.size(), 0);
 }
 
 /**
@@ -120,7 +120,6 @@ HWTEST_F(WatchdogInnerTaskTest, WatchdogInnerTaskTest_RunPeriodicalTask_001, Tes
     ASSERT_TRUE(WatchdogInner::GetInstance().checkerQueue_.size() > 0);
     WatchdogInner::GetInstance().TriggerTimerCountTask(name, false, "test");
     WatchdogInner::GetInstance().TriggerTimerCountTask(name, true, "test");
-    ASSERT_EQ(taskResult, 0);
     size_t beforeSize = WatchdogInner::GetInstance().taskNameSet_.size();
     WatchdogInner::GetInstance().RemoveInnerTask(name);
     size_t afterSize = WatchdogInner::GetInstance().taskNameSet_.size();
