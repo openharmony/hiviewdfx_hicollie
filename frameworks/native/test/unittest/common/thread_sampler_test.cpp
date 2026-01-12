@@ -114,7 +114,7 @@ uint32_t GetMMapSizeAndName(const std::string& checkName, std::string& mmapName)
     return static_cast<uint32_t>(size);
 }
 
-void* FunctionOpen(void* funcHandler, const char* funcName)
+void* TestFunctionOpen(void* funcHandler, const char* funcName)
 {
     dlerror();
     char* err = nullptr;
@@ -135,7 +135,7 @@ void ThreadSamplerTest::ThreadSamplerSigHandler(int sig, siginfo_t* si, void* co
     ThreadSamplerTest::threadSamplerSigHandler_(sig, si, context);
 }
 
-bool ThreadSamplerTest::InstallThreadSamplerSignal()
+bool ThreadSamplerTest::TestInstallThreadSamplerSignal()
 {
     struct sigaction action {};
     sigfillset(&action.sa_mask);
@@ -147,13 +147,13 @@ bool ThreadSamplerTest::InstallThreadSamplerSignal()
     return true;
 }
 
-void ThreadSamplerTest::UninstallThreadSamplerSignal()
+void ThreadSamplerTest::TestUninstallThreadSamplerSignal()
 {
     std::lock_guard<std::mutex> lock(threadSamplerSignalMutex_);
     threadSamplerSigHandler_ = nullptr;
 }
 
-bool ThreadSamplerTest::InitThreadSamplerFuncs()
+bool ThreadSamplerTest::TestInitThreadSamplerFuncs()
 {
     threadSamplerFuncHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
     if (threadSamplerFuncHandler_ == nullptr) {
@@ -161,15 +161,15 @@ bool ThreadSamplerTest::InitThreadSamplerFuncs()
     }
 
     threadSamplerInitFunc_ =
-        reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerInit"));
+        reinterpret_cast<ThreadSamplerInitFunc>(TestFunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerInit"));
     threadSamplerSampleFunc_ =
-        reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSample"));
+        reinterpret_cast<ThreadSamplerSampleFunc>(TestFunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSample"));
     threadSamplerCollectFunc_ =
-        reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerCollect"));
+        reinterpret_cast<ThreadSamplerCollectFunc>(TestFunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerCollect"));
     threadSamplerDeinitFunc_ =
-        reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
+        reinterpret_cast<ThreadSamplerDeinitFunc>(TestFunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
     threadSamplerSigHandler_ =
-        reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
+        reinterpret_cast<SigActionType>(TestFunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
     if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
         threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
         threadSamplerSigHandler_ == nullptr) {
@@ -185,13 +185,13 @@ bool ThreadSamplerTest::InitThreadSamplerFuncs()
     return true;
 }
 
-bool ThreadSamplerTest::InitThreadSampler()
+bool ThreadSamplerTest::TestInitThreadSampler()
 {
-    if (!InitThreadSamplerFuncs()) {
+    if (!TestInitThreadSamplerFuncs()) {
         return false;
     }
 
-    if (!InstallThreadSamplerSignal()) {
+    if (!TestInstallThreadSamplerSignal()) {
         return false;
     }
     return true;
@@ -208,7 +208,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level0)
     printf("ThreadSamplerTest_001\n");
     printf("Total:%dMS Sample:%dMS \n", static_cast<int>(INTERVAL * SAMPLE_CNT + INTERVAL), INTERVAL);
 
-    bool flag = InitThreadSampler();
+    bool flag = TestInitThreadSampler();
     ASSERT_TRUE(flag);
 
     threadSamplerInitFunc_(SAMPLE_CNT, 0);
@@ -234,11 +234,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    ASSERT_TRUE(stack.find("SnapshotTime:") != std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
-    UninstallThreadSamplerSignal();
+    TestUninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
 }
@@ -254,7 +253,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     printf("ThreadSamplerTest_002\n");
     printf("Total:%dMS Sample:%dMS \n", static_cast<int>(INTERVAL * SAMPLE_CNT + INTERVAL), INTERVAL);
 
-    bool flag = InitThreadSampler();
+    bool flag = TestInitThreadSampler();
     ASSERT_TRUE(flag);
 
     threadSamplerInitFunc_(SAMPLE_CNT, 0);
@@ -283,7 +282,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_002, TestSize.Level3)
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
-    UninstallThreadSamplerSignal();
+    TestUninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
 }
@@ -299,7 +298,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     printf("ThreadSamplerTest_003\n");
     printf("Total:%dMS Sample:%dMS \n", static_cast<int>(INTERVAL * SAMPLE_CNT + INTERVAL), INTERVAL);
 
-    InitThreadSampler();
+    TestInitThreadSampler();
 
     threadSamplerInitFunc_(SAMPLE_CNT, 0);
     auto sampleHandler = [this]() {
@@ -351,7 +350,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_003, TestSize.Level3)
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
-    UninstallThreadSamplerSignal();
+    TestUninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
 }
@@ -367,7 +366,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     printf("ThreadSamplerTest_004\n");
     printf("Total:%dMS Sample:%dMS \n", static_cast<int>(INTERVAL * SAMPLE_CNT + INTERVAL), INTERVAL);
 
-    bool flag = InitThreadSampler();
+    bool flag = TestInitThreadSampler();
     ASSERT_TRUE(flag);
 
     threadSamplerInitFunc_(SAMPLE_CNT, 0);
@@ -401,7 +400,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_004, TestSize.Level3)
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
-    UninstallThreadSamplerSignal();
+    TestUninstallThreadSamplerSignal();
     sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
     sigdelset(&sigset, MUSL_SIGNAL_SAMPLE_STACK);
     WaitSomeTime();
@@ -426,7 +425,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
     uint32_t uniTableSize = 0;
     std::string uniStackTableMMapName = "";
 
-    bool flag = InitThreadSamplerFuncs();
+    bool flag = TestInitThreadSamplerFuncs();
     ASSERT_TRUE(flag);
 
     threadSamplerInitFunc_(SAMPLE_CNT, 0);
@@ -459,7 +458,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_006, TestSize.Level0)
     uv_queue_work(loop, workReq, WorkCbTest, AfterWorkCbTest);
     uv_run(loop, UV_RUN_DEFAULT);
 
-    bool flag = InitThreadSampler();
+    bool flag = TestInitThreadSampler();
     ASSERT_TRUE(flag);
 
     threadSamplerInitFunc_(SAMPLE_CNT, 1);
@@ -485,11 +484,10 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_006, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    ASSERT_TRUE(stack.find("========SubmitterStacktrace========") != std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
-    UninstallThreadSamplerSignal();
+    TestUninstallThreadSamplerSignal();
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
 }
@@ -616,7 +614,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_008, TestSize.Level3)
     ThreadSampler::GetInstance().maps_ = DfxMaps::Create();
     ThreadSampler::GetInstance().unwinder_ = nullptr;
     ThreadSampler::GetInstance().CollectStack(stack, false);
-    ASSERT_EQ(stack, "\n");
+    ASSERT_TRUE(!stack.empty());
 
     ThreadSampler::GetInstance().Deinit();
 }

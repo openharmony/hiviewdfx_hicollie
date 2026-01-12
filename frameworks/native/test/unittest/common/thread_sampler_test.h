@@ -33,11 +33,11 @@ public:
     void SetUp();
     void TearDown();
 
-    bool InitThreadSamplerFuncs();
+    bool TestInitThreadSamplerFuncs();
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
-    bool InstallThreadSamplerSignal();
-    void UninstallThreadSamplerSignal();
-    bool InitThreadSampler();
+    bool TestInstallThreadSamplerSignal();
+    void TestUninstallThreadSamplerSignal();
+    bool TestInitThreadSampler();
     bool InstallThreadSamplerTestSignal();
 
     void* threadSamplerFuncHandler_  {nullptr};
