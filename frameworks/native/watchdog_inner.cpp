@@ -359,33 +359,37 @@ bool WatchdogInner::CheckThreadSampler(bool recordSubmitterStack)
 
 bool WatchdogInner::InitThreadSamplerFuncs()
 {
-    threadSamplerFuncHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
-    if (threadSamplerFuncHandler_ == nullptr) {
-        XCOLLIE_LOGE("dlopen failed, funcHandler is nullptr.\n");
-        return false;
-    }
+    #if defined(__aarch64__) || defined(__loongarch_lp64)
+        threadSamplerFuncHandler_ = dlopen(LIB_THREAD_SAMPLER_PATH, RTLD_LAZY);
+        if (threadSamplerFuncHandler_ == nullptr) {
+            XCOLLIE_LOGE("dlopen failed, funcHandler is nullptr.\n");
+            return false;
+        }
 
-    threadSamplerInitFunc_ =
-        reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerInit"));
-    threadSamplerSampleFunc_ =
-        reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSample"));
-    threadSamplerCollectFunc_ =
-        reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerCollect"));
-    threadSamplerDeinitFunc_ =
-        reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
-    threadSamplerSigHandler_ =
-        reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
-    threadSamplerGetResultFunc_ =
-        reinterpret_cast<ThreadSamplerGetResultFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
-    if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
-        threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
-        threadSamplerSigHandler_ == nullptr || threadSamplerGetResultFunc_ == nullptr) {
-        ResetThreadSamplerFuncs();
-        XCOLLIE_LOGE("ThreadSampler dlsym some function failed.\n");
+        threadSamplerInitFunc_ =
+            reinterpret_cast<ThreadSamplerInitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerInit"));
+        threadSamplerSampleFunc_ =
+            reinterpret_cast<ThreadSamplerSampleFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSample"));
+        threadSamplerCollectFunc_ =
+            reinterpret_cast<ThreadSamplerCollectFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerCollect"));
+        threadSamplerDeinitFunc_ =
+            reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
+        threadSamplerSigHandler_ =
+            reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
+        threadSamplerGetResultFunc_ = reinterpret_cast<ThreadSamplerGetResultFunc>(
+            FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
+        if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
+            threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
+            threadSamplerSigHandler_ == nullptr || threadSamplerGetResultFunc_ == nullptr) {
+            ResetThreadSamplerFuncs();
+            XCOLLIE_LOGE("ThreadSampler dlsym some function failed.\n");
+            return false;
+        }
+        XCOLLIE_LOGI("ThreadSampler has been successfully loaded.\n");
+        return true;
+    #else
         return false;
-    }
-    XCOLLIE_LOGI("ThreadSampler has been successfully loaded.\n");
-    return true;
+    #endif
 }
 
 void WatchdogInner::ResetThreadSamplerFuncs()
