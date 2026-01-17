@@ -127,7 +127,7 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_005, TestSize.Level1)
         printf("WatchdogTaskTest_005 test ipc full");
     };
 
-    WatchdogTask task(10, callback, nullptr, HiviewDFX::XCOLLIE_FLAG_DEFAULT);
+    WatchdogTask task(10, 0, callback, nullptr, HiviewDFX::XCOLLIE_FLAG_DEFAULT);
     task.RunHandlerCheckerTask();
     EXPECT_TRUE(task.checker != nullptr);
     EXPECT_TRUE(task.checker->GetCheckState() >= 0);

@@ -68,6 +68,9 @@ ohos_unittest("IpcFullUnitTest") {
     external_deps += [ "hisysevent:libhisysevent" ]
     defines += [ "HISYSEVENT_ENABLE" ]
   }
+  if (hicollie_asyncbinderspacefull_enable) {
+    defines += [ "ASYNC_BINDER_SPACE_FULL" ]
+  }
 }
 
 ohos_unittest("WatchdogUnitTest") {

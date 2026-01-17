@@ -30,5 +30,12 @@ bool IpcFull::AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback f
 {
     return WatchdogInner::GetInstance().AddIpcFull(interval, flag, func, arg);
 }
+#ifdef ASYNC_BINDER_SPACE_FULL
+bool IpcFull::AsyncBinderSpaceFull(uint64_t interval, unsigned int count, unsigned int flag,
+    IpcFullCallback func, void *arg)
+{
+    return WatchdogInner::GetInstance().AsyncBinderSpaceFull(interval, count, flag, func, arg);
+}
+#endif
 }
 }

@@ -74,6 +74,38 @@ void IpcFullTest::TearDown(void)
     result = IpcFull::GetInstance().AddIpcFull(12);
     ASSERT_EQ(result, false);
     }
+#ifdef ASYNC_BINDER_SPACE_FULL
+/**
+ * @tc.name: AsyncBinderSpaceFull
+ * @tc.desc: Verify add async binder space full interface
+ * @tc.type: FUNC
+ * @tc.require: AR20251016566499
+ * @tc.author: chenyufan
+ */
+    HWTEST_F(IpcFullTest, AsyncBinderSpaceFull_001, TestSize.Level1)
+    {
+    /**
+     * @tc.steps: step1. input interval param below the min allowable threshold
+     * @tc.expected: step1. add async binder space full interface failed;
+     */
+    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(1, 12);
+    ASSERT_EQ(result, false);
+
+    /**
+     * @tc.steps: step2. input count param exceeds the max allowable threshold
+     * @tc.expected: step2. add async binder space full interface failed;
+     */
+    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(3, 40);
+    ASSERT_EQ(result, false);
+
+    /**
+     * @tc.steps: step3. iinput valid interval param
+     * @tc.expected: step3. add async binder space full interface successfully;
+     */
+    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(3, 12);
+    ASSERT_EQ(result, true);
+    }
+#endif
 } // namespace HiviewDFX
 } // namespace OHOS
  
