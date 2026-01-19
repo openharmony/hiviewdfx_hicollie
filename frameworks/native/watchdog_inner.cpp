@@ -121,6 +121,10 @@ constexpr int SCROLL_INTERVAL = 50; // 50ms
 constexpr int DEFAULT_SAMPLE_VALUE = 1;
 constexpr int AUTO_STOP_CHECKER_INTERVAL = 60 * 1000; // 60S
 constexpr int CPU_FREQ_DECIMAL_BASE = 10;
+constexpr unsigned int BINDER_SPACE_FULL_MIN_COUNT = 2;
+constexpr unsigned int BINDER_SPACE_FULL_MAX_COUNT = 10;
+constexpr unsigned int BINDER_SPACE_FULL_MIN_INTERVAL = 5;
+constexpr unsigned int BINDER_SPACE_FULL_MAX_INTERVAL = 30;
 const uint64_t PRIORITY_MIN = 0;
 const uint64_t PRIORITY_MAX = 4;
 constexpr const char* SCROLL_JANK = "SCROLL_JANK";
@@ -1504,7 +1508,27 @@ bool WatchdogInner::AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCall
 
     return IpcCheck(interval, flag, func, arg, false);
 }
-
+#ifdef ASYNC_BINDER_SPACE_FULL
+bool WatchdogInner::AsyncBinderSpaceFull(uint64_t interval, unsigned int count, unsigned int flag, IpcFullCallback func,
+    void *arg)
+{
+    if (!IsBetaVersion()) {
+        XCOLLIE_KLOGE("async binder space full task does not take effect in non-beta versions.");
+        return false;
+    }
+    if (count < BINDER_SPACE_FULL_MIN_COUNT || count > BINDER_SPACE_FULL_MAX_COUNT) {
+        XCOLLIE_KLOGE("async binder space full count is invalid");
+        return false;
+    }
+    if (interval < BINDER_SPACE_FULL_MIN_INTERVAL || count > BINDER_SPACE_FULL_MAX_INTERVAL) {
+        XCOLLIE_KLOGE("async binder space full interval is invalid");
+        return false;
+    }
+    std::unique_lock<std::mutex> lock(lock_);
+    return InsertWatchdogTaskLocked(ASYNC_BINDER_SPACE_FULL_TASK, WatchdogTask(interval * TO_MILLISECOND_MULTPLE,
+        count, func, arg, flag)) > 0;
+}
+#endif
 bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg, bool defaultType)
 {
     if (defaultType) {
@@ -1517,8 +1541,8 @@ bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallba
     }
 
     std::unique_lock<std::mutex> lock(lock_);
-    bool result = InsertWatchdogTaskLocked(IPC_FULL_TASK, WatchdogTask(interval * TO_MILLISECOND_MULTPLE, func, arg,
-        flag)) > 0;
+    bool result = InsertWatchdogTaskLocked(IPC_FULL_TASK, WatchdogTask(interval * TO_MILLISECOND_MULTPLE,
+        IPC_FULL_TASK_PARAM, func, arg, flag)) > 0;
     if (result) {
         XCOLLIE_LOGI("add ipc full task success");
     } else {

@@ -14,6 +14,7 @@
         "OHOS::HiviewDFX::IpcFull::AddIpcFull(unsigned long, unsigned int, std::__h::function<void (void*)>, void*)";
         "OHOS::HiviewDFX::IpcFull::AddIpcFull(unsigned long long, unsigned int, std::__h::function<void (void*)>, void*)";
         "OHOS::HiviewDFX::XCollie::TriggerTimerCount(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, bool, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
+        "OHOS::HiviewDFX::IpcFull::AsyncBinderSpaceFull(unsigned long long, unsigned int, unsigned int, std::__h::function<void (void*)>, void*)";
         "OHOS::HiviewDFX::XCollie::SetTimerCount(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, unsigned int, int)";
         "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, unsigned long)";
         "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, unsigned long long)";

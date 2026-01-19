@@ -49,6 +49,10 @@ public:
         unsigned int flag);
     void RemoveXCollieTask(int64_t id);
     bool AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg);
+    #ifdef ASYNC_BINDER_SPACE_FULL
+    bool AsyncBinderSpaceFull(uint64_t interval, unsigned int count, unsigned int flag, IpcFullCallback func,
+    void *arg);
+    #endif
     int64_t SetTimerCountTask(const std::string &name, uint64_t timeLimit, int countLimit);
     void TriggerTimerCountTask(const std::string &name, bool bTrigger, const std::string &message);
     void StopWatchdog();

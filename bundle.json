@@ -15,7 +15,8 @@
         "features": [
             "hicollie_jank_detection_enable",
             "hicollie_suspend_check_enable",
-            "hicollie_kick_watchdog_enable"
+            "hicollie_kick_watchdog_enable",
+            "hicollie_asyncbinderspacefull_enable"
         ],
         "syscap": [
             "SystemCapability.HiviewDFX.HiCollie"

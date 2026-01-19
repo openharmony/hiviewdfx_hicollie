@@ -27,6 +27,10 @@ class IpcFull : public Singleton<IpcFull> {
 public:
     bool AddIpcFull(uint64_t interval = ADD_IPC_FULL_INTERVAL, unsigned int flag = XCOLLIE_FLAG_DEFAULT,
         IpcFullCallback func = nullptr, void *arg = nullptr);
+    #ifdef ASYNC_BINDER_SPACE_FULL
+    bool AsyncBinderSpaceFull(uint64_t interval, unsigned int count, unsigned int flag = XCOLLIE_FLAG_LOG,
+    IpcFullCallback func = nullptr, void *arg = nullptr);
+    #endif
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

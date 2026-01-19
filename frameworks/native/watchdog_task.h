@@ -38,7 +38,7 @@ public:
 #endif
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority);
-    WatchdogTask(uint64_t interval, IpcFullCallback func, void *arg, unsigned int flag);
+    WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag);
     WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot);
     WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag);
     WatchdogTask(std::string name, unsigned int timeLimit, int countLimit);
@@ -62,7 +62,8 @@ public:
           bootTimeStart(0),
           monoTimeStart(0),
 #endif
-          reportCount(0) {};
+          reportCount(0),
+          binderSpaceFullCount(0) {};
     ~WatchdogTask() {};
 
     bool operator<(const WatchdogTask &obj) const
@@ -78,6 +79,10 @@ public:
         const std::string& faultTimeStr) const;
     void DoCallback();
     void TimerCountTask();
+    #ifdef ASYNC_BINDER_SPACE_FULL
+    void AsyncBinderSpace();
+    bool IsBinderSpaceInsufficient();
+    #endif
     void DumpKernelStack(struct HstackVal& val, int& ret) const;
 #ifdef SUSPEND_CHECK_ENABLE
     bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
@@ -106,6 +111,7 @@ public:
     uint64_t monoTimeStart;
 #endif
     int reportCount;
+    int binderSpaceFullCount;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -34,6 +34,7 @@ constexpr int INVALID_ID = -1;
 constexpr uint64_t DEFAULT_IPC_FULL_INTERVAL = 30;
 constexpr uint64_t ADD_IPC_FULL_INTERVAL = 10;
 constexpr char IPC_FULL_TASK[] = "OS_DfxIpcCheck";
+constexpr char ASYNC_BINDER_SPACE_FULL_TASK[] = "OS_BinderSpace";
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif

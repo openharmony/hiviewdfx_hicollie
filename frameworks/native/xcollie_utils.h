@@ -35,6 +35,7 @@ namespace OHOS {
 namespace HiviewDFX {
 constexpr uint64_t MIN_APP_UID = 20000;
 constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
+constexpr uint64_t IPC_FULL_TASK_PARAM = 0;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
