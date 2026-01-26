@@ -188,6 +188,15 @@ HiCollie_ErrorCode OH_HiCollie_Init_JankDetection(OH_HiCollie_BeginFunc* beginFu
 HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond);
 
 /**
+ * @brief Report a stuck event while user input not response.
+ *
+ * @return {@link HICOLLIE_SUCCESS} 0 - Success.
+ *         {@link HICOLLIE_REMOTE_FAILED} 29800002 - Remote call failed.
+ * @since 24
+ */
+HiCollie_ErrorCode OH_HiCollie_ReportInputBlock();
+
+/**
  * @brief When user call {@link OH_HiCollie_SetTimer} and do not call {@link OH_HiCollie_CancelTimer}
  * in specific time, the callback function will be executed.
  *
