@@ -1488,7 +1488,9 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
     ssize_t watchdogWrite = write(g_fd, msg.c_str(), msg.size());
     if (watchdogWrite < 0 || watchdogWrite != static_cast<ssize_t>(msg.size())) {
         XCOLLIE_KLOGE("watchdog write msg failed, errno:%{public}d", errno);
-        close(g_fd);
+        if (fdsan_close_with_tag(g_fd, LOG_DOMAIN) != 0) {
+            XCOLLIE_KLOGE("watchdog fdsan failed, errno:%{public}d", errno);
+        }
         g_fd = NOT_OPEN;
         return false;
     }
@@ -1581,6 +1583,7 @@ void WatchdogInner::AddKickWatchdog()
         } else {
             XCOLLIE_KLOGE("linux kernel");
         }
+        fdsan_exchange_owner_tag(g_fd, 0, LOG_DOMAIN);
 
         if (!SendMsgToHungtask(isHmos ? ON_KICK_TIME_EXTRA + processName : ON_KICK_TIME)) {
             XCOLLIE_KLOGI("kick watchdog send msg to hungtask fail");
@@ -1766,7 +1769,7 @@ bool WatchdogInner::Stop()
         threadLoop_ = nullptr;
     }
     if (g_fd != NOT_OPEN) {
-        close(g_fd);
+        fdsan_close_with_tag(g_fd, LOG_DOMAIN);
         g_fd = NOT_OPEN;
     }
     return true;

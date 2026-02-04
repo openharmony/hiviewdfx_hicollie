@@ -409,8 +409,11 @@ void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
         XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
         return;
     }
+    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
     ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    close(fd);
+    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
+    }
     if (ret != 0) {
         XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
     } else {
