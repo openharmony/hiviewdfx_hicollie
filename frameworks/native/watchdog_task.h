@@ -111,7 +111,7 @@ public:
     uint64_t monoTimeStart;
 #endif
     int reportCount;
-    int binderSpaceFullCount;
+    unsigned int binderSpaceFullCount;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

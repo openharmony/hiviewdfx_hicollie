@@ -295,7 +295,7 @@ void WatchdogTask::AsyncBinderSpace()
 
 bool WatchdogTask::IsBinderSpaceInsufficient()
 {
-    uint32_t pid = getprocpid();
+    uint32_t pid = static_cast<uint32_t>(getprocpid());
     unsigned long totalSize = 0;
     unsigned long oneWayFreeSize = 0;
 
