@@ -31,6 +31,7 @@ void HandlerChecker::ScheduleCheck()
         return;
     }
 
+    taskSlow_ = false;
     auto weak = weak_from_this();
     auto checkTask = [weak]() {
         auto self = weak.lock();
@@ -47,7 +48,7 @@ void HandlerChecker::ScheduleCheck()
 
     std::string taskName = (name_ == IPC_FULL_TASK) ? "XCollie IpcCheck Task" : "XCollie Watchdog Task";
     if (!handler_->PostTask(checkTask, taskName, 0, priority_)) {
-        XCOLLIE_LOGE("post %{public}s false.", taskName.c_str());
+        XCOLLIE_LOGE("post %{public}s failed", taskName.c_str());
     }
 }
 

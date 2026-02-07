@@ -24,13 +24,6 @@
 #include "async_stack.h"
 #include "watchdog.h"
 
-#define private public
-#define protected public
-#include "thread_sampler.h"
-#undef private
-#undef protected
-#include "thread_sampler_utils.h"
-
 using namespace testing::ext;
 namespace OHOS {
 namespace HiviewDFX {
@@ -234,6 +227,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
+    ASSERT_TRUE(stack.find("SnapshotTime:") != std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
@@ -484,6 +478,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_006, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
+    ASSERT_TRUE(stack.find("========SubmitterStacktrace========") != std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
@@ -491,7 +486,19 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_006, TestSize.Level0)
     threadSamplerDeinitFunc_();
     dlclose(threadSamplerFuncHandler_);
 }
+}  // end of namespace HiviewDFX
+}  // end of namespace OHOS
 
+
+#define private public
+#define protected public
+#include "thread_sampler.h"
+#undef private
+#undef protected
+#include "thread_sampler_utils.h"
+
+namespace OHOS {
+namespace HiviewDFX {
 void WaitFewSec(int waitSec)
 {
     int left = waitSec;
@@ -609,7 +616,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_008, TestSize.Level3)
 
     ThreadSampler::GetInstance().maps_ = nullptr;
     ThreadSampler::GetInstance().CollectStack(stack, false);
-    ASSERT_TRUE(!stack.empty());
+    ASSERT_EQ(stack, "\n");
 
     ThreadSampler::GetInstance().maps_ = DfxMaps::Create();
     ThreadSampler::GetInstance().unwinder_ = nullptr;
