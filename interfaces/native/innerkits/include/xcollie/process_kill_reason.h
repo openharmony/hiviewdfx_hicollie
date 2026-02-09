@@ -23,9 +23,9 @@ namespace HiviewDFX {
 namespace {
 constexpr const char* INVALID_KILL_ID = "InvalidKillId";
 }
-namespace ThreadKillReason {
+namespace ProcessKillReason {
 
-enum kevent_id {
+enum KillEventId {
     REASON_MIN = 0,
     // crash: 0~1000
     REASON_NORMAL = REASON_MIN,
@@ -42,20 +42,13 @@ enum kevent_id {
     REASON_RESOURCE_LEAK_VMALEAK,
     REASON_RESOURCE_LEAK_FDLEAK,
     REASON_RESOURCE_LEAK_THREADLEAK,
-    REASON_RESOURCE_LEAK_KERNELZONELEAK,
-    REASON_RSS_KILLER,
-    REASON_OOM_KILLER,
-    REASON_CPA_KILLER,
-    REASON_ASHMEM_KILLER,
-    REASON_GPU_KILLER,
-    REASON_DMA_KILLER,
-    REASON_THREAD_KILLER,
     REASON_IO_HIGHLOAD,
     REASON_CPU_HIGHLOAD,
     REASON_CPU_HIGHLOAD_NOTIFY,
     REASON_CPU_HIGHLOAD_USER_REQUEST,
     REASON_ILLEGAL_AUDIO_RENDERER_BY_SUSPEND,
     REASON_ILLEGAL_AUDIO_CAPTURER_BY_SUSPEND,
+    REASON_FDRS,
 
     // app exit: 1000 ~ 2000
     REASON_KILLAPPLICATION = 1000,
@@ -71,12 +64,23 @@ enum kevent_id {
 
     // sys exit: 3000 ~ 4000
     REASON_POWER_SAVE_CLEAN = 3000,
-    REASON_LOW_MEMORY_KILL,
     REASON_SWAP_KILL,
     REASON_HIGH_TEMPERATURE,
     REASON_TRANSIENT_TASK_TIMEOUT,
 
-    REASON_MAX = REASON_TRANSIENT_TASK_TIMEOUT,
+    // kernel: 4000 ~ 5000
+    REASON_OOM_KILLER = 4000,
+    REASON_CPA_KILLER,
+    REASON_LOW_MEMORY_KILL,
+    REASON_RSS_THRESHOLD_KILLER,
+    REASON_ASHMEM_KILLER,
+    REASON_GPU_KILLER,
+    REASON_DMA_KILLER,
+    REASON_THREAD_KILLER,
+    REASON_RESOURCE_LEAK_KERNELZONELEAK,
+    REASON_APP_SANDBOX_UNINSTALL,
+    REASON_STORAGE_CARD_UNINSTALL,
+    REASON_MAX = REASON_STORAGE_CARD_UNINSTALL,
 };
 
 inline std::map<int32_t, const char* const> killReasonConfig {
@@ -95,9 +99,9 @@ inline std::map<int32_t, const char* const> killReasonConfig {
     {REASON_RESOURCE_LEAK_FDLEAK, "ResourceLeak(FdLeak)"},
     {REASON_RESOURCE_LEAK_THREADLEAK, "ResourceLeak(ThreadLeak)"},
     {REASON_RESOURCE_LEAK_KERNELZONELEAK, "ResourceLeak(KernelZoneLeak)"},
-    {REASON_RSS_KILLER, "RSSKiller"},
-    {REASON_OOM_KILLER, "OOMKiler"},
-    {REASON_CPA_KILLER, "CPAKiller"},
+    {REASON_RSS_THRESHOLD_KILLER, "RssThresholdKiller"},
+    {REASON_OOM_KILLER, "OomKiller"},
+    {REASON_CPA_KILLER, "CpaKiller"},
     {REASON_ASHMEM_KILLER, "AshmemKiller"},
     {REASON_GPU_KILLER, "GpuKiller"},
     {REASON_DMA_KILLER, "DmaKiller"},
@@ -106,8 +110,9 @@ inline std::map<int32_t, const char* const> killReasonConfig {
     {REASON_CPU_HIGHLOAD, "CpuHighLoad"},
     {REASON_CPU_HIGHLOAD_NOTIFY, "CpuHighLoadUserNotify"},
     {REASON_CPU_HIGHLOAD_USER_REQUEST, "CpuHighLoadUserRequest"},
-    {REASON_ILLEGAL_AUDIO_RENDERER_BY_SUSPEND, "IllegalRendererBySuspend"},
+    {REASON_ILLEGAL_AUDIO_RENDERER_BY_SUSPEND, "IllegalAudioRendererBySuspend"},
     {REASON_ILLEGAL_AUDIO_CAPTURER_BY_SUSPEND, "IllegalAudioCapturerBySuspend"},
+    {REASON_FDRS, "FdRs"},
     {REASON_KILLAPPLICATION, "KillApplication"},
     {REASON_UNKNOWN, "UnKnown"},
     {REASON_RESTART, "Restart"},
@@ -115,7 +120,9 @@ inline std::map<int32_t, const char* const> killReasonConfig {
     {REASON_UNINSTALL, "Uninstall"},
     {REASON_UPGRADE, "Upgrade"},
     {REASON_LOGOUT, "Logout"},
-    {REASON_UNINSTALL_STORAGE, "UninstallStopage"},
+    {REASON_UNINSTALL_STORAGE, "UninstallStorage"},
+    {REASON_STORAGE_CARD_UNINSTALL, "UninstallStorageCard"},
+    {REASON_APP_SANDBOX_UNINSTALL, "UninstallAppSandBox"},
     {REASON_POWER_SAVE_CLEAN, "PowerSaveClean"},
     {REASON_LOW_MEMORY_KILL, "LowMemoryKill"},
     {REASON_SWAP_KILL, "SwapFull"},
@@ -132,4 +139,3 @@ std::string GetKillReason(int killId)
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
 #endif // RELIABILITY_THREAD_KILL_REASON_H
-
