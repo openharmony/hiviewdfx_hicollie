@@ -16,7 +16,7 @@
 #include "ipc_full_test.h"
 
 #include "ipc_full.h"
-
+#include <thread>
 using namespace testing::ext;
 
 namespace OHOS {
@@ -44,8 +44,8 @@ void IpcFullTest::TearDown(void)
  * @tc.require: AR20250307218293
  * @tc.author: zhengchengkai
  */
-    HWTEST_F(IpcFullTest, AddIpcFullTest_001, TestSize.Level1)
-    {
+HWTEST_F(IpcFullTest, AddIpcFullTest_001, TestSize.Level1)
+{
     /**
      * @tc.steps: step1. input interval param below the min allowable threshold
      * @tc.expected: step1. add ipc full failed;
@@ -73,7 +73,7 @@ void IpcFullTest::TearDown(void)
      */
     result = IpcFull::GetInstance().AddIpcFull(12);
     ASSERT_EQ(result, false);
-    }
+}
 #ifdef ASYNC_BINDER_SPACE_FULL
 /**
  * @tc.name: AsyncBinderSpaceFull
@@ -82,29 +82,30 @@ void IpcFullTest::TearDown(void)
  * @tc.require: AR20251016566499
  * @tc.author: chenyufan
  */
-    HWTEST_F(IpcFullTest, AsyncBinderSpaceFull_001, TestSize.Level1)
-    {
+HWTEST_F(IpcFullTest, AsyncBinderSpaceFull_001, TestSize.Level1)
+{
     /**
      * @tc.steps: step1. input interval param below the min allowable threshold
      * @tc.expected: step1. add async binder space full interface failed;
      */
-    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(1, 12);
+    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(1, 9);
     ASSERT_EQ(result, false);
 
     /**
      * @tc.steps: step2. input count param exceeds the max allowable threshold
      * @tc.expected: step2. add async binder space full interface failed;
      */
-    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(3, 40);
+    result = IpcFull::GetInstance().AsyncBinderSpaceFull(3, 40);
     ASSERT_EQ(result, false);
 
     /**
-     * @tc.steps: step3. iinput valid interval param
+     * @tc.steps: step3. input valid interval param
      * @tc.expected: step3. add async binder space full interface successfully;
      */
-    bool result = IpcFull::GetInstance().AsyncBinderSpaceFull(3, 12);
+    result = IpcFull::GetInstance().AsyncBinderSpaceFull(6, 10);
     ASSERT_EQ(result, true);
-    }
+    std::this_thread::sleep_for(std::chrono::seconds(8));
+}
 #endif
 } // namespace HiviewDFX
 } // namespace OHOS

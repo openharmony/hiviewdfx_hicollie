@@ -22,17 +22,17 @@ namespace OHOS {
 namespace HiviewDFX {
 namespace {
     constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
-    constexpr const char* const ENABLE_BETA_VAULE = "beta";
+    constexpr const char* const ENABLE_BETA_VALUE = "beta";
 }
 
 bool AppWatchdogUtils::IsBetaVersion()
 {
     static std::string isBetaVersion;
     if (!isBetaVersion.empty()) {
-        return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
+        return (isBetaVersion.find(ENABLE_BETA_VALUE) != std::string::npos);
     }
     isBetaVersion = system::GetParameter(KEY_BETA_TYPE, "");
-    return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
+    return (isBetaVersion.find(ENABLE_BETA_VALUE) != std::string::npos);
 }
 }  // end of namespace HiviewDFX
 }  // end of namespace OHOS

@@ -35,7 +35,6 @@
 #include "directory_ex.h"
 #include "file_ex.h"
 #include "parameters.h"
-#include "watchdog_inner_util_test.h"
 
 using namespace testing::ext;
 using namespace OHOS::AppExecFwk;
@@ -64,22 +63,10 @@ void WatchdogInnerTaskTest::TearDownTestCase(void)
 
 void WatchdogInnerTaskTest::SetUp(void)
 {
-    InitSeLinuxEnabled();
 }
 
 void WatchdogInnerTaskTest::TearDown(void)
 {
-    CancelSeLinuxEnabled();
-}
-
-static void InitBeginFuncTest(const char* name)
-{
-    std::string nameStr(name);
-}
-
-static void InitEndFuncTest(const char* name)
-{
-    std::string nameStr(name);
 }
 
 /**

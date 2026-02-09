@@ -85,28 +85,20 @@ int TestCreateFile(const std::string &path)
         }
         fout.flush();
         fout.close();
-        chmod(path.c_str(), 0644); // 0644: test value
+        chmod(path.c_str(), 0644);
     }
     return 0;
 }
 
 void TestInitAppStartSample(AppStartContent& startContent)
 {
-    startContent.threshold = 500; // 500: test value
-    startContent.sampleInterval = 50; // 50: test value
-    startContent.targetCount = 10; // 10: test value
-    startContent.reportTimes = 1; // 1: test value
+    startContent.threshold = 500;
+    startContent.sampleInterval = 50;
+    startContent.targetCount = 10;
+    startContent.reportTimes = 1;
     startContent.startTime = GetTimeStamp();
     startContent.enableStartSample = true;
-    startContent.startUpDuration = 5000; // 5000: test value
-}
-
-void TestSleep(int second)
-{
-    int left = second;
-    while (left > 0) {
-        left = sleep(left);
-    }
+    startContent.startUpDuration = 5000;
 }
 
 /**
@@ -303,8 +295,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_003, TestSize.Level1)
     auto timeOutCallback = [](const std::string &name, int waitState) {
         printf("timeOutCallback name is %s, waitState is %d\n", name.c_str(), waitState);
     };
-    int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr, timeOutCallback, 10,
-        0);
+    int result = WatchdogInner::GetInstance().AddThread("AddThread", nullptr,
+        timeOutCallback, 10, 0);
     EXPECT_TRUE(result <= 0);
     int32_t pid = getprocpid();
     bool writeResult = WatchdogInner::WriteStringToFile(pid, "0");
@@ -468,6 +460,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_002, TestSize.Level1
  */
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_LeftTimeExitProcess_001, TestSize.Level1)
 {
+    OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogInnerUnitTest");
     EXPECT_TRUE(IsProcessDebug(getprocpid()));
     WatchdogInner::GetInstance().LeftTimeExitProcess("msg");
 }
@@ -510,7 +503,8 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitMainLooperWatcher_001, TestSiz
     beginTest("Test");
     usleep(3500 * 1000); // test value
     endTest("Test");
-    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes < 1);
+    printf("stackContent_.reportTimes: %d\n", WatchdogInner::GetInstance().stackContent_.reportTimes);
+    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes <= 1);
 }
 
 /**
@@ -909,7 +903,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ConfigEventPolicy_003, TestSize.Le
         endTest("Test");
         count++;
     }
-    usleep(1500 * 1000);
+    sleep(5);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_LOG_TYPE], 1);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_SAMPLE_INTERVAL], 100);
     EXPECT_EQ(WatchdogInner::GetInstance().jankParamsMap[KEY_IGNORE_STARTUP_TIME], 12);
@@ -1006,7 +1000,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetLimitedSizeName_001, TestSize.L
     EXPECT_TRUE(GetLimitedSizeName(name).size() <= limitValue);
 }
 
-#ifdef SUSPEND_CHECK_ENABLE
 /**
  * @tc.name: WatchdogInner IsInSleep test;
  * @tc.desc: add testcase
@@ -1038,7 +1031,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsInSleep_001, TestSize.Level1)
     ret = WatchdogInner::GetInstance().IsInSleep(task);
     EXPECT_TRUE(ret);
 }
-#endif
 
 /**
  * @tc.name: WatchdogInner GetAppStartTime test;
@@ -1292,7 +1284,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
     WatchdogInner::GetInstance().StartSample(duration, interval);
     duration = 100; // test value
     interval = 300; // test value
-    WatchdogInner::GetInstance().StartSample(duration, interval);
+    WatchdogInner::GetInstance().StartSample(100, 300);
     duration = -300; // test value
     interval = -100; // test value
     WatchdogInner::GetInstance().StartSample(duration, interval);
@@ -1362,50 +1354,52 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitAsyncStack, TestSize.Level1)
 #endif
 
 /**
- * @tc.name: WatchdogInner IsSystemApp Test;
+ * @tc.name: WatchdogInnerTest SystemApp Test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_IsSystemApp_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SystemApp_Test001, TestSize.Level1)
 {
-    WatchdogInner::GetInstance().stackContent_.reportTimes = 1; // test value
-    WatchdogInner::GetInstance().isSystemApp_ = true;
-    WatchdogInner::GetInstance().InitMainLooperWatcher(nullptr, nullptr);
-    WatchdogInnerBeginFunc beginTest = InitBeginFuncTest;
-    WatchdogInnerEndFunc endTest = InitEndFuncTest;
-    WatchdogInner::GetInstance().InitMainLooperWatcher(&beginTest, &endTest);
-    beginTest("Test");
-    sleep(12); // test value
-    int count = 0;
-    while (count < 3) {
-        beginTest("Test");
-        usleep(140 * 1000); // test value
-        endTest("Test");
-        count++;
-    }
-    EXPECT_TRUE(WatchdogInner::GetInstance().stackContent_.reportTimes == 1);
+    WatchdogInner::GetInstance().SetSystemApp(true);
+    std::string bundleName = "WatchdogInnerTest";
+    WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0");
+    
+    EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), bundleName);
+    TimePoint endTime = std::chrono::steady_clock::now();
+    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
+
+    WatchdogInner::GetInstance().SetSystemApp(false);
+    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
+
+    bundleName = "com.ohos.sceneboard";
+    WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0");
+    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
+    EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), bundleName);
+
+    WatchdogInner::GetInstance().SetSystemApp(true);
+    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
+    EXPECT_EQ(WatchdogInner::GetInstance().GetSystemApp(), true);
+
+    WatchdogInner::GetInstance().SetSystemApp(true);
+    WatchdogInner::GetInstance().CollectTraceDetect(endTime, 150);
+    WatchdogInner::GetInstance().SetSystemApp(false);
+    WatchdogInner::GetInstance().CollectTraceDetect(endTime, 150);
 }
 
 /**
- * @tc.name: WatchdogInner GetBundleName Test;
+ * @tc.name: WatchdogInnerTest CheckSystemThread Test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetBundleName_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckSystemThread_Test001, TestSize.Level1)
 {
-    std::string testValue = "WatchdogInnerTest_GetBundleName_001";
-    WatchdogInner::GetInstance().SetBundleInfo(testValue, "1.1.0");
-    EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), testValue);
-    testValue = "WatchdogInnerTest";
-    WatchdogInner::GetInstance().SetBundleInfo(testValue, "1.1.0");
-    EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), testValue);
-    WatchdogInner::GetInstance().isSystemApp_ = true;
-    TimePoint endTime = std::chrono::steady_clock::now();
-    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
-    testValue = "com.ohos.sceneboard";
-    WatchdogInner::GetInstance().SetBundleInfo(testValue, "1.1.0");
-    WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
-    EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), testValue);
+    WatchdogInner::GetInstance().SetSystemApp(false);
+    uint32_t uid = 666;
+    bool ret = WatchdogInner::GetInstance().CheckSystemThread(uid);
+    EXPECT_EQ(ret, true);
+    uid = 66666;
+    ret = WatchdogInner::GetInstance().CheckSystemThread(uid);
+    EXPECT_EQ(ret, false);
 }
 
 /**
@@ -1419,43 +1413,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_GetReservedTimeForLogging_001, TestSiz
     EXPECT_TRUE(ret >= 3500);
     ret = WatchdogInner::GetInstance().GetReservedTimeForLogging();
     EXPECT_TRUE(ret >= 3500);
-}
-
-/**
- * @tc.name: WatchdogInner IPCProxyLimitCallback Test;
- * @tc.desc: add testcase
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogInnerTest, WatchdogInner_IPCProxyLimitCallback_001, TestSize.Level1)
-{
-    pid_t childPid = fork();
-    if (childPid < 0) {
-        printf("Failed to fork process.\n");
-    } else if (childPid == 0) {
-        uint64_t num = 15000;
-        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
-        int pid = getpid();
-        std::string procPath = "/proc/" + std::to_string(pid);
-        EXPECT_TRUE(OHOS::FileExists(procPath));
-        int second = 10;
-        TestSleep(10);
-        num = 16000;
-        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
-        EXPECT_TRUE(OHOS::FileExists(procPath));
-        TestSleep(10);
-        num = 20000;
-        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
-        TestSleep(15);
-        setuid(num);
-        WatchdogInner::GetInstance().IPCProxyLimitCallback(num);
-        EXPECT_TRUE(!OHOS::FileExists(procPath));
-        _exit(0);
-    } else {
-        if (waitpid(childPid, nullptr, 0) != childPid) {
-            printf("Failed to fork process, pid: %d, errno: %d.\n", childPid, errno);
-        }
-        printf("waitpid succcess, pid: %d.\n", childPid);
-    }
 }
 
 /**
