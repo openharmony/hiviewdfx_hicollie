@@ -76,6 +76,7 @@ std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now);
 
 uint64_t GetCurrentTickMillseconds();
 
+
 uint64_t GetCurrentBootMillseconds();
 
 void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart);

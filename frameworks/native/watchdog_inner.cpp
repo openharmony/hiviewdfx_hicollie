@@ -659,7 +659,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
 
 bool WatchdogInner::CheckSystemThread(uint32_t uid)
 {
-    return (GetSystemApp() || uid == MIN_APP_UID);
+    return (GetSystemApp() || uid < MIN_APP_UID);
 }
 
 void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
@@ -1634,7 +1634,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     }
 
     if (isExist) {
-        description += ", report twice instead of exiting process.";
+        description += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
         WatchdogInner::KillPeerBinderProcess(description);
@@ -2085,7 +2085,7 @@ void WatchdogInner::SetScrollState(bool isScroll)
 
 int32_t WatchdogInner::GetReservedTimeForLogging()
 {
-    XCOLLIE_LOGD("Set reserved time, is betaVersion: %{public}d", g_betaVersion);
+    XCOLLIE_LOGD("Set reserved time, betaVersion: %{public}d", g_betaVersion);
     if (g_betaVersion) {
         reservedTime_ = BETA_RESERVED_TIME;
     }
