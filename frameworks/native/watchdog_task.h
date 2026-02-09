@@ -58,6 +58,7 @@ public:
           monoTimeStart(0),
           reportCount(0),
           binderSpaceFullCount(0) {};
+
     ~WatchdogTask() {};
 
     bool operator<(const WatchdogTask &obj) const

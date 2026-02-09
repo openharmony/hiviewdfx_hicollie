@@ -4,7 +4,7 @@
         SetTimerRust;
         CancelTimerRust;
     };
-    extern "C++" {	
+    extern "C++" {
         "OHOS::HiviewDFX::XCollie::SetTimer(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, unsigned int, std::__h::function<void (void*)>, void*, unsigned int)";
         "OHOS::HiviewDFX::XCollie::CancelTimer(int)";
         "OHOS::HiviewDFX::XCollie::XCollie()";
@@ -52,7 +52,7 @@
         "OHOS::HiviewDFX::Watchdog::StartSample(int, int)";
         "OHOS::HiviewDFX::Watchdog::StopSample(int)";
         "OHOS::HiviewDFX::Watchdog::GetReservedTimeForLogging()";
-    };	
-  local:	
+    };
+  local:
     *;
 };

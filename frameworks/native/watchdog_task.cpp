@@ -72,7 +72,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 }
 
 WatchdogTask::WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag)
-    : task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
+    : name(IPC_FULL_TASK), task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
       flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
@@ -245,7 +245,6 @@ bool WatchdogTask::IsBinderSpaceInsufficient()
     uint32_t pid = static_cast<uint32_t>(getprocpid());
     unsigned long totalSize = UINT32_MAX;
     unsigned long oneWayFreeSize = UINT32_MAX;
-
     if (IPCSkeleton::GetMemoryUsage(pid, totalSize, oneWayFreeSize) != 0) {
         XCOLLIE_LOGE("GetMemoryUsage failed for pid %{public}d", pid);
         return false;
@@ -358,11 +357,8 @@ void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
         XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
         return;
     }
-    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
     ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
-        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
-    }
+    close(fd);
     if (ret != 0) {
         XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
     } else {
