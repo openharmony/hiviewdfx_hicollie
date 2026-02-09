@@ -12,10 +12,15 @@
 # limitations under the License.
 
 import("//build/ohos.gni")
+import ("//base/hiviewdfx/hicollie/hicollie.gni")
 
 config("libhicollie_pub_config") {
   visibility = [ ":*" ]
   include_dirs = [ "include" ]
+  defines = []
+  if (hicollie_asyncbinderspacefull_enable) {
+    defines += [ "ASYNC_BINDER_SPACE_FULL" ]
+  }
 }
 
 ohos_shared_library("libhicollie") {

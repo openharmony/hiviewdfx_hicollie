@@ -5,22 +5,22 @@
         CancelTimerRust;
     };
     extern "C++" {	
-        "OHOS::HiviewDFX::XCollie::SetTimer(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, unsigned int, std::__h::function<void (void*)>, void*, unsigned int)";	
-        "OHOS::HiviewDFX::XCollie::CancelTimer(int)";	
-        "OHOS::HiviewDFX::XCollie::XCollie()";	
+        "OHOS::HiviewDFX::XCollie::SetTimer(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, unsigned int, std::__h::function<void (void*)>, void*, unsigned int)";
+        "OHOS::HiviewDFX::XCollie::CancelTimer(int)";
+        "OHOS::HiviewDFX::XCollie::XCollie()";
         "OHOS::HiviewDFX::XCollie::~XCollie()";
         "OHOS::HiviewDFX::IpcFull::IpcFull()";
         "OHOS::HiviewDFX::IpcFull::~IpcFull()";
         "OHOS::HiviewDFX::IpcFull::AddIpcFull(unsigned long, unsigned int, std::__h::function<void (void*)>, void*)";
         "OHOS::HiviewDFX::IpcFull::AddIpcFull(unsigned long long, unsigned int, std::__h::function<void (void*)>, void*)";
         "OHOS::HiviewDFX::XCollie::TriggerTimerCount(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, bool, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
-        "OHOS::HiviewDFX::IpcFull::AsyncBinderSpaceFull(unsigned long long, unsigned int, unsigned int, std::__h::function<void (void*)>, void*)";
+        "OHOS::HiviewDFX::IpcFull::AsyncBinderSpaceFull(unsigned long, unsigned int, unsigned int, std::__h::function<void (void*)>, void*)";
         "OHOS::HiviewDFX::XCollie::SetTimerCount(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, unsigned int, int)";
         "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, unsigned long)";
         "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, unsigned long long)";
         "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, std::__h::function<void (std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)>, unsigned long)";
         "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, std::__h::function<void (std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)>, unsigned long long)";
-        "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, std::__h::function<void (std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)>, unsigned int)";
+        "OHOS::HiviewDFX::Watchdog::AddThread(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::shared_ptr<OHOS::AppExecFwk::EventHandler>, std::__h::function<void (std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)>, unsigned long long, unsigned int)";
         "OHOS::HiviewDFX::Watchdog::Watchdog()";
         "OHOS::HiviewDFX::Watchdog::~Watchdog()";
         "OHOS::HiviewDFX::Watchdog::RunOneShotTask(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, std::__h::function<void ()>&&, unsigned long)";
@@ -42,7 +42,7 @@
         "OHOS::HiviewDFX::Watchdog::ConfigEventPolicy(std::__h::map<std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>>)";
         "OHOS::HiviewDFX::Watchdog::ConfigEventPolicy(std::__h::map<std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>, std::__h::less<std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>>, std::__h::allocator<std::__h::pair<std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const, std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>>>>>)";
         "OHOS::HiviewDFX::GetCurrentTickMillseconds()";
-        "OHOS::HiviewDFX::FormatTime(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";	
+        "OHOS::HiviewDFX::FormatTime(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
         "OHOS::HiviewDFX::Watchdog::SetSpecifiedProcessName(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&)";
         "OHOS::HiviewDFX::Watchdog::SetScrollState(bool)";
         "OHOS::HiviewDFX::Watchdog::GetForeground()";
@@ -51,6 +51,7 @@
         "OHOS::HiviewDFX::Watchdog::GetSamplerResult(unsigned long long&, unsigned long long&, int&)";
         "OHOS::HiviewDFX::Watchdog::StartSample(int, int)";
         "OHOS::HiviewDFX::Watchdog::StopSample(int)";
+        "OHOS::HiviewDFX::Watchdog::GetReservedTimeForLogging()";
     };	
   local:	
     *;

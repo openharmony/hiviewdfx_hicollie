@@ -40,6 +40,7 @@ private:
     void DumpTrace(UCollectClient::AppCaller appCaller,
         const std::shared_ptr<UCollectClient::TraceCollector> &traceCollector);
 
+    static ffrt::mutex queueMutex_;
     static int maxTaskNum_;
     static int openTraceCode_;
     std::unique_ptr<ffrt::queue> xcollieQueue_ = nullptr;

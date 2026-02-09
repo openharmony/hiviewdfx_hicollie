@@ -20,6 +20,7 @@ namespace OHOS {
 namespace HiviewDFX {
 int XCollieFfrtTask::maxTaskNum_ = 0;
 int XCollieFfrtTask::openTraceCode_ = -1;
+ffrt::mutex XCollieFfrtTask::queueMutex_;
 
 XCollieFfrtTask::XCollieFfrtTask(int maxFfrtNum)
 {
@@ -40,7 +41,10 @@ void XCollieFfrtTask::StartTrace(UCollectClient::AppCaller appCaller,
 {
     uint64_t beforeTime = GetCurrentTickMillseconds();
     auto result = traceCollector->CaptureDurationTrace(appCaller);
-    openTraceCode_ = result.retCode;
+    {
+        std::lock_guard<ffrt::mutex> lock(queueMutex_);
+        openTraceCode_ = result.retCode;
+    }
     XCOLLIE_LOGI("Start to open trace result: %{public}d, interval: %{public}" PRIu64 " ms",
         result.retCode, (GetCurrentTickMillseconds() - beforeTime));
 }
@@ -48,7 +52,11 @@ void XCollieFfrtTask::StartTrace(UCollectClient::AppCaller appCaller,
 void XCollieFfrtTask::DumpTrace(UCollectClient::AppCaller appCaller,
     const std::shared_ptr<UCollectClient::TraceCollector> &traceCollector)
 {
-    int ret = openTraceCode_;
+    int ret = -1;
+    {
+        std::lock_guard<ffrt::mutex> lock(queueMutex_);
+        ret = openTraceCode_;
+    }
     if (ret != 0) {
         XCOLLIE_LOGI("Start to dump trace failed, openTrace result: %{public}d", ret);
         return;

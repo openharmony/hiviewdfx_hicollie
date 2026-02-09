@@ -35,7 +35,6 @@ namespace HiviewDFX {
 class Watchdog : public Singleton<Watchdog> {
     DECLARE_SINGLETON(Watchdog);
     static const uint64_t WATCHDOG_TIMEVAL = 30000;
-    static const uint64_t PRIORITY_IMMEDIATE = 1;
 public:
 
     /**
@@ -193,7 +192,7 @@ public:
      * @param name, the name of handler check task
      * @param handler, the handler to be checked periodically
      * @param timeOutCallback, callback when timeout. After the callback is executed,
-     *                          freeze logs cannot be generate.
+     *                          freeze logs cannot be generated.
      * @param interval, the period in millisecond
      * @param priority, task priority
      * @return 0 if added
@@ -204,6 +203,7 @@ public:
 
     /**
      * @brief Get sampler result.
+     * @return reserved Time
      */
     int32_t GetReservedTimeForLogging();
 };

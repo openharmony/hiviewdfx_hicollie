@@ -44,7 +44,7 @@ std::string TimeFormat(uint64_t time)
     char timeChars[FORMAT_TIME_LEN] = {0};
     struct tm localTime;
     localtime_r(&sec, &localTime);
-    (void)strftime(timeChars, FORMAT_TIME_LEN, "%Y-%m-%d-%H-%M-%S", &localTime);
+    strftime(timeChars, FORMAT_TIME_LEN, "%Y-%m-%d-%H-%M-%S", &localTime);
     std::string s = timeChars;
     uint64_t usec = nsec / NANOSEC_PER_MICROSEC;
     std::string usecStr = std::to_string(usec);

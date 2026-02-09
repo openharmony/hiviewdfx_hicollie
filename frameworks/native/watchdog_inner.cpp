@@ -131,6 +131,7 @@ constexpr const char* SCROLL_JANK = "SCROLL_JANK";
 constexpr const char* MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
 constexpr const char* BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
 using InitAsyncStackFn = bool(*)();
+static bool g_betaVersion = OHOS::system::GetParameter("const.logsystem.versiontype", "unknown") == "beta";
 }
 
 std::mutex WatchdogInner::lockFfrt_;
@@ -379,8 +380,8 @@ bool WatchdogInner::InitThreadSamplerFuncs()
             reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
         threadSamplerSigHandler_ =
             reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
-        threadSamplerGetResultFunc_ = reinterpret_cast<ThreadSamplerGetResultFunc>(
-            FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
+        threadSamplerGetResultFunc_ =
+            reinterpret_cast<ThreadSamplerGetResultFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
         if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
             threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
             threadSamplerSigHandler_ == nullptr || threadSamplerGetResultFunc_ == nullptr) {
@@ -656,9 +657,15 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
     return true;
 }
 
+bool WatchdogInner::CheckSystemThread(uint32_t uid)
+{
+    return (GetSystemApp() || uid == MIN_APP_UID);
+}
+
 void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
 {
-    if ((GetSystemApp() && GetBundleName() != KEY_SCB_STATE) || !SampleStackDetect(endTime, stackContent_.reportTimes,
+    if ((CheckSystemThread(getuid()) && GetBundleName() != KEY_SCB_STATE) ||
+        !SampleStackDetect(endTime, stackContent_.reportTimes,
         jankParamsMap[KEY_SAMPLE_REPORT_TIMES], jankParamsMap[KEY_IGNORE_STARTUP_TIME])) {
         return;
     }
@@ -710,9 +717,9 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
 
 std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
 {
+    ResetFreezeSampleFlags();
     if (!CreateDir(FREEZE_DIR)) {
         XCOLLIE_LOGE("Path to realPath failed.");
-        ResetFreezeSampleFlags();
         return "";
     }
     XCOLLIE_LOGI("Start to collect stack, pid:%{public}d.", pid);
@@ -736,7 +743,6 @@ std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
         .freezeFile = freezeFile,
     };
     XCOLLIE_LOGI("Save freeze stack to file, ret:%{public}d, logFile:%{public}s.", saveRet, freezeFile.c_str());
-    ResetFreezeSampleFlags();
     return freezeFile;
 }
 
@@ -912,7 +918,7 @@ int32_t WatchdogInner::StartTraceProfile()
 
 void WatchdogInner::CollectTraceDetect(const TimePoint& endTime, int64_t durationTime)
 {
-    if (IsBetaVersion() || GetSystemApp()) {
+    if (IsBetaVersion() || CheckSystemThread(getuid())) {
         return;
     }
     if (traceContent_.traceState == DumpStackState::COMPLETE) {
@@ -978,9 +984,8 @@ static void DistributeEnd(const std::string& name, const TimePoint& startTime)
     }
 }
 
-int WatchdogInner::AddThread(const std::string &name,
-    std::shared_ptr<AppExecFwk::EventHandler> handler, TimeOutCallback timeOutCallback, uint64_t interval,
-    uint32_t priority)
+int WatchdogInner::AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
+    TimeOutCallback timeOutCallback, uint64_t interval, uint32_t priority)
 {
     if (name.empty() || handler == nullptr) {
         XCOLLIE_LOGE("Add thread fail, invalid args!");
@@ -995,7 +1000,7 @@ int WatchdogInner::AddThread(const std::string &name,
     XCOLLIE_LOGI("Add thread %{public}s to watchdog.", limitedName.c_str());
 
     if (priority < PRIORITY_MIN || priority > PRIORITY_MAX) {
-        XCOLLIE_LOGE("Add thread fail, invalid priority!");
+        XCOLLIE_LOGE("Add thread failed, invalid priority.");
         return -1;
     }
     auto taskPriority = static_cast<AppExecFwk::EventQueue::Priority>(priority);
@@ -1190,17 +1195,11 @@ bool WatchdogInner::IsCallbackLimit(unsigned int flag)
     return ret;
 }
 
-void WatchdogInner::IPCProxyLimitCallback(uint64_t num)
+void IPCProxyLimitCallback(uint64_t num)
 {
-    uint64_t now = GetCurrentTickMillseconds();
-    if (now  - lastIpcCallbackTime_ > IPC_CALLBACK_INTERVAL) {
-        XCOLLIE_LOGE("ipc proxy num %{public}" PRIu64 " exceed limit", num);
-        lastIpcCallbackTime_ = now;
-    }
-    if (num >= MAX_IPC_CALLBACK_LIMIT && getuid() >= MIN_APP_UID && IsBetaVersion()) {
-        XCOLLIE_LOGI("Process is going to exit, reason: "
-            "ipc proxy num %{public}" PRIu64 " exceed limit %{public}" PRIu64 ", "
-            "only beta version.", num, MAX_IPC_CALLBACK_LIMIT);
+    XCOLLIE_LOGE("ipc proxy num %{public}" PRIu64 " exceed limit", num);
+    if (getuid() >= MIN_APP_UID && IsBetaVersion()) {
+        XCOLLIE_LOGI("Process is going to exit, reason: ipc proxy num exceed limit");
         _exit(0);
     }
 }
@@ -1285,10 +1284,13 @@ void WatchdogInner::ReadAppStartConfig(const std::string& filePath)
             continue;
         }
         if (line.find(EVENT_SLIDING_JANK) != std::string::npos) {
-            ParseAppStartParams(line, EVENT_SLIDING_JANK);
+            eventName = EVENT_SLIDING_JANK;
         } else if (line.find(EVENT_APP_START_SLOW) != std::string::npos) {
-            ParseAppStartParams(line, EVENT_APP_START_SLOW);
+            eventName = EVENT_APP_START_SLOW;
+        } else {
+            continue;
         }
+        ParseAppStartParams(line, eventName);
     }
 }
 
@@ -1303,9 +1305,8 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             if (getuid() >= MIN_APP_UID) {
                 ReadAppStartConfig(APP_START_CONFIG);
             }
-            const uint64_t limitNum = 15000;
-            IPCDfx::SetIPCProxyLimit(limitNum,
-                std::bind(&WatchdogInner::IPCProxyLimitCallback, this, std::placeholders::_1));
+            const uint64_t limitNum = 20000;
+            IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
                 SetThreadSignalMask(SIGDUMP, true, true);
@@ -1315,7 +1316,6 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
     });
 }
 
-#ifdef SUSPEND_CHECK_ENABLE
 bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 {
     if (IsInAppspwan() || queuedTaskCheck.bootTimeStart <= 0 || queuedTaskCheck.monoTimeStart <= 0) {
@@ -1333,7 +1333,6 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
     }
     return false;
 }
-#endif
 
 bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
 {
@@ -1456,15 +1455,11 @@ bool WatchdogInner::Start()
             nextWeakUpTime_ = now + leftTimeMill;
         }
         if (leftTimeMill == 0) {
-#ifdef SUSPEND_CHECK_ENABLE
             if (!IsInSleep(task)) {
-#endif
                 task.Run(now);
                 ReInsertTaskIfNeed(task);
                 currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
-#ifdef SUSPEND_CHECK_ENABLE
             }
-#endif
             continue;
         } else if (isNeedStop_) {
             break;
@@ -2090,9 +2085,8 @@ void WatchdogInner::SetScrollState(bool isScroll)
 
 int32_t WatchdogInner::GetReservedTimeForLogging()
 {
-    bool betaVersion = IsBetaVersion();
-    XCOLLIE_LOGD("Set reserved time, is betaVersion: %{public}d", betaVersion);
-    if (betaVersion) {
+    XCOLLIE_LOGD("Set reserved time, is betaVersion: %{public}d", g_betaVersion);
+    if (g_betaVersion) {
         reservedTime_ = BETA_RESERVED_TIME;
     }
     return reservedTime_;

@@ -49,10 +49,10 @@ public:
         unsigned int flag);
     void RemoveXCollieTask(int64_t id);
     bool AddIpcFull(uint64_t interval, unsigned int flag, IpcFullCallback func, void *arg);
-    #ifdef ASYNC_BINDER_SPACE_FULL
+#ifdef ASYNC_BINDER_SPACE_FULL
     bool AsyncBinderSpaceFull(uint64_t interval, unsigned int count, unsigned int flag, IpcFullCallback func,
     void *arg);
-    #endif
+#endif
     int64_t SetTimerCountTask(const std::string &name, uint64_t timeLimit, int countLimit);
     void TriggerTimerCountTask(const std::string &name, bool bTrigger, const std::string &message);
     void StopWatchdog();
@@ -114,9 +114,7 @@ private:
     bool IsTaskExistLocked(const std::string& name);
     bool IsExceedMaxTaskLocked();
     int64_t InsertWatchdogTaskLocked(const std::string& name, WatchdogTask&& task);
-#ifdef SUSPEND_CHECK_ENABLE
     bool IsInSleep(const WatchdogTask& queuedTaskCheck);
-#endif
     bool CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck);
     uint64_t FetchNextTask(uint64_t now, WatchdogTask& task);
     void ReInsertTaskIfNeed(WatchdogTask& task);
@@ -143,6 +141,7 @@ private:
     void ReadAppStartConfig(const std::string& filePath);
     bool EnableAppStartSample(AppStartContent& startContent, int64_t durationTime, bool isScroll);
     std::string GetBundleName();
+    bool CheckSystemThread(uint32_t uid);
     bool CheckBusinessByTid(int64_t tid);
     bool CheckBusinessEmpty();
     void InsertOrRemoveInfo(int64_t tid, bool isRemove = false);
@@ -156,7 +155,6 @@ private:
     bool InstallThreadSamplerSignal();
     void UninstallThreadSamplerSignal();
     void ResetFreezeSampleFlags();
-    void IPCProxyLimitCallback(uint64_t num);
 
     static SigActionType threadSamplerSigHandler_;
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -207,7 +205,6 @@ private:
     SampleFreezeInfo sampleFreezeInfo_;
     bool initAsyncStack_ {false};
     int reservedTime_ {DEFAULT_RESERVED_TIME};
-    uint64_t lastIpcCallbackTime_ {0};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

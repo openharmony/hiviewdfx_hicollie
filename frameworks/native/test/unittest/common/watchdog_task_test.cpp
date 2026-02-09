@@ -129,6 +129,10 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_005, TestSize.Level1)
 
     WatchdogTask task(10, 0, callback, nullptr, HiviewDFX::XCOLLIE_FLAG_DEFAULT);
     task.RunHandlerCheckerTask();
+    int pid = getpid();
+    std::string msg = "Thread ID = " + std::to_string(pid) + ") is running";
+    task.SendEvent(msg, "IPC_FULL", "");
+    sleep(1);
     EXPECT_TRUE(task.checker != nullptr);
     EXPECT_TRUE(task.checker->GetCheckState() >= 0);
 }
@@ -259,7 +263,7 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendXCollieEvent_001, TestSize.Level
 {
     int taskResult = 0;
     auto taskFunc = [&taskResult]() { taskResult = 1; };
-    const std::string name = "WatchdogTaskTest_SendXCollieEvent_001";
+    std::string name = "WatchdogTaskTest_SendXCollieEvent_001";
     WatchdogTask task(name, taskFunc, 0, 1000, true);
     task.SendXCollieEvent("1234", "keyMsg", "1234567");
     EXPECT_TRUE(!name.empty());
@@ -272,17 +276,14 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendXCollieEvent_001, TestSize.Level
  */
 HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendEvent_001, TestSize.Level1)
 {
-    int taskResult = 0;
-    auto taskFunc = [&taskResult]() { taskResult = 1; };
-    const std::string name = "WatchdogTaskTest_SendEvent_001";
-    WatchdogTask task(name, taskFunc, 0, 2111, true);
+    std::string name = "WatchdogTaskTest_SendEvent_001";
     auto runner = EventRunner::Create(true);
     auto handler = std::make_shared<EventHandler>(runner);
-    WatchdogTask task1("WatchdogTaskTest_003", handler, nullptr, 5,
+    WatchdogTask task1(name, handler, nullptr, 5,
         AppExecFwk::EventQueue::Priority::IMMEDIATE);
     task1.RunHandlerCheckerTask();
     EXPECT_TRUE(task1.checker != nullptr);
-    task.SendEvent("11", "keyMsg", "11111");
+    task1.SendEvent("11", "keyMsg", "11111");
     EXPECT_TRUE(!name.empty());
 }
 } // namespace HiviewDFX
