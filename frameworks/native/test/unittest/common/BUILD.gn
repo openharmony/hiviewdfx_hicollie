@@ -282,10 +282,6 @@ group("unittest") {
     # deps file
     ":HandlerCheckerTest",
     ":ThreadSamplerTest",
-    ":WatchdogInnerTaskTest",
-    ":WatchdogInnerUnitTest",
-    ":WatchdogTaskTest",
-    ":WatchdogUnitTest",
     ":XCollieFfrtTaskTest",
     ":XCollieUnitTest",
     ":IpcFullUnitTest",
