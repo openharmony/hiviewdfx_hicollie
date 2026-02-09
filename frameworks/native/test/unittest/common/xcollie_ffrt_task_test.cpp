@@ -106,7 +106,7 @@ HWTEST_F(XCollieFfrtTaskTest, XCollieFfrtTaskTest_SubmitDumpTraceTask_001, TestS
     appCaller.happenTime = 123; // test value
     appCaller.beginTime = 345; // test value
     appCaller.endTime = 456; // test value
-    appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE; // test value
+    appCaller.actionId = UCollectClient::ACTION_ID_START_TRACE; // test value
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector = UCollectClient::TraceCollector::Create();
     EXPECT_TRUE(xcollieFfrtTask);
     xcollieFfrtTask->SubmitDumpTraceTask(appCaller, traceCollector);
@@ -158,7 +158,7 @@ HWTEST_F(XCollieFfrtTaskTest, XCollieFfrtTaskTest_DumpTrace_001, TestSize.Level1
     appCaller.happenTime = 111; // test value
     appCaller.beginTime = 1234; // test value
     appCaller.endTime = 2234; // test value
-    appCaller.actionId = UCollectClient::ACTION_ID_DUMP_TRACE; // test value
+    appCaller.actionId = UCollectClient::ACTION_ID_START_TRACE; // test value
     std::shared_ptr<UCollectClient::TraceCollector> traceCollector = UCollectClient::TraceCollector::Create();
     std::shared_ptr<XCollieFfrtTask> xcollieFfrtTask = std::make_shared<XCollieFfrtTask>(1);
     EXPECT_TRUE(xcollieFfrtTask);

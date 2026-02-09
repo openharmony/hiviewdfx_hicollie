@@ -32,10 +32,6 @@ namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
 public:
-#ifdef SUSPEND_CHECK_ENABLE
-    WatchdogTask(const WatchdogTask& other);
-    WatchdogTask& operator=(const WatchdogTask& other);
-#endif
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority);
     WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag);
@@ -58,10 +54,8 @@ public:
           watchdogTid(0),
           timeLimit(0),
           countLimit(0),
-#ifdef SUSPEND_CHECK_ENABLE
           bootTimeStart(0),
           monoTimeStart(0),
-#endif
           reportCount(0),
           binderSpaceFullCount(0) {};
     ~WatchdogTask() {};
@@ -79,10 +73,10 @@ public:
         const std::string& faultTimeStr) const;
     void DoCallback();
     void TimerCountTask();
-    #ifdef ASYNC_BINDER_SPACE_FULL
+#ifdef ASYNC_BINDER_SPACE_FULL
     void AsyncBinderSpace();
     bool IsBinderSpaceInsufficient();
-    #endif
+#endif
     void DumpKernelStack(struct HstackVal& val, int& ret) const;
 #ifdef SUSPEND_CHECK_ENABLE
     bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
@@ -106,12 +100,10 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
-#ifdef SUSPEND_CHECK_ENABLE
     uint64_t bootTimeStart;
     uint64_t monoTimeStart;
-#endif
     int reportCount;
-    int binderSpaceFullCount;
+    unsigned int binderSpaceFullCount;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

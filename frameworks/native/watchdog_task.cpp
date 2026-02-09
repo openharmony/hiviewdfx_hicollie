@@ -50,6 +50,7 @@ constexpr const char* CORE_PROCS[] = {
     "anco_service_broker", "aptouch_daemon", "foundation", "init",
     "multimodalinput", "com.ohos.sceneboard", "render_service"
 };
+constexpr const int ASYNC_BINDER_SPACE_NUM = 2;
 }
 int64_t WatchdogTask::curId = 0;
 struct HstackVal {
@@ -57,63 +58,22 @@ struct HstackVal {
     pid_t tid;
     char hstackLogBuff[BUFF_STACK_SIZE];
 };
-
-#ifdef SUSPEND_CHECK_ENABLE
-WatchdogTask::WatchdogTask(const WatchdogTask& other)
-    : name(other.name), message(other.message), task(other.task), timeOutCallback(other.timeOutCallback),
-    checker(other.checker), id(other.id), timeout(other.timeout), func(other.func), arg(other.arg),
-    flag(other.flag), checkInterval(other.checkInterval), nextTickTime(other.nextTickTime),
-    isOneshotTask(other.isOneshotTask), watchdogTid(other.watchdogTid), timeLimit(other.timeLimit),
-    countLimit(other.countLimit), triggerTimes(other.triggerTimes), reportCount(other.reportCount)
-{
-    CalculateTimes(bootTimeStart, monoTimeStart);
-}
-
-WatchdogTask &WatchdogTask::operator=(const WatchdogTask &other)
-{
-    if (this != &other) {
-        name = other.name;
-        message = other.message;
-        task = other.task;
-        timeOutCallback = other.timeOutCallback;
-        checker = other.checker;
-        id = other.id;
-        timeout = other.timeout;
-        func = other.func;
-        arg = other.arg;
-        flag = other.flag;
-        checkInterval = other.checkInterval;
-        nextTickTime = other.nextTickTime;
-        isOneshotTask = other.isOneshotTask;
-        watchdogTid = other.watchdogTid;
-        timeLimit = other.timeLimit;
-        countLimit = other.countLimit;
-        triggerTimes = other.triggerTimes;
-        reportCount = other.reportCount;
-        CalculateTimes(bootTimeStart, monoTimeStart);
-    }
-    return *this;
-}
-#endif
-
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0), binderSpaceFullCount(0)
+      watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0),
+      binderSpaceFullCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler, priority);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
-#ifdef SUSPEND_CHECK_ENABLE
-    CalculateTimes(bootTimeStart, monoTimeStart);
-#endif
 }
 
-WatchdogTask::WatchdogTask(uint64_t interval,  unsigned int count, IpcFullCallback func, void *arg, unsigned int flag)
+WatchdogTask::WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag)
     : task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
-      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
+      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
 {
     id = ++curId;
     checker = (count > 0) ? nullptr:std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
@@ -122,24 +82,17 @@ WatchdogTask::WatchdogTask(uint64_t interval,  unsigned int count, IpcFullCallba
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
     binderSpaceFullCount = count;
-#ifdef SUSPEND_CHECK_ENABLE
-    bootTimeStart = 0;
-    monoTimeStart = 0;
-#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
-      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0), binderSpaceFullCount(0)
+      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0),
+      reportCount(0), binderSpaceFullCount(0)
 {
     id = ++curId;
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
     isOneshotTask = isOneshot;
-#ifdef SUSPEND_CHECK_ENABLE
-    bootTimeStart = 0;
-    monoTimeStart = 0;
-#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag)
@@ -151,23 +104,17 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isOneshotTask = true;
     watchdogTid = getproctid();
-#ifdef SUSPEND_CHECK_ENABLE
     CalculateTimes(bootTimeStart, monoTimeStart);
-#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit), reportCount(0),
-      binderSpaceFullCount(0)
+      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit), bootTimeStart(0),
+      monoTimeStart(0), reportCount(0), binderSpaceFullCount(0)
 {
     id = ++curId;
     checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;
     nextTickTime = GetCurrentTickMillseconds();
-#ifdef SUSPEND_CHECK_ENABLE
-    bootTimeStart = 0;
-    monoTimeStart = 0;
-#endif
 }
 
 void WatchdogTask::DoCallback()
@@ -240,12 +187,12 @@ void WatchdogTask::Run(uint64_t now)
         nextTickTime = now;
         return;
     }
-    #ifdef ASYNC_BINDER_SPACE_FULL
+#ifdef ASYNC_BINDER_SPACE_FULL
     if (binderSpaceFullCount > 0) {
         AsyncBinderSpace();
         return;
     }
-    #endif
+#endif
     if (timeout != 0) {
         DoCallback();
     } else if (task != nullptr) {
@@ -262,9 +209,9 @@ void WatchdogTask::AsyncBinderSpace()
         return;
     }
     reportCount++;
-    XCOLLIE_LOGI("async binder space full, reportCount = %{public}d", reportCount);
+    XCOLLIE_LOGD("async binder space full, reportCount = %{public}d", reportCount);
 
-    std::string description = GetBlockDescription(checkInterval / TO_MILLISECOND_MULTPLE);
+    std::string description = GetBlockDescription(checkInterval * reportCount / TO_MILLISECOND_MULTPLE);
     description += "\nreportCount = " + std::to_string(reportCount);
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
     if (reportCount == binderSpaceFullCount / BINDER_SPACE_FULL_COUNT_HALF) {
@@ -272,7 +219,7 @@ void WatchdogTask::AsyncBinderSpace()
             func(arg);
         }
         if (flag & XCOLLIE_FLAG_LOG) {
-            XCOLLIE_LOGI("BINDER_BUFFER_FULL_WARNING, reportCount = %{public}d", reportCount);
+            XCOLLIE_LOGD("BINDER_BUFFER_FULL_WARNING, reportCount = %{public}d", reportCount);
             SendEvent(description, "BINDER_BUFFER_FULL_WARNING", faultTimeStr);
         }
     } else if (reportCount == binderSpaceFullCount) {
@@ -280,7 +227,7 @@ void WatchdogTask::AsyncBinderSpace()
             func(arg);
         }
         if (flag & XCOLLIE_FLAG_LOG) {
-            XCOLLIE_LOGI("BINDER_BUFFER_FULL, reportCount = %{public}d", reportCount);
+            XCOLLIE_LOGD("BINDER_BUFFER_FULL, reportCount = %{public}d", reportCount);
             SendEvent(description, "BINDER_BUFFER_FULL", faultTimeStr);
         }
         if ((flag & XCOLLIE_FLAG_RECOVERY)||(func == nullptr)) {
@@ -288,24 +235,26 @@ void WatchdogTask::AsyncBinderSpace()
         }
     } else if (reportCount >= binderSpaceFullCount * BINDER_SPACE_FULL_WARNING_MULTIPLE) {
         reportCount = 0;
-        XCOLLIE_LOGI("async binder space full reach fullCount 10 ratio, reportCount reset to 0");
+        XCOLLIE_LOGE("async binder space full reach fullCount 10 ratio, reportCount reset to 0");
         WatchdogInner::KillPeerBinderProcess(description);
     }
 }
 
 bool WatchdogTask::IsBinderSpaceInsufficient()
 {
-    uint32_t pid = getprocpid();
-    unsigned long totalSize = 0;
-    unsigned long oneWayFreeSize = 0;
+    uint32_t pid = static_cast<uint32_t>(getprocpid());
+    unsigned long totalSize = UINT32_MAX;
+    unsigned long oneWayFreeSize = UINT32_MAX;
 
     if (IPCSkeleton::GetMemoryUsage(pid, totalSize, oneWayFreeSize) != 0) {
-        XCOLLIE_LOGI("GetMemoryUsage failed for pid %{public}d", pid);
+        XCOLLIE_LOGE("GetMemoryUsage failed for pid %{public}d", pid);
         return false;
     }
-    unsigned long usedSize = totalSize - oneWayFreeSize;
-    float usedRatio = (usedSize * 100.0f) / totalSize;
-    return (usedRatio >= 80.0f);
+    if (totalSize == UINT32_MAX || oneWayFreeSize == UINT32_MAX) {
+        XCOLLIE_LOGE("GetMemoryUsage failed for pid %{public}d", pid);
+        return false;
+    }
+    return ((totalSize - oneWayFreeSize * ASYNC_BINDER_SPACE_NUM) * 100.0f) / totalSize >= 80.0f;
 }
 #endif
 void WatchdogTask::TimerCountTask()
@@ -360,7 +309,7 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     time_t curTime = time(nullptr);
     char* timeStr = ctime(&curTime);
     std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) + "\n" + msg + "\n";
-    sendMsg += checker == nullptr ? "": checker->GetDumpInfo();
+    sendMsg += (checker == nullptr) ? "": checker->GetDumpInfo();
 
     watchdogTid = pid;
     std::string tidFrontStr = "Thread ID = ";
@@ -409,8 +358,11 @@ void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
         XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
         return;
     }
+    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
     ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    close(fd);
+    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
+    }
     if (ret != 0) {
         XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
     } else {
