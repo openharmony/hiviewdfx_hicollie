@@ -103,7 +103,7 @@ public:
     std::vector<uint64_t> triggerTimes;
     uint64_t bootTimeStart;
     uint64_t monoTimeStart;
-    int reportCount;
+    unsigned int reportCount;
     unsigned int binderSpaceFullCount;
 };
 } // end of namespace HiviewDFX

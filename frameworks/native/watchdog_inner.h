@@ -132,7 +132,7 @@ private:
     int ConvertStrToNum(const std::map<std::string, std::string>& paramsMap, const std::string& key,
         std::string& value, int defaultValue = -1);
     bool GetAutoStopSampling(const std::map<std::string, std::string>& paramsMap, int& autoStopSampling);
-    bool CheckSampleParam(const std::map<std::string, std::string>& paramsMap, bool keyNeedExist = true);
+    bool CheckSampleParam(const std::map<std::string, std::string>& paramsMap, bool keyNeedExist = true);;
     std::string SaveFreezeStackToFile(int32_t pid);
     bool AppStartSample(bool isScroll, AppStartContent& startContent);
     void ClearParam(bool& isFinished);
