@@ -380,8 +380,8 @@ bool WatchdogInner::InitThreadSamplerFuncs()
             reinterpret_cast<ThreadSamplerDeinitFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerDeinit"));
         threadSamplerSigHandler_ =
             reinterpret_cast<SigActionType>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerSigHandler"));
-        threadSamplerGetResultFunc_ =
-            reinterpret_cast<ThreadSamplerGetResultFunc>(FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
+        threadSamplerGetResultFunc_ = reinterpret_cast<ThreadSamplerGetResultFunc>(
+            FunctionOpen(threadSamplerFuncHandler_, "ThreadSamplerGetResult"));
         if (threadSamplerInitFunc_ == nullptr || threadSamplerSampleFunc_ == nullptr ||
             threadSamplerCollectFunc_ == nullptr || threadSamplerDeinitFunc_ == nullptr ||
             threadSamplerSigHandler_ == nullptr || threadSamplerGetResultFunc_ == nullptr) {
@@ -659,7 +659,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
 
 bool WatchdogInner::CheckSystemThread(uint32_t uid)
 {
-    return (GetSystemApp() || uid == MIN_APP_UID);
+    return (GetSystemApp() || uid < MIN_APP_UID);
 }
 
 void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t durationTime, int sampleInterval)
@@ -1637,7 +1637,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     }
 
     if (isExist) {
-        description += ", report twice instead of exiting process.";
+        description += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
         WatchdogInner::KillPeerBinderProcess(description);
@@ -2088,7 +2088,7 @@ void WatchdogInner::SetScrollState(bool isScroll)
 
 int32_t WatchdogInner::GetReservedTimeForLogging()
 {
-    XCOLLIE_LOGD("Set reserved time, is betaVersion: %{public}d", g_betaVersion);
+    XCOLLIE_LOGD("Set reserved time, betaVersion: %{public}d", g_betaVersion);
     if (g_betaVersion) {
         reservedTime_ = BETA_RESERVED_TIME;
     }

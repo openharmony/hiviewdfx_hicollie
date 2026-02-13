@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import("//build/ohos.gni")
-import ("//base/hiviewdfx/hicollie/hicollie.gni")
+import("//base/hiviewdfx/hicollie/hicollie.gni")
 
 config("libhicollie_pub_config") {
   visibility = [ ":*" ]
