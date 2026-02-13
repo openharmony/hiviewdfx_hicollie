@@ -625,7 +625,7 @@ int32_t GetUidByPid(const int32_t pid)
 
 int64_t GetAppStartTime(int32_t pid, int64_t tid)
 {
-    static int32_t startTime = -1;
+    static int64_t startTime = -1;
     static int32_t lastTid = -1;
     if (startTime > 0 && lastTid == tid) {
         return startTime;
@@ -652,7 +652,7 @@ int64_t GetAppStartTime(int32_t pid, int64_t tid)
         if (!IsNum(content)) {
             return startTime;
         }
-        startTime = std::stoi(content);
+        startTime = static_cast<int64_t>(std::stoll(content));
         lastTid = tid;
     }
     return startTime;
@@ -668,13 +668,23 @@ std::map<std::string, int> GetReportTimesMap()
     std::string value;
     std::string line;
     while (getline(reportParams, line, ';') && !line.empty()) {
-        if (!GetKeyValueByStr(line, key, value, ':') ||
-            value.size() > std::to_string(INT32_MAX).length()) {
+        if (!GetKeyValueByStr(line, key, value, ':')) {
             XCOLLIE_LOGE("Parse param failed, key:%{public}s value:%{public}s",
                 key.c_str(), value.c_str());
             continue;
         }
-        keyValueMap[key] = std::stoi(value);
+        long long num = std::stoll(value);
+        if (num < INT32_MIN) {
+            XCOLLIE_LOGE("Value below int range, key: %{public}s, invalid value: %{public}lld",
+                key.c_str(), num);
+            keyValueMap[key] = INT32_MIN;
+        } else if (num > INT32_MAX) {
+            XCOLLIE_LOGE("Value above int range, key: %{public}s, invalid value: %{public}lld",
+                key.c_str(), num);
+            keyValueMap[key] = INT32_MAX;
+        } else {
+            keyValueMap[key] = static_cast<int32_t>(num);
+        }
     }
     return keyValueMap;
 }
