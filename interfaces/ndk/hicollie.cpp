@@ -87,12 +87,12 @@ int Report(bool* isSixSecond)
 
     AppExecFwk::FaultData faultData;
     faultData.faultType = OHOS::AppExecFwk::FaultDataType::APP_FREEZE;
-    int stuckTimeout = g_stuckTimeout;
+    int stuckTimeout = static_cast<int>(g_stuckTimeout);
     if (*isSixSecond) {
         faultData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
         faultData.forceExit = true;
         *isSixSecond = false;
-        stuckTimeout = g_stuckTimeout * RATIO;
+        stuckTimeout = static_cast<int>(g_stuckTimeout) * RATIO;
         std::ifstream statmStream("/proc/" + std::to_string(g_pid) + "/statm");
         if (statmStream) {
             std::string procStatm;
