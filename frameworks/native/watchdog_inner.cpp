@@ -46,6 +46,7 @@
 
 typedef void(*ThreadInfoCallBack)(char* buf, size_t len, void* ucontext);
 extern "C" void SetThreadInfoCallback(ThreadInfoCallBack func) __attribute__((weak));
+extern "C" int DfxNotifyWatchdogThreadStart(const char* signalStr) __attribute__((weak));
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
@@ -1310,6 +1311,11 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
                 SetThreadSignalMask(SIGDUMP, true, true);
+            }
+            // notify faultloggerd watchdog start
+            std::string signalStr = OHOS::system::GetParameter("hilog.signal.stack.on", "");
+            if (DfxNotifyWatchdogThreadStart != nullptr && !signalStr.empty()) {
+                DfxNotifyWatchdogThreadStart(signalStr.c_str());
             }
             XCOLLIE_LOGD("Watchdog is running!");
         }
