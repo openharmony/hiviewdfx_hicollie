@@ -1523,7 +1523,7 @@ bool WatchdogInner::AsyncBinderSpaceFull(uint64_t interval, unsigned int count, 
         XCOLLIE_KLOGE("async binder space full count is invalid");
         return false;
     }
-    if (interval < BINDER_SPACE_FULL_MIN_INTERVAL || count > BINDER_SPACE_FULL_MAX_INTERVAL) {
+    if (interval < BINDER_SPACE_FULL_MIN_INTERVAL || interval > BINDER_SPACE_FULL_MAX_INTERVAL) {
         XCOLLIE_KLOGE("async binder space full interval is invalid");
         return false;
     }
