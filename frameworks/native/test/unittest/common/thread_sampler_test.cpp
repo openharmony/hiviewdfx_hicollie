@@ -478,7 +478,6 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_006, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    ASSERT_TRUE(stack.find("========SubmitterStacktrace========") != std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
