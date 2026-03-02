@@ -52,7 +52,8 @@
         "OHOS::HiviewDFX::Watchdog::StartSample(int, int)";
         "OHOS::HiviewDFX::Watchdog::StopSample(int)";
         "OHOS::HiviewDFX::Watchdog::GetReservedTimeForLogging()";
-        "OHOS::HiviewDFX::ThreadKillReason::GetKillReason(int)";
+        "OHOS::HiviewDFX::ProcessKillReason::GetKillReason(int)";
+        "OHOS::HiviewDFX::ProcessKillReason::GetAppExitReason(int)";
     };
   local:
     *;
