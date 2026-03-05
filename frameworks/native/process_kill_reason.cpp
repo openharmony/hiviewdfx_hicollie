@@ -61,8 +61,8 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_ILLEGAL_AUDIO_RENDERER_BY_SUSPEND, {"ILLEGAL_AUDIO_RENDERER_BY_SUSPEND", "IllegalAudioRendererBySuspend"}},
     {REASON_ILLEGAL_AUDIO_CAPTURER_BY_SUSPEND, {"ILLEGAL_AUDIO_CAPTURER_BY_SUSPEND", "IllegalAudioCapturerBySuspend"}},
     {REASON_IO_MANAGE_CONTROL, {"IO Manage Control", "IOHighload"}},
-    {REASON_BUSINESS_THREAD_BLOCK_6S, {"BUSINESS_THREAD_BLOCK_6S", "Appfreeze"}},
-    {REASON_BUSINESS_INPUT_BLOCK, {"BUSINESS_INPUT_BLOCK", "Appfreeze"}},
+    {REASON_BUSINESS_THREAD_BLOCK_6S, {"BUSINESS_THREAD_BLOCK_6S", "AppFreeze"}},
+    {REASON_BUSINESS_INPUT_BLOCK, {"BUSINESS_INPUT_BLOCK", "AppFreeze"}},
 
     {REASON_CONTINUOUSLY_WAKEUP_ABNORMAL, {"ContinuouslyWakeupAbnormal", "PowerSaveClean"}},
     {REASON_BACKGROUND_FREEZE_ABNORMAL, {"BackgroundFreezeAbnormal", "PowerSaveClean"}},
