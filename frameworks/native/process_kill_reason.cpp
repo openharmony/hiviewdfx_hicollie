@@ -107,7 +107,7 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_HARDWARE_DECODING_RESOURCES_LIMIT, {"HARDWARE_DECODING_RESOURCES_LIMIT", "HardwareDecodingResourcesLimit"}},
 
     {REASON_OOM_KILLER, {"OOM_KILLER", "OomKiller"}},
-    {REASON_CPA_KILLER, {"CPA_KILLER", "CPAKiller"}},
+    {REASON_CPA_KILLER, {"CPA_KILLER", "CpaKiller"}},
     {REASON_LOW_MEMORY_KILLER, {"LowMemoryKill", "LowMemoryKill"}},
     {REASON_CPU_HIGHLOAD_KILLER, {"CPU Highload", "CPUHighload"}},
     {REASON_RSS_THRESHOLD_KILLER, {"RSS_THRESHOLD_KILLER", "RssThresholdKiller"}},
