@@ -63,6 +63,8 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_IO_MANAGE_CONTROL, {"IO Manage Control", "IOHighload"}},
     {REASON_BUSINESS_THREAD_BLOCK_6S, {"BUSINESS_THREAD_BLOCK_6S", "AppFreeze"}},
     {REASON_BUSINESS_INPUT_BLOCK, {"BUSINESS_INPUT_BLOCK", "AppFreeze"}},
+    {REASON_MALICIOUS_CONTINUOUSTASK_ACTIVE, {"MALICIOUS_CONTINUOUSTASK_ACTIVE", "MALICIOUS_CONTINUOUSTASK_ACTIVE"}},
+    {REASON_RS_TRANSACTION_DATA_OVERLIMIT, {"RS_TRANSACTION_DATA_OVERLIMIT", "RsDataOverflow"}},
 
     {REASON_CONTINUOUSLY_WAKEUP_ABNORMAL, {"ContinuouslyWakeupAbnormal", "PowerSaveClean"}},
     {REASON_BACKGROUND_FREEZE_ABNORMAL, {"BackgroundFreezeAbnormal", "PowerSaveClean"}},
@@ -105,6 +107,9 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_TOO_MANY_READY_THREADS, {"TooManyReadyThreads", "TooManyReadyThreads"}},
     {REASON_JS_HEAP_SLEEP_CLEAN_KILL, {"Js_Heap_Sleep_Clean_Kill", "REASON_RESOURCE_CONTROL"}},
     {REASON_HARDWARE_DECODING_RESOURCES_LIMIT, {"HARDWARE_DECODING_RESOURCES_LIMIT", "HardwareDecodingResourcesLimit"}},
+    {REASON_APPRECOVERY_NOTIFYAPP_OVER_LIMIT, {"AppRecoveryNotifyAppOverLimit", "AppRecoveryNotifyAppOverLimit"}},
+    {REASON_EXTREME_POWER_SAVE_CLEAN, {"ExtremePowerSaveClean", "PowerSaveClean"}},
+    {REASON_RS_VULKAN_ERROR, {"RS_VULKAN_ERROR", "GpuError"}},
 
     {REASON_OOM_KILLER, {"OOM_KILLER", "OomKiller"}},
     {REASON_CPA_KILLER, {"CPA_KILLER", "CpaKiller"}},
