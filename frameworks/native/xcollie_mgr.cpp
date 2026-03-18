@@ -33,11 +33,13 @@ namespace {
     constexpr uint32_t CALLBACK_WAIT_TIME = 10000; // 10s
 }
 
-XCollieMgr::XCollieMgr(){
+XCollieMgr::XCollieMgr()
+{
 
 }
 
-XCollieMgr::~XCollieMgr(){
+XCollieMgr::~XCollieMgr()
+{
 
 }
 
