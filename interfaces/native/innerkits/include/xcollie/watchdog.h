@@ -19,6 +19,7 @@
 #include <map>
 #include <string>
 #include "singleton.h"
+#include "xcollie_define.h"
 
 using Task = std::function<void()>;
 using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;

@@ -286,13 +286,13 @@ typedef enum OH_Hicollie_Freeze_Type {
      */
     OH_THREAD_BLOCK_6S,
     /**
-     * @brief Ability lifecycle timeout for one period.
+     * @brief Ability lifecycle timeout for one periods.
      *
      * @since 24
      */
     OH_LIFECYCLE_HALF_TIMEOUT,
     /**
-     * @brief Ability lifecycle timeout for two period.
+     * @brief Ability lifecycle timeout for two periods.
      *
      * @since 24
      */
@@ -321,12 +321,12 @@ typedef enum OH_Hicollie_Freeze_Type {
      * @since 24
      */
     OH_BUSINESS_INPUT_BLOCK,
-};
+} OH_Hicollie_Freeze_Type;
 
 /**
  * @brief the freeze callback used in {@link OH_HiCollie_SetFreezeCallback}
  *
- * @param type Freeze event type in {@link OH_HiCollie_SetTimer}.
+ * @param type Freeze event type in {@link OH_HiCollie_Freeze_Type}.
  * @param buffer log buffer provided by the system, whose content will be moved to APP_FREEZE or APP_HICOLLIE
  *                 HiAppEvent
  * @param size buffer size can be used
@@ -336,10 +336,10 @@ typedef enum OH_Hicollie_Freeze_Type {
 typedef size_t (*OH_HiCollie_FreezeCallback)(OH_Hicollie_Freeze_Type type, void* buffer, size_t size);
 
 /**
- * @brief Set freeze callback to system, system will callback when system detent freeze
+ * @brief Set freeze callback to system, system will callback when system detect freeze
  *
- * @param callback th function callback {@link OH_HiCollie_FreezeCallback}.
- * @return the previous callback
+ * @param callback The function callback {@link OH_HiCollie_FreezeCallback}.
+ * @return The previous callback
  * @since 24
  */
 void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback);
@@ -350,7 +350,6 @@ void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback);
  *
  * @param isFreezeEvent boolean. True, BUSINESS_THREAD_BLOCK_6S will be reported.
  *                                   False, BUSINESS_THREAD_BLOCK_3S will be reported.
- *
  *
  * @return {@link HICOLLIE_SUCCESS} 0 - Success.
  *         {@link OH_HICOLLIE_REACH_REPORT_LIMIT} 29800007 - report too frequently
