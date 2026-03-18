@@ -30,6 +30,7 @@ ohos_shared_library("ohhicollie") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "samgr:samgr_proxy",
+    "hisysevent:libhisysevent",
   ]
   defines = []
   if (defined(global_parts_info) &&

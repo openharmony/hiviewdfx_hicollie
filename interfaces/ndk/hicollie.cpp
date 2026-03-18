@@ -19,12 +19,16 @@
 #include <unistd.h>
 #include <string>
 #include <sys/syscall.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <mutex>
 #include "watchdog.h"
 #include "xcollie.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
 #include "fault_data.h"
 #include "app_mgr_client.h"
+#include "hisysevent.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -39,6 +43,12 @@ namespace {
     constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
     constexpr uint32_t RATIO = 2;
     constexpr int32_t BACKGROUND_REPORT_COUNT_MAX = 5;
+    constexpr std::size_t MAX_BUFFER_SIZE = 64 * 1024; // 65536 bytes
+    constexpr int32_t BUSINESS_THREAD_BLOCK_3S_TYPE = 5;
+    constexpr int32_t BUSINESS_THREAD_BLOCK_6S_TYPE = 6;
+    constexpr int32_t BUSINESS_INPUT_BLOCK_TYPE = 7;
+    constexpr uint32_t TIME_MIN_TO_S = 60;
+    constexpr uint32_t TIME_S_TO_MS = 1000;
 }
 
 static int32_t g_bussinessTid = 0;
@@ -46,6 +56,8 @@ static uint32_t g_stuckTimeout = 0;
 static int64_t g_lastWatchTime = 0;
 static std::atomic_int g_backgroundReportCount = 0;
 static int g_pid = getpid();
+static int64_t g_lastWatchTimeReport3S = 0;
+static int64_t g_lastWatchTimeReport6S = 0;
 
 bool IsAppMainThread()
 {
@@ -76,6 +88,27 @@ bool CheckInBackGround(bool* isSixSecond)
         return true;
     }
     return false;
+}
+
+bool XCollieMgr::CheckManualReportDuration(int type)
+{
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
+        steady_clock::now().time_since_epoch()).count();
+    if (isFreezeEvent) {
+        if (now - g_lastWatchTimeReport6S > TIME_MIN_TO_S * TIME_S_TO_MS) {
+            g_lastWatchTimeReport6S = now;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        if (now - g_lastWatchTimeReport3S > TIME_MIN_TO_S * TIME_S_TO_MS) {
+            g_lastWatchTimeReport3S = now;
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
 
 int Report(bool* isSixSecond)
@@ -114,6 +147,9 @@ int Report(bool* isSixSecond)
     faultData.waitSaveState = false;
     faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
     faultData.stuckTimeout = g_stuckTimeout;
+    int type = (faultData.errorObject.name == "BUSSINESS_THREAD_BLOCK_3S") ?
+            BUSINESS_THREAD_BLOCK_3S_TYPE : BUSINESS_THREAD_BLOCK_6S_TYPE;
+    faultData.callbackLog = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(type);
     auto result = DelayedSingleton<AppExecFwk::AppMgrClient>::GetInstance()->NotifyAppFault(faultData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
         result, faultData.tid, faultData.stuckTimeout);
@@ -139,12 +175,39 @@ int ReportInputBlock()
     faultData.notifyApp = false;
     faultData.waitSaveState = false;
     faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
+    faultData.callbackLog = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(BUSINESS_INPUT_BLOCK_TYPE);
     auto result = DelayedSingleton<AppExecFwk::AppMgrClient>::GetInstance()->NotifyAppFault(faultData);
     XCOLLIE_LOGI("OH_HiCollie_ReportInputBlock result: %{public}d, current tid: %{public}d", result, faultData.tid);
     return result;
 }
+
+int ReportEvent(bool isFreezeEvent)
+{
+    if (!CheckManualReportDuration(isFreezeEvent)) {
+        return -1;
+    }
+    XCOLLIE_LOGI("manual report AAFWK event");
+    std::string eventName = isFreezeEvent ? "BUSSINESS_THREAD_BLOCK_6S" : "BUSSINESS_THREAD_BLOCK_3S";
+    int type = isFreezeEvent ? BUSINESS_THREAD_BLOCK_6S_TYPE : BUSINESS_THREAD_BLOCK_3S_TYPE;
+    std::string log = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(type);
+    int result = HiSysEventWrite(HiSysEvent::Domain::AAFWK, eventName, HiSysEvent::EventType::FAULT,
+        "PID", getpid(),
+        "UID", gituid(),
+        "IS_HICOLLIE", true,
+        "EXTERNAL_LOG", log);
+    if (result != 0) {
+        XCOLLIE_LOGE("OH_HiCollie_AssociateProcessReport result:%{public}d current pid:%{public}d",
+            result, getpid());
+    }
+    return 0;
+}
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
+static std::string FreezeInvoker(void* handler, int type);
+OH_HiCollie_FreezeCallback g_callback = nullptr;
+static std::mutex g_callbackMutex;
+OHOS::HiviewDFX::XCollieCallback g_invoker = FreezeInvoker;
+static bool g_isInvokerSet = false;
 
 inline HiCollie_ErrorCode InitStuckDetection(OH_HiCollie_Task task, uint32_t timeout)
 {
@@ -273,4 +336,49 @@ void OH_HiCollie_CancelTimer(int id)
         return;
     }
     OHOS::HiviewDFX::XCollie::GetInstance().CancelTimer(id);
+}
+
+static std::string FreezeInvoker(void* handler, int type)
+{
+    OH_HiCollie_FreezeCallback callback = (OH_HiCollie_FreezeCallback)handler;
+    if (callback == nullptr) {
+        XCOLLIE_LOGE("no freeze callback");
+        return "";
+    }
+    size_t mmapSize = OHOS::HiviewDFX::MAX_BUFFER_SIZE;
+    void* mptr = mmap(nullptr, mmapSize, PORT_READ | PORT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mptr == MAP_FAILED) {
+        XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
+        return "";
+    }
+    OH_Hicollie_Freeze_Type freezeType = static_cast<OH_Hicollie_Freeze_Type>(type);
+    size_t callbackSize = callback(freezeType, mptr, mmapSize);
+    XCOLLIE_LOGD("Freeze Invoker %{public}zu", callbackSize);
+    std::string buffer((char*)mptr);
+    munmap(mptr, mmapSize);
+    return buffer;
+}
+
+void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
+{
+    OH_HiCollie_FreezeCallback result = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_callbackMutex);
+        result = g_callback;
+        g_callback = callback;
+        if (!g_isInvokerSet) {
+            OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeInvoker((void*)callback);
+            g_isInvokerSet = true;
+        }
+        OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeHandler(g_callback);
+    }
+    return (void*)result;
+}
+
+HiCollie_ErrorCode OH_HiCollie_AssociateProcessReport(bool isFreezeEvent)
+{
+    if (OHOS::HiviewDFX::ReportEvent(isFreezeEvent) != 0) {
+        return OH_HICOLLIE_REACH_REPORT_LIMIT;
+    }
+    return HICOLLIE_SUCCESS;
 }

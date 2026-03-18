@@ -8,6 +8,8 @@
         OH_HiCollie_ReportInputBlock;
         OH_HiCollie_SetTimer;
         OH_HiCollie_CancelTimer;
+        OH_HiCollie_SetFreezeCallback;
+        OH_HiCollie_AssociateProcessReport;
     };
     extern "C++" {
     };
