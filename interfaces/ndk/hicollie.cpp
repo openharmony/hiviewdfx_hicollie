@@ -192,11 +192,11 @@ int ReportEvent(bool isFreezeEvent)
     std::string log = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(type);
     int result = HiSysEventWrite(HiSysEvent::Domain::AAFWK, eventName, HiSysEvent::EventType::FAULT,
         "PID", getpid(),
-        "UID", gituid(),
+        "UID", getuid(),
         "IS_HICOLLIE", true,
         "EXTERNAL_LOG", log);
     if (result != 0) {
-        XCOLLIE_LOGE("OH_HiCollie_AssociateProcessReport result:%{public}d current pid:%{public}d",
+        XCOLLIE_LOGE("OH_HiCollie_AssociateProcessReport result:%{public}d, current pid:%{public}d",
             result, getpid());
     }
     return 0;
@@ -367,10 +367,10 @@ void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
         result = g_callback;
         g_callback = callback;
         if (!g_isInvokerSet) {
-            OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeInvoker((void*)callback);
+            OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeInvoker(g_invoker);
             g_isInvokerSet = true;
         }
-        OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeHandler(g_callback);
+        OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeHandler((void*)g_callback);
     }
     return (void*)result;
 }
