@@ -35,12 +35,10 @@ namespace {
 
 XCollieMgr::XCollieMgr()
 {
-
 }
 
 XCollieMgr::~XCollieMgr()
 {
-
 }
 
 void XCollieMgr::SetInvoker(XCollieCallback callback)
