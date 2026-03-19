@@ -48,7 +48,6 @@ namespace {
     constexpr int32_t BUSINESS_THREAD_BLOCK_6S_TYPE = 6;
     constexpr int32_t BUSINESS_INPUT_BLOCK_TYPE = 7;
     constexpr uint32_t TIME_MIN_TO_S = 60;
-    constexpr uint32_t TIME_S_TO_MS = 1000;
 }
 
 static int32_t g_bussinessTid = 0;
@@ -90,7 +89,7 @@ bool CheckInBackGround(bool* isSixSecond)
     return false;
 }
 
-bool XCollieMgr::CheckManualReportDuration(int type)
+bool CheckManualReportDuration(bool isFreezeEvent)
 {
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
         steady_clock::now().time_since_epoch()).count();
@@ -346,7 +345,7 @@ static std::string FreezeInvoker(void* handler, int type)
         return "";
     }
     size_t mmapSize = OHOS::HiviewDFX::MAX_BUFFER_SIZE;
-    void* mptr = mmap(nullptr, mmapSize, PORT_READ | PORT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* mptr = mmap(nullptr, mmapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mptr == MAP_FAILED) {
         XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
         return "";
@@ -367,10 +366,10 @@ void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
         result = g_callback;
         g_callback = callback;
         if (!g_isInvokerSet) {
-            OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeInvoker(g_invoker);
+            OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeInvoker(g_invoker);
             g_isInvokerSet = true;
         }
-        OHOS::HiviewDFX::Watchdog::GetInstance.SetFreezeHandler((void*)g_callback);
+        OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeHandler((void*)g_callback);
     }
     return (void*)result;
 }
