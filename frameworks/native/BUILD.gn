@@ -35,7 +35,7 @@ ohos_source_set("libhicollie_source") {
     "xcollie.cpp",
     "xcollie_ffrt_task.cpp",
     "xcollie_utils.cpp",
-    "xcollie_mgr",
+    "xcollie_mgr.cpp",
   ]
   configs = [ ":hicollie_include" ]
 
