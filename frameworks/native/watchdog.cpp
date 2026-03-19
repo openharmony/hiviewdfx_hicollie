@@ -153,7 +153,7 @@ int32_t Watchdog::GetReservedTimeForLogging()
     return WatchdogInner::GetInstance().GetReservedTimeForLogging();
 }
 
-void Watchdog::SetFreezeInvoker(XCollieCallback callback)
+void Watchdog::SetFreezeInvoker(XCollieInnerCallback callback)
 {
     XCollieMgr::GetInstance().SetInvoker(callback);
 }

@@ -41,7 +41,7 @@ XCollieMgr::~XCollieMgr()
 {
 }
 
-void XCollieMgr::SetInvoker(XCollieCallback callback)
+void XCollieMgr::SetInvoker(XCollieInnerCallback callback)
 {
     lastFreezeCallback_ = callback;
 }
@@ -72,7 +72,7 @@ std::string XCollieMgr::ReadDataFromBuffer(int type)
         XCOLLIE_LOGE("can not ReadDataFromBuffer twice within 1 min");
         return "";
     }
-    XCollieCallback callback = lastFreezeCallback_;
+    XCollieInnerCallback callback = lastFreezeCallback_;
     if (callback == nullptr) {
         XCOLLIE_LOGE("no freeze callback");
         return "";

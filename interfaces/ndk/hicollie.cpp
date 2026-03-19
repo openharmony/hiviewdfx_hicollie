@@ -206,7 +206,7 @@ int ReportEvent(bool isFreezeEvent)
 static std::string FreezeInvoker(void* handler, int type);
 OH_HiCollie_FreezeCallback g_callback = nullptr;
 static std::mutex g_callbackMutex;
-OHOS::HiviewDFX::XCollieCallback g_invoker = FreezeInvoker;
+OHOS::HiviewDFX::XCollieInnerCallback g_invoker = FreezeInvoker;
 static bool g_isInvokerSet = false;
 
 inline HiCollie_ErrorCode InitStuckDetection(OH_HiCollie_Task task, uint32_t timeout)

@@ -208,8 +208,8 @@ public:
      */
     int32_t GetReservedTimeForLogging();
 
-    void SetFreezeInvoker(OHOS::HiviewDFX::XCollieCallback callback);
-    void SetFreezeHandler(void* handler)
+    void SetFreezeInvoker(OHOS::HiviewDFX::XCollieInnerCallback callback);
+    void SetFreezeHandler(void* handler);
     std::string ReadDataFromBuffer(int type);
 };
 } // end of namespace HiviewDFX

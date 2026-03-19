@@ -25,13 +25,13 @@ namespace HiviewDFX {
 class XCollieMgr : public Singleton<XCollieMgr> {
     DECLARE_SINGLETON(XCollieMgr);
 public:
-    void SetInvoker(XCollieCallback callback);
+    void SetInvoker(XCollieInnerCallback callback);
     void SetHandler(void* handler);
     std::string ReadDataFromBuffer(int type);
 
 private:
     void* handler_ = nullptr;
-    XCollieCallback lastFreezeCallback_ = nullptr;
+    XCollieInnerCallback lastFreezeCallback_ = nullptr;
     std::unordered_map<int, int64_t> lastCallTime_;
     bool CheckCallDuration(int type);
 };
