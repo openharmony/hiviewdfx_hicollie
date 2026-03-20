@@ -54,6 +54,9 @@
         "OHOS::HiviewDFX::Watchdog::GetReservedTimeForLogging()";
         "OHOS::HiviewDFX::ProcessKillReason::GetKillReason(int)";
         "OHOS::HiviewDFX::ProcessKillReason::GetAppExitReason(int)";
+        "OHOS::HiviewDFX::Watchdog::SetFreezeHandler(void*)";
+        "OHOS::HiviewDFX::Watchdog::SetFreezeInvoker(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> (*)(void*, int))";
+        "OHOS::HiviewDFX::Watchdog::ReadDataFromBuffer(int)";
     };
   local:
     *;

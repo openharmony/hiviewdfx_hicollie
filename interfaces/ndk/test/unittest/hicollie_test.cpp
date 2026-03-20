@@ -203,4 +203,26 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_CancelTimer_1, TestSize.Level1)
     OH_HiCollie_CancelTimer(id);
     EXPECT_TRUE(flag);
 }
+
+/**
+ * @tc.name: OH_HiCollie_SetFreezeCallback
+ * @tc.desc: test OH_HiCollie_SetFreezeCallback
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_SetFreezeCallback_1, TestSize.Level1)
+{
+    void* last = OH_HiCollie_SetFreezeCallback(nullptr);
+    EXPECT_EQ(last, nullptr);
+}
+
+/**
+ * @tc.name: OH_HiCollie_AssociateProcessReport
+ * @tc.desc: test OH_HiCollie_AssociateProcessReport
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_AssociateProcessReport_1, TestSize.Level1)
+{
+    int ret = OH_HiCollie_AssociateProcessReport(true);
+    EXPECT_EQ(ret, HICOLLIE_SUCCESS);
+}
 } // namespace

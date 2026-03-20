@@ -16,6 +16,7 @@
 #include "watchdog.h"
 
 #include "watchdog_inner.h"
+#include "xcollie_mgr.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -150,6 +151,21 @@ void Watchdog::GetSamplerResult(uint64_t &samplerStartTime, uint64_t &samplerFin
 int32_t Watchdog::GetReservedTimeForLogging()
 {
     return WatchdogInner::GetInstance().GetReservedTimeForLogging();
+}
+
+void Watchdog::SetFreezeInvoker(XCollieInnerCallback callback)
+{
+    XCollieMgr::GetInstance().SetInvoker(callback);
+}
+
+void Watchdog::SetFreezeHandler(void* handler)
+{
+    XCollieMgr::GetInstance().SetHandler(handler);
+}
+
+std::string Watchdog::ReadDataFromBuffer(int type)
+{
+    return XCollieMgr::GetInstance().ReadDataFromBuffer(type);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
