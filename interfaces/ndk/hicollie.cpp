@@ -37,7 +37,6 @@ namespace {
     constexpr uint32_t CHECK_INTERVAL_TIME = 45000;
 #else
     constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
-    constexpr uint32_t TIME_S_TO_MS = 1000;
     constexpr uint32_t MAX_TIMEOUT = 15000;
 #endif
     constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
@@ -48,6 +47,7 @@ namespace {
     constexpr int32_t BUSINESS_THREAD_BLOCK_6S_TYPE = 6;
     constexpr int32_t BUSINESS_INPUT_BLOCK_TYPE = 7;
     constexpr uint32_t TIME_MIN_TO_S = 60;
+    constexpr uint32_t TIME_S_TO_MS = 1000;
 }
 
 static int32_t g_bussinessTid = 0;
