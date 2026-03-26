@@ -122,6 +122,7 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_MSDP_BOTTOM_N_QUICK_KILL, {"MSDP_BOTTOM_N_QUICK_KILL", "LowMemoryKill"}},
     {REASON_LOW_MEMORY_ANCO_CACHED_KILL, {"LOW_MEMORY_ANCO_CACHED_KILL", "LowMemoryKill"}},
     {REASON_MINI_SYS_ANCO_SYS_PROC_KILL, {"MINI_SYS_ANCO_SYS_PROC_KILL", "LowMemoryKill"}},
+    {REASON_POWER_SAVE_CLEAN, {"PowerSaveClean", "PowerSaveClean"}},
 
     {REASON_OOM_KILLER, {"OOM_KILLER", "OomKiller"}},
     {REASON_CPA_KILLER, {"CPA_KILLER", "CpaKiller"}},
