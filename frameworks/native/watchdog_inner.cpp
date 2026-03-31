@@ -1751,10 +1751,11 @@ void WatchdogInner::LeftTimeExitProcess(const std::string &description)
     }
     DelayBeforeExit(10); // sleep 10s for hiview dump
     bool result = WatchdogInner::WriteStringToFile(pid, "0");
-    XCOLLIE_LOGI("Process is going to exit, reason:%{public}s. write to file: %{public}d.",
+    XCOLLIE_LOGE("Process is going to exit, reason:%{public}s. write to file: %{public}d.",
         description.c_str(), result);
 
     _exit(0);
+    XCOLLIE_LOGE("Process has exited. reason:%{public}s.", description.c_str());
 }
 
 bool WatchdogInner::Stop()
