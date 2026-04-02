@@ -1314,7 +1314,7 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             }
             // notify faultloggerd watchdog start
             std::string signalStr = OHOS::system::GetParameter("hilog.signal.stack.on", "");
-            if (DfxNotifyWatchdogThreadStart != nullptr && !signalStr.empty()) {
+            if (DfxNotifyWatchdogThreadStart != nullptr) {
                 DfxNotifyWatchdogThreadStart(signalStr.c_str());
             }
             XCOLLIE_LOGD("Watchdog is running!");
