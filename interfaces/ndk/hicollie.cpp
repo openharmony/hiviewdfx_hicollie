@@ -54,14 +54,15 @@ static int32_t g_bussinessTid = 0;
 static uint32_t g_stuckTimeout = 0;
 static int64_t g_lastWatchTime = 0;
 static std::atomic_int g_backgroundReportCount = 0;
-static int g_pid = getpid();
 static int64_t g_lastWatchTimeReport3S = 0;
 static int64_t g_lastWatchTimeReport6S = 0;
 
 bool IsAppMainThread()
 {
+    static int pid = getpid();
     static uint64_t uid = getuid();
-    if (g_pid == gettid() && uid >= MIN_APP_UID) {
+    int tid = gettid();
+    if (pid == tid && uid >= MIN_APP_UID) {
         return true;
     }
     return false;
@@ -120,12 +121,13 @@ int Report(bool* isSixSecond)
     AppExecFwk::FaultData faultData;
     faultData.faultType = OHOS::AppExecFwk::FaultDataType::APP_FREEZE;
     int stuckTimeout = static_cast<int>(g_stuckTimeout);
+    static int pid = getpid();
     if (*isSixSecond) {
         faultData.errorObject.name = "BUSSINESS_THREAD_BLOCK_6S";
         faultData.forceExit = true;
         *isSixSecond = false;
         stuckTimeout = static_cast<int>(g_stuckTimeout) * RATIO;
-        std::ifstream statmStream("/proc/" + std::to_string(g_pid) + "/statm");
+        std::ifstream statmStream("/proc/" + std::to_string(pid) + "/statm");
         if (statmStream) {
             std::string procStatm;
             std::getline(statmStream, procStatm);
@@ -144,7 +146,7 @@ int Report(bool* isSixSecond)
     faultData.errorObject.stack = "";
     faultData.notifyApp = false;
     faultData.waitSaveState = false;
-    faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
+    faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : pid;
     faultData.stuckTimeout = g_stuckTimeout;
     int type = (faultData.errorObject.name == "BUSSINESS_THREAD_BLOCK_3S") ?
             BUSINESS_THREAD_BLOCK_3S_TYPE : BUSINESS_THREAD_BLOCK_6S_TYPE;
@@ -173,7 +175,8 @@ int ReportInputBlock()
     faultData.errorObject.stack = "";
     faultData.notifyApp = false;
     faultData.waitSaveState = false;
-    faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : g_pid;
+    static int pid = getpid();
+    faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : pid;
     faultData.callbackLog = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(BUSINESS_INPUT_BLOCK_TYPE);
     auto result = DelayedSingleton<AppExecFwk::AppMgrClient>::GetInstance()->NotifyAppFault(faultData);
     XCOLLIE_LOGI("OH_HiCollie_ReportInputBlock result: %{public}d, current tid: %{public}d", result, faultData.tid);
