@@ -35,6 +35,8 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_APP_EXIT, {"app exit", "KillApplication"}},
     {REASON_KILL_APPLICATION_SELF, {"KillApplicationSelf", "KillApplication"}},
     {REASON_KILL_PROCESS_WITH_ACCOUNT, {"KillProcessWithAccount", "KillApplication"}},
+    {REASON_KILL_APPLICATION, {"KillApplication", "KillApplication"}},
+    {REASON_KILL_CGROUP, {"KillCgroup", "KillApplication"}},
 
     {REASON_USER_REQUEST, {"User Request", "UserRequest"}},
     {REASON_CLEAR_SESSION, {"ClearSession", "UserRequest"}},
@@ -123,6 +125,8 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_LOW_MEMORY_ANCO_CACHED_KILL, {"LOW_MEMORY_ANCO_CACHED_KILL", "LowMemoryKill"}},
     {REASON_MINI_SYS_ANCO_SYS_PROC_KILL, {"MINI_SYS_ANCO_SYS_PROC_KILL", "LowMemoryKill"}},
     {REASON_POWER_SAVE_CLEAN, {"PowerSaveClean", "PowerSaveClean"}},
+    {REASON_VRS_KILL_PROCESS, {"VRS_KILL_PROCESS", "VrsKill"}},
+    {REASON_APPSPAWN_STOP, {"APPSPAWN_STOP", "AppspawnStop"}},
 
     {REASON_OOM_KILLER, {"OOM_KILLER", "OomKiller"}},
     {REASON_CPA_KILLER, {"CPA_KILLER", "CpaKiller"}},
