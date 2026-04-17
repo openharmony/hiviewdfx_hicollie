@@ -130,9 +130,9 @@ void Watchdog::SetScrollState(bool isScroll)
     WatchdogInner::GetInstance().SetScrollState(isScroll);
 }
 
-void Watchdog::StartSample(int duration, int interval)
+std::string Watchdog::StartSample(int duration, int interval)
 {
-    WatchdogInner::GetInstance().StartSample(duration, interval);
+    return WatchdogInner::GetInstance().StartSample(duration, interval);
 }
 
 std::string Watchdog::StopSample(int sampleCount)

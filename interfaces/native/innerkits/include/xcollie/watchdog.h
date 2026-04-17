@@ -175,7 +175,7 @@ public:
     /**
      * @brief Start freeze stack sample.
      */
-    void StartSample(int duration, int interval);
+    std::string StartSample(int duration, int interval);
 
     /**
      * @brief Stop freeze stack sample.

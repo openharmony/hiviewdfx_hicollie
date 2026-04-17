@@ -1281,16 +1281,21 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_001, TestSize.Level1)
 {
     int duration = 0;
     int interval = 0;
-    WatchdogInner::GetInstance().StartSample(duration, interval);
+    std::string ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(ret.empty());
     duration = 100; // test value
     interval = 300; // test value
-    WatchdogInner::GetInstance().StartSample(100, 300);
+    ret = WatchdogInner::GetInstance().StartSample(100, 300);
+    EXPECT_TRUE(ret.empty());
     duration = -300; // test value
     interval = -100; // test value
-    WatchdogInner::GetInstance().StartSample(duration, interval);
+    ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(ret.empty());
     duration = 300; // test value
     interval = 100; // test value
+    ret = WatchdogInner::GetInstance().StartSample(duration, interval);
     WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(!ret.empty());
     auto watchdogTask = [duration, interval] {
         printf("StartSample before\n");
         WatchdogInner::GetInstance().StartSample(duration, interval);
@@ -1501,6 +1506,71 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_CheckSampleParam_001, TestSize.Level1)
     paramsMap[KEY_SAMPLE_REPORT_TIMES] = "2";
     ret = WatchdogInner::GetInstance().CheckSampleParam(paramsMap);
     EXPECT_TRUE(ret);
+}
+
+/**
+ * @tc.name: WatchdogInner CheckTaskValid Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckTaskValid_001, TestSize.Level1)
+{
+    int targetCount = 0;
+    std::string result;
+    bool ret = WatchdogInner::GetInstance().CheckTaskValid(0, 100, targetCount, result);
+    EXPECT_FALSE(ret);
+    ret = WatchdogInner::GetInstance().CheckTaskValid(100, 0, targetCount, result);
+    EXPECT_FALSE(ret);
+    ret = WatchdogInner::GetInstance().CheckTaskValid(-1, 100, targetCount, result);
+    EXPECT_FALSE(ret);
+    ret = WatchdogInner::GetInstance().CheckTaskValid(100, -1, targetCount, result);
+    EXPECT_FALSE(ret);
+    ret = WatchdogInner::GetInstance().CheckTaskValid(100, 200, targetCount, result);
+    EXPECT_FALSE(ret);
+    ret = WatchdogInner::GetInstance().CheckTaskValid(100, 100, targetCount, result);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(targetCount, 1);
+    ret = WatchdogInner::GetInstance().CheckTaskValid(200, 100, targetCount, result);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(targetCount, 2);
+}
+
+/**
+ * @tc.name: WatchdogInner StartSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_002, TestSize.Level1)
+{
+    int duration = 1;
+    int interval = 1;
+    std::string ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(!ret.empty());
+    duration = 1000;
+    interval = 1;
+    ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(!ret.empty());
+    duration = 100;
+    interval = 50;
+    ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(!ret.empty());
+}
+
+/**
+ * @tc.name: WatchdogInner StartSample Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_003, TestSize.Level1)
+{
+    int duration = 1;
+    int interval = 2;
+    std::string ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(ret.empty());
+    duration = 99;
+    interval = 100;
+    ret = WatchdogInner::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(ret.empty());
 }
 } // namespace HiviewDFX
 } // namespace OHOS
