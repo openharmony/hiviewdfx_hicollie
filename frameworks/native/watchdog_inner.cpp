@@ -737,7 +737,7 @@ std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
     }
     info += stack;
     ClearFreezeFileIfNeed(info.size());
-    std::string freezeFile = "freeze_" + GetFormatDate() + "_" + std::to_string(pid) + ".txt";
+    std::string freezeFile = sampleFreezeInfo_.currentFile;
     bool saveRet = SaveStringToFile(FREEZE_DIR + freezeFile, info);
     sampleFreezeInfo_ = {
         .lastSaveTime = GetCurrentTickMillseconds(),
@@ -754,24 +754,35 @@ void WatchdogInner::ResetFreezeSampleFlags()
     g_freezeTaskFinished.store(true);
 }
 
-void WatchdogInner::StartSample(int duration, int interval)
+bool WatchdogInner::CheckTaskValid(int duration, int interval, int& targetCount, std::string& result)
 {
     {
         std::unique_lock<std::mutex> lock(lock_);
         if (IsTaskExistLocked(FREEZE_SAMPLE)) {
             XCOLLIE_LOGW("Sample freeze task already exit, skip this task.");
-            return;
+            result = sampleFreezeInfo_.currentFile;
+            return false;
         }
     }
     if (duration <= 0 || interval <= 0) {
         XCOLLIE_LOGE("Sample freeze failed, duration=%{public}d, interval=%{public}d.",
             duration, interval);
-        return;
+        return false;
     }
-    int targetCount = duration / interval;
+    targetCount = duration / interval;
     if (targetCount < DEFAULT_SAMPLE_VALUE) {
         XCOLLIE_LOGE("Sample freeze failed, sampleCount=%{public}d", targetCount);
-        return;
+        return false;
+    }
+    return true;
+}
+
+std::string WatchdogInner::StartSample(int duration, int interval)
+{
+    int targetCount = 0;
+    std::string result;
+    if (!CheckTaskValid(duration, interval, targetCount, result)) {
+        return result;
     }
     int32_t pid = getpid();
     g_freezeSampleCount.store(0);
@@ -800,8 +811,18 @@ void WatchdogInner::StartSample(int duration, int interval)
         g_freezeSampleCount.fetch_add(DEFAULT_SAMPLE_VALUE);
     };
     WatchdogTask task(FREEZE_SAMPLE, sampleTask, 0, interval, false);
-    std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task));
+    int id = 0;
+    {
+        std::unique_lock<std::mutex> lock(lock_);
+        id =  InsertWatchdogTaskLocked(FREEZE_SAMPLE, std::move(task));
+    }
+    std::string file = "";
+    if (id != 0) {
+        file = "freeze_" + GetFormatDate() + "_" + std::to_string(pid) + ".txt";
+        sampleFreezeInfo_.currentFile = file;
+        XCOLLIE_LOGW("Sample freeze half file=%{public}s", file.c_str());
+    }
+    return file;
 }
 
 std::string WatchdogInner::StopSample(int sampleCount)

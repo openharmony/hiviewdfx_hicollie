@@ -88,7 +88,7 @@ public:
     void SetSpecifiedProcessName(const std::string& name);
     std::string GetSpecifiedProcessName();
     void SetScrollState(bool isScroll);
-    void StartSample(int duration, int interval);
+    std::string StartSample(int duration, int interval);
     std::string StopSample(int sampleCount);
     bool CheckSample(const TimePoint& endTime, int64_t durationTime);
     SamplerResult GetSamplerResult();
@@ -150,6 +150,7 @@ private:
     bool NeedOpenAsyncStack();
 #endif
     void InitDefaultTask();
+    bool CheckTaskValid(int duration, int interval, int& targetCount, std::string& result);
 
     static void ThreadSamplerSigHandler(int sig, siginfo_t* si, void* context);
     bool InstallThreadSamplerSignal();

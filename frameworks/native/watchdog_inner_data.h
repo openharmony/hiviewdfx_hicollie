@@ -112,6 +112,7 @@ struct AppStartContent {
 struct SampleFreezeInfo {
     uint64_t lastSaveTime {0};
     std::string freezeFile;
+    std::string currentFile;
 };
 
 struct SampleJankParams {

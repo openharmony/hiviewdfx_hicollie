@@ -410,8 +410,9 @@ HWTEST_F(WatchdogInterfaceTest, Watchdog_StartSample_001, TestSize.Level1)
 {
     int duration = 300; // test value
     int interval = 100; // test value
-    Watchdog::GetInstance().StartSample(duration, interval);
     EXPECT_TRUE(duration / interval != 0);
+    std::string ret = Watchdog::GetInstance().StartSample(duration, interval);
+    EXPECT_TRUE(!ret.empty());
 }
 
 /**
