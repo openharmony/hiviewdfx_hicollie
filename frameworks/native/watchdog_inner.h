@@ -156,6 +156,7 @@ private:
     bool InstallThreadSamplerSignal();
     void UninstallThreadSamplerSignal();
     void ResetFreezeSampleFlags();
+    static void IsExistProcess(std::string description);
 
     static SigActionType threadSamplerSigHandler_;
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
@@ -206,6 +207,7 @@ private:
     SampleFreezeInfo sampleFreezeInfo_;
     bool initAsyncStack_ {false};
     int reservedTime_ {DEFAULT_RESERVED_TIME};
+    static std::atomic_bool isTestExist_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

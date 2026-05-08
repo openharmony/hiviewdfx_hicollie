@@ -35,7 +35,6 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
-constexpr const char* BBOX_PATH = "/dev/bbox";
 #ifdef SUSPEND_CHECK_ENABLE
 constexpr const char* LAST_SUSPEND_TIME_PATH = "/sys/power/last_sr";
 constexpr double SUSPEND_TIME_RATIO = 0.2;
@@ -44,7 +43,6 @@ constexpr int COUNT_LIMIT_NUM_MAX_RATIO = 2;
 constexpr int TIME_LIMIT_NUM_MAX_RATIO = 2;
 constexpr int BINDER_SPACE_FULL_COUNT_HALF = 2;
 constexpr int UID_TYPE_THRESHOLD = 20000;
-constexpr int BUFF_STACK_SIZE = 20 * 1024;
 constexpr int BINDER_SPACE_FULL_WARNING_MULTIPLE = 10;
 constexpr const char* CORE_PROCS[] = {
     "anco_service_broker", "aptouch_daemon", "foundation", "init",
@@ -53,11 +51,6 @@ constexpr const char* CORE_PROCS[] = {
 constexpr const int ASYNC_BINDER_SPACE_NUM = 2;
 }
 int64_t WatchdogTask::curId = 0;
-struct HstackVal {
-    uint32_t magic;
-    pid_t tid;
-    char hstackLogBuff[BUFF_STACK_SIZE];
-};
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
@@ -351,25 +344,6 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 #endif
 }
 
-void WatchdogTask::DumpKernelStack(struct HstackVal& val, int& ret) const
-{
-    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
-    if (fd < 0) {
-        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
-        return;
-    }
-    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
-    ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
-        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
-    }
-    if (ret != 0) {
-        XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
-    } else {
-        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
-    }
-}
-
 void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::string &keyMsg,
     const std::string& faultTimeStr) const
 {
@@ -385,15 +359,6 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) + "\n" +
         "timeout timer: " + timerName + "\n" + keyMsg + faultTimeStr;
 
-    struct HstackVal val;
-    if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {
-        XCOLLIE_LOGE("memset val failed\n");
-        return;
-    }
-    val.tid = watchdogTid;
-    val.magic = MAGIC_NUM;
-    int ret = 0;
-    DumpKernelStack(val, ret);
     std::string eventName = "APP_HICOLLIE";
     std::string stack;
     std::string processName = GetSelfProcName();
@@ -409,7 +374,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
 #ifdef HISYSEVENT_ENABLE
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", processName,
-        "MSG", sendMsg, "STACK", stack + "\n"+ (ret != 0 ? "" : val.hstackLogBuff), "SPECIFICSTACK_NAME",
+        "MSG", sendMsg, "STACK", stack + "\n"+ GetKernelStackByTid(watchdogTid), "SPECIFICSTACK_NAME",
             WatchdogInner::GetInstance().GetSpecifiedProcessName(), "TASK_NAME", name);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());

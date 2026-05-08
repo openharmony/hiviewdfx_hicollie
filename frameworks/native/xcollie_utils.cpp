@@ -58,12 +58,14 @@ constexpr int64_t MINUTE_TO_S = 60; // 60s
 constexpr size_t TOTAL_HALF = 2; // 2 : remove half of the total
 constexpr size_t DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT = 100;
 constexpr mode_t DEFAULT_LOG_DIR_MODE = 0770;
+constexpr unsigned int NEXT_POS = 1;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_BETA_VAULE = "beta";
 constexpr const char* const KEY_REPORT_TIMES_TYPE = "persist.hiview.jank.reporttimes";
+constexpr const char* BBOX_PATH = "/dev/bbox";
 
 static std::string g_curProcName;
 static int32_t g_lastPid;
@@ -335,7 +337,6 @@ void SplitStr(const std::string& str, const std::string& sep,
 
 int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
 {
-    const int decimal = 10;
     std::string line;
     bool isBinderMatchup = false;
     while (getline(fin, line)) {
@@ -373,9 +374,9 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
             if (server == "" || client == "" || wait == "") {
                 continue;
             }
-            int serverNum = std::strtol(server.c_str(), nullptr, decimal);
-            int clientNum = std::strtol(client.c_str(), nullptr, decimal);
-            int waitNum = std::strtol(wait.c_str(), nullptr, decimal);
+            int serverNum = std::strtol(server.c_str(), nullptr, DECIMAL);
+            int clientNum = std::strtol(client.c_str(), nullptr, DECIMAL);
+            int waitNum = std::strtol(wait.c_str(), nullptr, DECIMAL);
             XCOLLIE_LOGI("server:%{public}d, client:%{public}d, wait:%{public}d",
                 serverNum, clientNum, waitNum);
             if (clientNum != pid || waitNum < MIN_WAIT_NUM) {
@@ -723,6 +724,90 @@ bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& 
         return false;
     }
     return true;
+}
+
+void DumpKernelStack(struct HstackVal& val, int& ret)
+{
+    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
+        return;
+    }
+    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
+    ret = ioctl(fd, LOGGER_GET_STACK, &val);
+    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
+    }
+    if (ret != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
+    } else {
+        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
+    }
+}
+
+std::string GetKernelStackByTid(pid_t watchdogTid)
+{
+    struct HstackVal val;
+    if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {
+        XCOLLIE_LOGE("memset val failed\n");
+        return "";
+    }
+    val.tid = watchdogTid;
+    val.magic = MAGIC_NUM;
+    int ret = 0;
+    DumpKernelStack(val, ret);
+    return (ret != 0 ? "" : val.hstackLogBuff);
+}
+
+pid_t ParseTidFromInfo(const std::string& taskInfo)
+{
+    if (taskInfo.empty()) {
+        XCOLLIE_LOGE("taskInfo is empty");
+        return -1;
+    }
+    std::string tidKey = "\"tid\":";
+    size_t tidKeyPos = taskInfo.find(tidKey);
+    if (tidKeyPos == std::string::npos) {
+        XCOLLIE_LOGE("not find tid start, taskInfo:%{public}s", taskInfo.c_str());
+        return -1;
+    }
+    size_t valueStart = tidKeyPos + tidKey.length();
+    size_t length = taskInfo.length();
+    while (valueStart < length && taskInfo[valueStart] != '"') {
+        if (taskInfo[valueStart] != ' ' && taskInfo[valueStart] != '\t') {
+            return -1;
+        }
+        valueStart++;
+    }
+    if (valueStart > length) {
+        return -1;
+    }
+    size_t valueEnd = taskInfo.find('"', valueStart + NEXT_POS);
+    if (valueEnd == std::string::npos) {
+        XCOLLIE_LOGE("not find tid end, taskInfo:%{public}s", taskInfo.c_str());
+        return -1;
+    }
+    std::string tidStr = taskInfo.substr(valueStart + NEXT_POS, valueEnd - valueStart - NEXT_POS);
+    if (tidStr.empty()) {
+        XCOLLIE_LOGE("not find tidStr, taskInfo:%{public}s", taskInfo.c_str());
+        return -1;
+    }
+    char* endPtr = nullptr;
+    errno = 0;
+    long long tidValue = strtoll(tidStr.c_str(), &endPtr, DECIMAL);
+    if (errno == ERANGE || endPtr == nullptr || *endPtr != '\0') {
+        XCOLLIE_LOGE("str to int failed, errno:%{public}d", errno);
+        return -1;
+    }
+    if (tidValue == LLONG_MAX || tidValue == LLONG_MIN) {
+        XCOLLIE_LOGE("tid exceeds the maximum value");
+        return -1;
+    }
+    if (tidValue < 0 || tidValue > static_cast<long long>(std::numeric_limits<pid_t>::max())) {
+        XCOLLIE_LOGE("tid exceeds the pid_t maximum value");
+        return -1;
+    }
+    return static_cast<pid_t>(tidValue);
 }
 } // end of HiviewDFX
 } // end of OHOS

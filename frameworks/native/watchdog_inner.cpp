@@ -148,6 +148,7 @@ static std::shared_ptr<XCollieFfrtTask> xcollieFfrtTask_ = nullptr;
 
 SigActionType WatchdogInner::threadSamplerSigHandler_ = nullptr;
 std::mutex WatchdogInner::threadSamplerSignalMutex_;
+std::atomic_bool WatchdogInner::isTestExist_ = false;
 
 namespace {
 void ThreadInfo(char *buf  __attribute__((unused)),
@@ -1649,7 +1650,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr, false);
         description += ", report twice instead of exiting process.";
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
-        WatchdogInner::KillPeerBinderProcess(description);
+        IsExistProcess(description);
         return;
     }
     bool isExist = false;
@@ -1667,9 +1668,17 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         description += ", report twice instead of exiting process."; // 1s = 1000ms
         WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
-        WatchdogInner::KillPeerBinderProcess(description);
+        IsExistProcess(description);
     } else {
         WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr);
+    }
+}
+
+void WatchdogInner::IsExistProcess(std::string description)
+{
+    bool isTestExist = isTestExist_.load();
+    if (!isTestExist) {
+        WatchdogInner::KillPeerBinderProcess(description);
     }
 }
 
@@ -1702,18 +1711,21 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     int32_t tid = pid;
     GetFfrtTaskTid(tid, sendMsg);
     sendMsg += faultTimeStr;
+    pid_t watchdogTid = ParseTidFromInfo(std::string(taskInfo));
+    std::string kernelStack = "\n" + GetKernelStackByTid(watchdogTid);
 #ifdef HISYSEVENT_ENABLE
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg, "STACK", isDumpStack ? GetProcessStacktrace() : "");
+        "PID", pid, "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid,
+        "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg, "STACK", (isDumpStack ? GetProcessStacktrace() : "") + kernelStack);
     if (ret == ERR_OVER_SIZE) {
         std::string stack = "";
         if (isDumpStack) {
             GetBacktraceStringByTid(stack, tid, 0, true);
         }
         ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-            "PID", pid, "TID", tid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo,
-            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack);
+            "PID", pid, "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo,
+            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack + kernelStack);
     }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
