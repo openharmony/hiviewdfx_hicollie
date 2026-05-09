@@ -12,13 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "xcollie_mgr.h"
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <unistd.h>
 #include <string>
-#include <sys/syscall.h>
 
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
@@ -29,30 +26,32 @@ namespace HiviewDFX {
 namespace {
     constexpr uint32_t TIME_MIN_TO_S = 60;
     constexpr uint32_t TIME_S_TO_MS = 1000;
-    constexpr uint32_t COUNT_OF_FAULT_TYPE = 1000;
+    constexpr uint32_t COUNT_OF_FAULT_TYPE = 8;
     constexpr uint32_t CALLBACK_WAIT_TIME = 10000; // 10s
 }
-
-XCollieMgr::XCollieMgr()
+XcollieMgr::XcollieMgr()
 {
 }
 
-XCollieMgr::~XCollieMgr()
+XcollieMgr::~XcollieMgr()
 {
 }
 
-void XCollieMgr::SetInvoker(XCollieInnerCallback callback)
+void XcollieMgr::SetInvoker(XCollieInnerCallback callback)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     lastFreezeCallback_ = callback;
 }
 
-void XCollieMgr::SetHandler(void *handler)
+void XcollieMgr::SetHandler(void* handler)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     handler_ = handler;
 }
 
-bool XCollieMgr::CheckCallDuration(int type)
+bool XcollieMgr::CheckCallDuration(int type)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
         steady_clock::now().time_since_epoch()).count();
     if (now - lastCallTime_[type] > TIME_MIN_TO_S * TIME_S_TO_MS) {
@@ -62,9 +61,9 @@ bool XCollieMgr::CheckCallDuration(int type)
     return false;
 }
 
-std::string XCollieMgr::ReadDataFromBuffer(int type)
+std::string XcollieMgr::ReadDataFromBuffer(int type)
 {
-    if (type < 0 || type > COUNT_OF_FAULT_TYPE) {
+    if (type < 0 || type >= COUNT_OF_FAULT_TYPE) {
         XCOLLIE_LOGE("invalid freeze type");
         return "";
     }
@@ -72,26 +71,18 @@ std::string XCollieMgr::ReadDataFromBuffer(int type)
         XCOLLIE_LOGE("can not ReadDataFromBuffer twice within 1 min");
         return "";
     }
-    XCollieInnerCallback callback = lastFreezeCallback_;
+    XCollieInnerCallback callback;
+    void* handler;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        callback = lastFreezeCallback_;
+        handler = handler_;
+    }
     if (callback == nullptr) {
         XCOLLIE_LOGE("no freeze callback");
         return "";
     }
-    auto syncPromise = std::make_shared<ffrt::promise<std::string>>();
-    if (syncPromise == nullptr) {
-        XCOLLIE_LOGE("syncPromise error");
-        return "";
-    }
-    ffrt::future syncFuture = syncPromise->get_future();
-    ffrt::submit([this, syncPromise, callback, type]() {
-        syncPromise->set_value(callback(this->handler_, type));
-    }, ffrt::task_attr().qos(static_cast<int>(ffrt_qos_user_initiated)));
-    ffrt::future_status wait = syncFuture.wait_for(std::chrono::milliseconds(CALLBACK_WAIT_TIME));
-    if (wait != ffrt::future_status::ready) {
-        XCOLLIE_LOGE("invalid freeze type");
-        return "";
-    }
-    return syncFuture.get();
+    return callback(handler, type);
 }
-} // end of HiviewDFX
-} // end of OHOS
+} // end of namespace HiviewDFX
+} // end of namespace OHOS
