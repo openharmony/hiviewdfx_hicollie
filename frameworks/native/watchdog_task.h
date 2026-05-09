@@ -77,7 +77,7 @@ public:
     void AsyncBinderSpace();
     bool IsBinderSpaceInsufficient();
 #endif
-    void DumpKernelStack(struct HstackVal& val, int& ret) const;
+
 #ifdef SUSPEND_CHECK_ENABLE
     bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
 #endif

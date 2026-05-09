@@ -37,6 +37,8 @@ constexpr uint64_t MIN_APP_UID = 20000;
 constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
 constexpr uint64_t IPC_FULL_TASK_PARAM = 0;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
+constexpr int BUFF_STACK_SIZE = 20 * 1024;
+const int DECIMAL = 10;
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
 
@@ -70,6 +72,12 @@ struct FileInfo {
     std::string filePath;
     time_t mtime;
 };
+struct HstackVal {
+    uint32_t magic;
+    pid_t tid;
+    char hstackLogBuff[BUFF_STACK_SIZE];
+};
+
 #ifdef SUSPEND_CHECK_ENABLE
 std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now);
 #endif
@@ -146,6 +154,12 @@ bool IsNum(const std::string& str);
 
 bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& value,
     char flag);
+
+void DumpKernelStack(struct HstackVal& val, int& ret);
+
+std::string GetKernelStackByTid(pid_t watchdogTid);
+
+pid_t ParseTidFromInfo(const std::string& taskInfo);
 } // end of HiviewDFX
 } // end of OHOS
 #endif
