@@ -54,16 +54,24 @@ const uint64_t START_TIME_INDEX = 21;
 const int START_PATH_LEN = 128;
 constexpr int64_t MAX_TIME_BUFF = 64;
 constexpr int64_t SEC_TO_MILLISEC = 1000;
+constexpr int64_t SEC_TO_NANOSEC = 1000000000;
+constexpr size_t MILLISEC_DIGIT_COUNT = 6;
 constexpr int64_t MINUTE_TO_S = 60; // 60s
 constexpr size_t TOTAL_HALF = 2; // 2 : remove half of the total
 constexpr size_t DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT = 100;
 constexpr mode_t DEFAULT_LOG_DIR_MODE = 0770;
+constexpr unsigned int NEXT_POS = 1;
 constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_BETA_VAULE = "beta";
 constexpr const char* const KEY_REPORT_TIMES_TYPE = "persist.hiview.jank.reporttimes";
+constexpr const char* BBOX_PATH = "/dev/bbox";
+constexpr static uint8_t ARR_SIZE = 7;
+constexpr static uint8_t DECIMAL = 10;
+constexpr static uint8_t FREE_ASYNC_INDEX = 6;
+constexpr static uint16_t FREE_ASYNC_MAX = 1000;
 
 static std::string g_curProcName;
 static int32_t g_lastPid;
@@ -107,6 +115,171 @@ std::pair<double, double> GetSuspendTime(const char *path, uint64_t &now)
     return {suspendStartTime, suspendEndTime};
 }
 #endif
+
+std::string FormatTimeImpl(const std::string &format, int64_t* ns)
+{
+    auto now = std::chrono::system_clock::now();
+    auto nanosecs = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch());
+    auto timestamp = nanosecs.count();
+    if (ns != nullptr) {
+        *ns = timestamp % SEC_TO_NANOSEC; // 纳秒
+    }
+    std::time_t tt = static_cast<std::time_t>(timestamp / SEC_TO_NANOSEC);
+    std::tm* t = std::localtime(&tt);
+    if (t == nullptr) {
+        XCOLLIE_LOGE("localtime failed.");
+        return "";
+    }
+    char buffer[MAX_TIME_BUFF] = {0};
+    if (std::strftime(buffer, sizeof(buffer), format.c_str(), t) == 0) {
+        XCOLLIE_LOGE("strftime failed.");
+        return "";
+    }
+    return std::string(buffer);
+}
+ 
+std::vector<std::string> GetFileToList(std::string line)
+{
+    std::vector<std::string> strList;
+    std::istringstream lineStream(line);
+    std::string tmpstr;
+    while (lineStream >> tmpstr) {
+        strList.push_back(tmpstr);
+    }
+    return strList;
+}
+ 
+std::string StrSplit(const std::string& str, uint16_t index)
+{
+    std::vector<std::string> strings;
+    SplitStr(str, ":", strings);
+    return index < strings.size() ? strings[index] : "";
+}
+ 
+void BinderInfoLineParser(std::ifstream& fin,
+    std::map<int, std::list<BinderInfo>>& manager,
+    std::map<uint32_t, uint32_t>& asyncBinderMap,
+    std::vector<std::pair<uint32_t, uint64_t>>& freeAsyncSpacePairs,
+    std::string& rawBinderInfo)
+{
+    std::string line;
+    bool isBinderMatchup = false;
+    while (getline(fin, line)) {
+        rawBinderInfo += line + "\n";
+ 
+        if (line.find("context") != line.npos) {
+            isBinderMatchup = true;
+        }
+ 
+        std::vector<std::string> strList = GetFileToList(line);
+        if (isBinderMatchup) {
+            if (line.find("free_async_space") == line.npos && strList.size() == ARR_SIZE &&
+                std::atoll(strList[FREE_ASYNC_INDEX].c_str()) < FREE_ASYNC_MAX) {
+                freeAsyncSpacePairs.emplace_back(std::atoi(strList[0].c_str()),
+                    std::atoll(strList[FREE_ASYNC_INDEX].c_str()));
+            }
+        } else if (line.find("async\t") != std::string::npos && strList.size() > ARR_SIZE) {
+            std::string serverPid = StrSplit(strList[3], 0);
+            std::string serverTid = StrSplit(strList[3], 1);
+            if (serverPid != "" && serverTid != "" && std::atoi(serverTid.c_str()) == 0) {
+                asyncBinderMap[std::atoi(serverPid.c_str())]++;
+            }
+        } else if (strList.size() >= ARR_SIZE) {
+            std::string clientPid = StrSplit(strList[0], 0);
+            std::string clientTid = StrSplit(strList[0], 1);
+            std::string serverPid = StrSplit(strList[2], 0);
+            std::string serverTid = StrSplit(strList[2], 1);
+            std::string wait = StrSplit(strList[5], 1);
+            if (clientPid == "" || clientTid == "" || serverPid == "" || serverTid == "" || wait == "") {
+                continue;
+            }
+            BinderInfo info = {std::strtol(clientPid.c_str(), nullptr, DECIMAL),
+                std::strtol(clientTid.c_str(), nullptr, DECIMAL), std::strtol(serverPid.c_str(), nullptr, DECIMAL),
+                std::strtol(serverTid.c_str(), nullptr, DECIMAL), std::strtol(wait.c_str(), nullptr, DECIMAL)};
+            manager[info.clientPid].push_back(info);
+        }
+    }
+}
+ 
+void BinderInfoParser(std::ifstream& fin,
+    std::map<int, std::list<BinderInfo>>& manager,
+    std::set<int>& asyncPids,
+    std::string& rawBinderInfo)
+{
+    std::map<uint32_t, uint32_t> asyncBinderMap;
+    std::vector<std::pair<uint32_t, uint64_t>> freeAsyncSpacePairs;
+    BinderInfoLineParser(fin, manager, asyncBinderMap, freeAsyncSpacePairs, rawBinderInfo);
+ 
+    std::sort(freeAsyncSpacePairs.begin(), freeAsyncSpacePairs.end(),
+        [] (const auto& pairOne, const auto& pairTwo) { return pairOne.second < pairTwo.second; });
+    std::vector<std::pair<uint32_t, uint32_t>> asyncBinderPairs(asyncBinderMap.begin(), asyncBinderMap.end());
+    std::sort(asyncBinderPairs.begin(), asyncBinderPairs.end(),
+        [] (const auto& pairOne, const auto& pairTwo) { return pairOne.second > pairTwo.second; });
+ 
+    size_t freeAsyncSpaceSize = freeAsyncSpacePairs.size();
+    size_t asyncBinderSize = asyncBinderPairs.size();
+    size_t individualMaxSize = 2;
+    for (size_t i = 0; i < individualMaxSize; i++) {
+        if (i < freeAsyncSpaceSize) {
+            asyncPids.insert(freeAsyncSpacePairs[i].first);
+        }
+        if (i < asyncBinderSize) {
+            asyncPids.insert(asyncBinderPairs[i].first);
+        }
+    }
+}
+ 
+void ParseBinderCallChain(const ParseBinderCallChainParam& param)
+{
+    auto it = param.manager.find(param.pid);
+    if (it == param.manager.end()) {
+        return;
+    }
+    for (auto& each : it->second) {
+        if (param.pids.find(each.serverPid) != param.pids.end()) {
+            continue;
+        }
+        param.pids.insert(each.serverPid);
+        if (param.getTerminal) {
+            if ((each.clientPid == param.params.eventPid && each.clientTid == param.params.eventTid) ||
+                (each.clientPid == param.terminalBinder.pid && each.clientTid == param.terminalBinder.tid)) {
+                param.terminalBinder.pid = each.serverPid;
+                param.terminalBinder.tid = each.serverTid;
+                ParseBinderCallChain({param.manager, param.pids, each.serverPid, param.params,
+                    param.terminalBinder, true});
+            }
+        }
+        ParseBinderCallChain({param.manager, param.pids, each.serverPid, param.params,
+            param.terminalBinder, false});
+    }
+}
+ 
+std::string GetBinderPeerPids(int32_t pid, int32_t tid, std::set<int>& syncPids, std::set<int>& asyncPids,
+    TerminalBinderInfo& terminalBinder)
+{
+    std::ifstream fin;
+    std::string path = std::string(LOGGER_TEANSPROC_PATH);
+    fin.open(path.c_str());
+    if (!fin.is_open()) {
+        XCOLLIE_LOGE("open binder file failed, %{public}s.", path.c_str());
+        return "";
+    }
+ 
+    std::map<int, std::list<BinderInfo>> manager;
+    std::string rawBinderInfo;
+    BinderInfoParser(fin, manager, asyncPids, rawBinderInfo);
+    fin.close();
+ 
+    if (pid <= 0 || manager.size() == 0 || manager.find(pid) == manager.end()) {
+        return rawBinderInfo;
+    }
+ 
+    int actualTid = (tid > 0) ? tid : pid;
+    ParseBinderParam params = {pid, actualTid};
+    ParseBinderCallChain({manager, syncPids, pid, params, terminalBinder, true});
+    return rawBinderInfo;
+}
+
 uint64_t GetCurrentTickMillseconds()
 {
     struct timespec t;
@@ -335,7 +508,6 @@ void SplitStr(const std::string& str, const std::string& sep,
 
 int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
 {
-    const int decimal = 10;
     std::string line;
     bool isBinderMatchup = false;
     while (getline(fin, line)) {
@@ -373,9 +545,9 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
             if (server == "" || client == "" || wait == "") {
                 continue;
             }
-            int serverNum = std::strtol(server.c_str(), nullptr, decimal);
-            int clientNum = std::strtol(client.c_str(), nullptr, decimal);
-            int waitNum = std::strtol(wait.c_str(), nullptr, decimal);
+            int serverNum = std::strtol(server.c_str(), nullptr, DECIMAL);
+            int clientNum = std::strtol(client.c_str(), nullptr, DECIMAL);
+            int waitNum = std::strtol(wait.c_str(), nullptr, DECIMAL);
             XCOLLIE_LOGI("server:%{public}d, client:%{public}d, wait:%{public}d",
                 serverNum, clientNum, waitNum);
             if (clientNum != pid || waitNum < MIN_WAIT_NUM) {
@@ -555,28 +727,24 @@ std::string GetFormatDate()
 
 std::string FormatTime(const std::string &format)
 {
-    auto now = std::chrono::system_clock::now();
-    auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
-    auto timestamp = millisecs.count();
-    std::time_t tt = static_cast<std::time_t>(timestamp / SEC_TO_MILLISEC);
-    std::tm* t = std::localtime(&tt);
-    if (t == nullptr) {
-        XCOLLIE_LOGE("localtime failed.");
-        return "";
-    }
-    char buffer[MAX_TIME_BUFF] = {0};
-    if (std::strftime(buffer, sizeof(buffer), format.c_str(), t) == 0) {
-        XCOLLIE_LOGE("strftime failed.");
-        return "";
-    }
-    return std::string(buffer);
+    return FormatTimeImpl(format, nullptr);
+}
+
+std::string FormatTimeWithMs(const std::string &format)
+{
+    int64_t ns = 0;
+    std::string result = FormatTimeImpl(format, &ns);
+    int64_t ms = ns / 1000;  // 纳秒转毫秒
+    std::ostringstream oss;
+    oss << std::setfill('0') << std::setw(MILLISEC_DIGIT_COUNT) << ms;
+    return result + "." + oss.str();
 }
 
 int64_t GetTimeStamp()
 {
-    std::chrono::nanoseconds ms = std::chrono::duration_cast< std::chrono::nanoseconds >(
+    std::chrono::nanoseconds ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::system_clock::now().time_since_epoch());
-    return ms.count();
+    return ns.count();
 }
 
 void* FunctionOpen(void* funcHandler, const char* funcName)
@@ -723,6 +891,142 @@ bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& 
         return false;
     }
     return true;
+}
+
+void DumpKernelStack(struct HstackVal& val, int& ret)
+{
+    int fd = open(BBOX_PATH, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        XCOLLIE_LOGE("open %{public}s failed", BBOX_PATH);
+        return;
+    }
+    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
+    ret = ioctl(fd, LOGGER_GET_STACK, &val);
+    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
+    }
+    if (ret != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
+    } else {
+        XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
+    }
+}
+
+std::string GetKernelStackByTid(pid_t watchdogTid)
+{
+    struct HstackVal val;
+    if (memset_s(&val, sizeof(val), 0, sizeof(val)) != 0) {
+        XCOLLIE_LOGE("memset val failed\n");
+        return "";
+    }
+    val.tid = watchdogTid;
+    val.magic = MAGIC_NUM;
+    int ret = 0;
+    DumpKernelStack(val, ret);
+    return (ret != 0 ? "" : val.hstackLogBuff);
+}
+
+pid_t ParseTidFromInfo(const std::string& taskInfo)
+{
+    if (taskInfo.empty()) {
+        XCOLLIE_LOGE("taskInfo is empty");
+        return -1;
+    }
+    std::string tidKey = "\"tid\":";
+    size_t tidKeyPos = taskInfo.find(tidKey);
+    if (tidKeyPos == std::string::npos) {
+        XCOLLIE_LOGE("not find tid start, taskInfo:%{public}s", taskInfo.c_str());
+        return -1;
+    }
+    size_t valueStart = tidKeyPos + tidKey.length();
+    size_t length = taskInfo.length();
+    while (valueStart < length && taskInfo[valueStart] != '"') {
+        if (taskInfo[valueStart] != ' ' && taskInfo[valueStart] != '\t') {
+            return -1;
+        }
+        valueStart++;
+    }
+    if (valueStart > length) {
+        return -1;
+    }
+    size_t valueEnd = taskInfo.find('"', valueStart + NEXT_POS);
+    if (valueEnd == std::string::npos) {
+        XCOLLIE_LOGE("not find tid end, taskInfo:%{public}s", taskInfo.c_str());
+        return -1;
+    }
+    std::string tidStr = taskInfo.substr(valueStart + NEXT_POS, valueEnd - valueStart - NEXT_POS);
+    if (tidStr.empty()) {
+        XCOLLIE_LOGE("not find tidStr, taskInfo:%{public}s", taskInfo.c_str());
+        return -1;
+    }
+    char* endPtr = nullptr;
+    errno = 0;
+    long long tidValue = strtoll(tidStr.c_str(), &endPtr, DECIMAL);
+    if (errno == ERANGE || endPtr == nullptr || *endPtr != '\0') {
+        XCOLLIE_LOGE("str to int failed, errno:%{public}d", errno);
+        return -1;
+    }
+    if (tidValue == LLONG_MAX || tidValue == LLONG_MIN) {
+        XCOLLIE_LOGE("tid exceeds the maximum value");
+        return -1;
+    }
+    if (tidValue < 0 || tidValue > static_cast<long long>(std::numeric_limits<pid_t>::max())) {
+        XCOLLIE_LOGE("tid exceeds the pid_t maximum value");
+        return -1;
+    }
+    return static_cast<pid_t>(tidValue);
+}
+
+bool IsOversea()
+{
+    static bool isOversea = (OHOS::system::GetParameter("const.global.region", "CN") != "CN");
+    return isOversea;
+}
+
+std::string GetBinderInfoString(int32_t pid, int32_t tid, std::string& rawBinderInfo)
+{
+    if (IsOversea()) {
+        return "";
+    }
+    std::set<int> syncPids;
+    std::set<int> asyncPids;
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    rawBinderInfo = GetBinderPeerPids(pid, tid, syncPids, asyncPids, terminalBinder);
+
+    if (syncPids.empty() && asyncPids.empty() && terminalBinder.pid <= 0) {
+        return "";
+    }
+
+    std::string binderInfo = "";
+    if (!syncPids.empty()) {
+        binderInfo += "syncPids:";
+        for (auto it = syncPids.begin(); it != syncPids.end(); ++it) {
+            if (it != syncPids.begin()) {
+                binderInfo += ";";
+            }
+            binderInfo += std::to_string(*it) + "(" + GetProcessNameFromProcCmdline(*it) + ")";
+        }
+    }
+    if (!asyncPids.empty()) {
+        if (!binderInfo.empty()) {
+            binderInfo += " ";
+        }
+        binderInfo += "asyncPids:";
+        for (auto it = asyncPids.begin(); it != asyncPids.end(); ++it) {
+            if (it != asyncPids.begin()) {
+                binderInfo += ",";
+            }
+            binderInfo += std::to_string(*it);
+        }
+    }
+    if (terminalBinder.pid > 0) {
+        if (!binderInfo.empty()) {
+            binderInfo += " ";
+        }
+        binderInfo += "terminalBinder:" + std::to_string(terminalBinder.pid) +
+            "," + std::to_string(terminalBinder.tid);
+    }
+    return binderInfo;
 }
 } // end of HiviewDFX
 } // end of OHOS

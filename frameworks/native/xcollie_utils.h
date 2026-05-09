@@ -21,7 +21,9 @@
 #include <sys/ioctl.h>
 #include <fstream>
 #include <map>
+#include <set>
 #include <vector>
+#include <list>
 
 #include "hilog/log.h"
 
@@ -37,6 +39,7 @@ constexpr uint64_t MIN_APP_UID = 20000;
 constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
 constexpr uint64_t IPC_FULL_TASK_PARAM = 0;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
+constexpr int BUFF_STACK_SIZE = 20 * 1024;
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
 
@@ -70,6 +73,35 @@ struct FileInfo {
     std::string filePath;
     time_t mtime;
 };
+struct BinderInfo {
+    int clientPid;
+    int clientTid;
+    int serverPid;
+    int serverTid;
+    int wait;
+};
+struct HstackVal {
+    uint32_t magic;
+    pid_t tid;
+    char hstackLogBuff[BUFF_STACK_SIZE];
+};
+struct ParseBinderParam {
+    int eventPid;
+    int eventTid;
+};
+struct TerminalBinderInfo {
+    int pid;
+    int tid;
+};
+struct ParseBinderCallChainParam {
+    std::map<int, std::list<BinderInfo>>& manager;
+    std::set<int>& pids;
+    int pid;
+    const ParseBinderParam& params;
+    TerminalBinderInfo& terminalBinder;
+    bool getTerminal;
+};
+
 #ifdef SUSPEND_CHECK_ENABLE
 std::pair<double, double> GetSuspendTime(const char* path, uint64_t &now);
 #endif
@@ -117,6 +149,17 @@ std::string GetFormatDate();
 
 std::string FormatTime(const std::string &format);
 
+std::string FormatTimeWithMs(const std::string &format);
+
+std::string FormatTimeImpl(const std::string &format, int64_t* ns);
+
+std::vector<std::string> GetFileToList(std::string line);
+
+std::string StrSplit(const std::string& str, uint16_t index);
+
+std::string GetBinderPeerPids(int32_t pid, int32_t tid, std::set<int>& syncPids, std::set<int>& asyncPids,
+    TerminalBinderInfo& terminalBinder);
+
 bool CreateDir(const std::string& dirPath);
 
 void GetFilesByDir(std::vector<FileInfo> &fileList, const std::string& dir);
@@ -136,6 +179,10 @@ int32_t GetUidByPid(const int32_t pid);
 
 int64_t GetAppStartTime(int32_t pid, int64_t tid);
 
+bool IsOversea();
+
+std::string GetBinderInfoString(int32_t pid, int32_t tid, std::string& rawBinderInfo);
+
 std::map<std::string, int> GetReportTimesMap();
 
 void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& checkInterval);
@@ -146,6 +193,12 @@ bool IsNum(const std::string& str);
 
 bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& value,
     char flag);
+
+void DumpKernelStack(struct HstackVal& val, int& ret);
+
+std::string GetKernelStackByTid(pid_t watchdogTid);
+
+pid_t ParseTidFromInfo(const std::string& taskInfo);
 } // end of HiviewDFX
 } // end of OHOS
 #endif
