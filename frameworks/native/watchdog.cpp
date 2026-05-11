@@ -155,17 +155,17 @@ int32_t Watchdog::GetReservedTimeForLogging()
 
 void Watchdog::SetFreezeInvoker(XCollieInnerCallback callback)
 {
-    XCollieMgr::GetInstance().SetInvoker(callback);
+    XcollieMgr::GetInstance().SetInvoker(callback);
 }
 
 void Watchdog::SetFreezeHandler(void* handler)
 {
-    XCollieMgr::GetInstance().SetHandler(handler);
+    XcollieMgr::GetInstance().SetHandler(handler);
 }
 
 std::string Watchdog::ReadDataFromBuffer(int type)
 {
-    return XCollieMgr::GetInstance().ReadDataFromBuffer(type);
+    return XcollieMgr::GetInstance().ReadDataFromBuffer(type);
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
