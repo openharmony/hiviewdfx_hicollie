@@ -29,6 +29,7 @@ ohos_source_set("libhicollie_source") {
     "handler_checker.cpp",
     "ipc_full.cpp",
     "process_kill_reason.cpp",
+    "sample_stack_map.cpp",
     "watchdog.cpp",
     "watchdog_inner.cpp",
     "watchdog_task.cpp",

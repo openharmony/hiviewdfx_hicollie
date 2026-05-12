@@ -33,6 +33,7 @@
 
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
+#include "sample_stack_map.h"
 #include "directory_ex.h"
 #include "file_ex.h"
 #include "event_handler.h"
@@ -284,7 +285,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_002, TestSize.Level1)
     EXPECT_TRUE(stack.size() >= heaviestStack.size());
 }
 
-
 /**
  * @tc.name: WatchdogInner;
  * @tc.desc: add testcase
@@ -437,7 +437,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_001, TestSize.Level1
 {
     EXPECT_TRUE(IsProcessDebug(getprocpid()));
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
-    WatchdogInner::GetInstance().SendFfrtEvent("msg", "testName", "taskInfo", faultTimeStr);
+    WatchdogInner::SendFfrtEvent({"msg", "testName", "taskInfo", faultTimeStr, true, ""});;
 }
 
 /**
@@ -450,7 +450,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_002, TestSize.Level1
     OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogInnerUnitTest12345");
     EXPECT_FALSE(IsProcessDebug(getprocpid()));
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
-    WatchdogInner::GetInstance().SendFfrtEvent("test", "SendFfrtEvent_002", "test", faultTimeStr);
+    WatchdogInner::SendFfrtEvent({"test", "SendFfrtEvent_002", "test", faultTimeStr, true, ""});
 }
 
 /**
@@ -1571,6 +1571,101 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_003, TestSize.Level1)
     interval = 100;
     ret = WatchdogInner::GetInstance().StartSample(duration, interval);
     EXPECT_TRUE(ret.empty());
+}
+
+/**
+ * @tc.name: FormatTimeWithMsTest
+ * @tc.desc: test FormatTimeWithMs function
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, FormatTimeWithMsTest_001, TestSize.Level1)
+{
+    std::string result = FormatTimeWithMs("%Y-%m-%d %H:%M:%S");
+    EXPECT_FALSE(result.empty());
+    size_t dotPos = result.find('.');
+    EXPECT_NE(dotPos, std::string::npos);
+    std::string msStr = result.substr(dotPos + 1);
+    EXPECT_EQ(msStr.length(), 6);
+}
+ 
+/**
+ * @tc.name: GetBinderInfoStringTest
+ * @tc.desc: test GetBinderInfoString function
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, GetBinderInfoStringTest_001, TestSize.Level1)
+{
+    std::string rawBinderInfo;
+    std::string result = GetBinderInfoString(-1, -1, rawBinderInfo);
+    EXPECT_TRUE(result.empty());
+}
+ 
+/**
+ * @tc.name: InsertSampleStackTaskImplTest
+ * @tc.desc: test InsertSampleStackTaskImpl function
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, InsertSampleStackTaskImplTest_001, TestSize.Level1)
+{
+    std::string sampleStackName = "test_sample_stack";
+    pid_t tid = getproctid();
+    uint64_t sampleInterval = 100;
+    WatchdogInner::GetInstance().InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
+    sleep(1);
+    bool removed = WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
+    EXPECT_TRUE(removed);
+}
+ 
+/**
+ * @tc.name: InsertFfrtSampleStackTaskTest
+ * @tc.desc: test InsertFfrtSampleStackTask function
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, InsertFfrtSampleStackTaskTest_001, TestSize.Level1)
+{
+    std::string sampleStackName = "test_ffrt_sample_stack";
+    pid_t tid = getproctid();
+    uint64_t sampleInterval = 100;
+    WatchdogInner::GetInstance().InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
+    sleep(1);
+    bool removed = WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
+    EXPECT_TRUE(removed);
+}
+ 
+/**
+ * @tc.name: RemoveInnerTaskTest
+ * @tc.desc: test RemoveInnerTask function returns bool
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, RemoveInnerTaskTest_001, TestSize.Level1)
+{
+    bool ret = WatchdogInner::GetInstance().RemoveInnerTask("non_existent_task");
+    EXPECT_FALSE(ret);
+}
+ 
+/**
+ * @tc.name: SampleStackMapTest
+ * @tc.desc: test SampleStackMap Set and GetAndRemove
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, SampleStackMapTest_001, TestSize.Level1)
+{
+    std::string key = "test_sample_stack_key";
+    std::string value = "test_sample_stack_value";
+    SampleStackMap::GetInstance().Set(key, value);
+    std::string result = SampleStackMap::GetInstance().GetAndRemove(key);
+    EXPECT_EQ(result, value);
+}
+ 
+/**
+ * @tc.name: SampleStackMapTest GetAndRemove non-existent
+ * @tc.desc: test SampleStackMap GetAndRemove with non-existent key
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, SampleStackMapTest_002, TestSize.Level1)
+{
+    std::string result = SampleStackMap::GetInstance().GetAndRemove("non_existent_key");
+    EXPECT_TRUE(result.empty());
 }
 } // namespace HiviewDFX
 } // namespace OHOS

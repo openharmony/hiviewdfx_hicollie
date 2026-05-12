@@ -27,6 +27,7 @@
 
 #include "backtrace_local.h"
 #include "hisysevent.h"
+#include "sample_stack_map.h"
 #include "watchdog_inner.h"
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
@@ -49,7 +50,10 @@ constexpr const char* CORE_PROCS[] = {
     "multimodalinput", "com.ohos.sceneboard", "render_service"
 };
 constexpr const int ASYNC_BINDER_SPACE_NUM = 2;
+constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
+constexpr int SAMPLE_STACK_MAX_COUNT = 10;
 }
+
 int64_t WatchdogTask::curId = 0;
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority)
@@ -302,9 +306,29 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
     time_t curTime = time(nullptr);
     char* timeStr = ctime(&curTime);
     std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) + "\n" + msg + "\n";
-    sendMsg += (checker == nullptr) ? "": checker->GetDumpInfo();
+    sendMsg += (checker == nullptr) ? "" : checker->GetDumpInfo();
 
     watchdogTid = pid;
+    ParseTidFromMsg(sendMsg);
+
+    std::string binderInfo;
+    if (eventName == "SERVICE_WARNING") {
+        InsertSampleStackTask();
+        std::string rawBinderInfo;
+        binderInfo = GetBinderInfoString(pid, watchdogTid, rawBinderInfo);
+        binderInfo = binderInfo.empty() ? rawBinderInfo : rawBinderInfo + "PROCESS_NAME:" + binderInfo;
+    } else if (eventName == "SERVICE_BLOCK") {
+        std::string sampleStackName = name + "_sample_stack" + std::to_string(watchdogTid);
+        sampleStack = SampleStackMap::GetInstance().GetAndRemove(sampleStackName);
+        WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
+    }
+
+    sendMsg += faultTimeStr;
+    SendHisyseventEvent({pid, gid, uid, sendMsg, eventName, binderInfo});
+}
+
+void WatchdogTask::ParseTidFromMsg(const std::string& sendMsg)
+{
     std::string tidFrontStr = "Thread ID = ";
     std::string tidRearStr = ") is running";
     std::size_t frontPos = sendMsg.find(tidFrontStr);
@@ -321,24 +345,29 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
             }
         }
     }
+}
 
-    sendMsg += faultTimeStr;
+void WatchdogTask::SendHisyseventEvent(const HisyseventParam& param)
+{
 #ifdef HISYSEVENT_ENABLE
     std::string processName = GetSelfProcName();
     std::string moduleName = (name == IPC_FULL_TASK) ? (processName + "_" + name) : name;
-    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", moduleName,
-        "PROCESS_NAME", processName, "MSG", sendMsg, "STACK", GetProcessStacktrace());
+    std::string stackTrace = GetProcessStacktrace();
+    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
+        "PID", param.pid, "TID", watchdogTid, "TGID", param.gid, "UID", param.uid, "MODULE_NAME", moduleName,
+        "PROCESS_NAME", processName, "MSG", param.sendMsg,  "STACK", stackTrace,
+        "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo);
     if (ret == ERR_OVER_SIZE) {
         std::string stack;
         GetBacktraceStringByTid(stack, watchdogTid, 0, true);
-        ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-            "PID", pid, "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", moduleName,
-            "PROCESS_NAME", processName, "MSG", sendMsg, "STACK", stack);
+        ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
+            "PID", param.pid, "TID", watchdogTid, "TGID", param.gid, "UID", param.uid, "MODULE_NAME", moduleName,
+            "PROCESS_NAME", processName, "MSG", param.sendMsg, "STACK", stack,
+            "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo);
     }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
-        ret, eventName.c_str(), msg.c_str());
+        ret, param.eventName.c_str(), param.sendMsg.c_str());
 #else
        XCOLLIE_LOGI("hisysevent not exists");
 #endif
@@ -371,16 +400,31 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     } else if (!GetBacktraceStringByTid(stack, watchdogTid, 0, true)) {
         XCOLLIE_LOGE("get tid:%{public}d BacktraceString failed", watchdogTid);
     }
+
+    std::string binderInfo;
+    if (eventName == "SERVICE_TIMEOUT") {
+        std::string rawBinderInfo;
+        binderInfo = GetBinderInfoString(pid, watchdogTid, rawBinderInfo);
+        binderInfo = binderInfo.empty() ? rawBinderInfo : rawBinderInfo + "PROCESS_NAME:" + binderInfo;
+    }
+
 #ifdef HISYSEVENT_ENABLE
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", processName,
         "MSG", sendMsg, "STACK", stack + "\n"+ GetKernelStackByTid(watchdogTid), "SPECIFICSTACK_NAME",
-            WatchdogInner::GetInstance().GetSpecifiedProcessName(), "TASK_NAME", name);
+        WatchdogInner::GetInstance().GetSpecifiedProcessName(), "TASK_NAME", name, "HICOLLIE_BINDER_INFO", binderInfo);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
 #else
        XCOLLIE_LOGI("hisysevent not exists");
 #endif
+}
+
+void WatchdogTask::InsertSampleStackTask()
+{
+    uint64_t sampleInterval = checkInterval / SAMPLE_STACK_INTERVAL_DIVISOR;
+    std::string sampleStackName = name + "_sample_stack" + std::to_string(watchdogTid);
+    WatchdogInner::InsertSampleStackTaskImpl(sampleStackName, watchdogTid, sampleInterval);
 }
 
 void WatchdogTask::EvaluateCheckerState()

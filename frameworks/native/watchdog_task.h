@@ -20,6 +20,7 @@
 #include <string>
 #include <sys/types.h>
 
+
 #include "event_handler.h"
 #include "handler_checker.h"
 
@@ -83,6 +84,17 @@ public:
 #endif
     void EvaluateCheckerState();
     std::string GetBlockDescription(uint64_t interval);
+    void InsertSampleStackTask();
+    void ParseTidFromMsg(const std::string& sendMsg);
+    struct HisyseventParam {
+        int32_t pid;
+        uint32_t gid;
+        uint32_t uid;
+        std::string sendMsg;
+        std::string eventName;
+        std::string binderInfo;
+    };
+    void SendHisyseventEvent(const HisyseventParam& param);
     std::string name;
     std::string message;
     Task task;
@@ -104,6 +116,7 @@ public:
     uint64_t monoTimeStart;
     unsigned int reportCount;
     unsigned int binderSpaceFullCount;
+    std::string sampleStack;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

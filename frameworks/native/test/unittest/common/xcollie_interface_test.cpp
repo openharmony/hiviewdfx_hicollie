@@ -17,9 +17,12 @@
 
 #include <gtest/gtest.h>
 #include <string>
+#include <vector>
+#include <set>
 
 #include "xcollie.h"
 #include "watchdog.h"
+#include "xcollie_utils.h"
 
 using namespace testing::ext;
 
@@ -208,6 +211,68 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_005, TestSize.Level1)
         i++;
     }
     sleep(1);
+}
+
+/**
+ * @tc.name: IsOverseaTest
+ * @tc.desc: Verify IsOversea function
+ * @tc.type: FUNC
+ */
+HWTEST_F(XCollieInterfaceTest, IsOverseaTest_001, TestSize.Level1)
+{
+    bool result = IsOversea();
+    ASSERT_FALSE(result);
+}
+ 
+/**
+ * @tc.name: FormatTimeImplTest
+ * @tc.desc: test FormatTimeImpl function
+ * @tc.type: FUNC
+ */
+HWTEST_F(XCollieInterfaceTest, FormatTimeImplTest_001, TestSize.Level1)
+{
+    int64_t ns = 0;
+    std::string result = FormatTimeImpl("%Y-%m-%d %H:%M:%S", &ns);
+    EXPECT_FALSE(result.empty());
+    EXPECT_GE(ns, 0);
+}
+ 
+/**
+ * @tc.name: GetFileToListTest
+ * @tc.desc: test GetFileToList function
+ * @tc.type: FUNC
+ */
+HWTEST_F(XCollieInterfaceTest, GetFileToListTest_001, TestSize.Level1)
+{
+    std::string line = "a b c d e";
+    std::vector<std::string> result = GetFileToList(line);
+    EXPECT_EQ(result.size(), 5);
+}
+ 
+/**
+ * @tc.name: StrSplitTest
+ * @tc.desc: test StrSplit function
+ * @tc.type: FUNC
+ */
+HWTEST_F(XCollieInterfaceTest, StrSplitTest_001, TestSize.Level1)
+{
+    std::string str = "a:b:c";
+    std::string result = StrSplit(str, 1);
+    EXPECT_EQ(result, "b");
+}
+ 
+/**
+ * @tc.name: GetBinderPeerPidsTest
+ * @tc.desc: test GetBinderPeerPids function
+ * @tc.type: FUNC
+ */
+HWTEST_F(XCollieInterfaceTest, GetBinderPeerPidsTest_001, TestSize.Level1)
+{
+    std::set<int> syncPids;
+    std::set<int> asyncPids;
+    TerminalBinderInfo terminalBinder = {0, 0};
+    std::string result = GetBinderPeerPids(-1, -1, syncPids, asyncPids, terminalBinder);
+    EXPECT_FALSE(result.empty());
 }
 } // namespace HiviewDFX
 } // namespace OHOS

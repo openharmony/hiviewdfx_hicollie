@@ -41,6 +41,7 @@
 #include "parameter.h"
 #include "parameters.h"
 #include "file_ex.h"
+#include "sample_stack_map.h"
 #include "xcollie_ffrt_task.h"
 #include "event_handler.h"
 
@@ -81,6 +82,9 @@ constexpr const char* MEDIA_SERVICE = "media_service";
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 constexpr uint32_t TIME_MS_TO_S = 1000;
+constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
+constexpr int SAMPLE_STACK_MAX_COUNT = 10;
+constexpr uint32_t FFRT_SAMPLE_INTERVAL = FFRT_CALLBACK_TIME / SAMPLE_STACK_INTERVAL_DIVISOR;
 constexpr uint32_t AUDIO_SERVER_UID = 1041;
 constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
 constexpr uint32_t FOUNDATION_UID = 5523;
@@ -653,7 +657,7 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
             isMainThreadStackEnabled_ = true;
         }
     };
-    WatchdogTask task("ThreadSampler", sampleTask, 0, sampleInterval, true);
+    WatchdogTask task("ThreadSampler", sampleTask, 0, sampleInterval, false);
     std::unique_lock<std::mutex> lock(lock_);
     InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
     return true;
@@ -714,7 +718,7 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
     };
 
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked("ThreadSampler", WatchdogTask("ThreadSampler", sampleTask, 0, sampleInterval, true));
+    InsertWatchdogTaskLocked("ThreadSampler", WatchdogTask("ThreadSampler", sampleTask, 0, sampleInterval, false));
 }
 
 std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
@@ -1449,8 +1453,13 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
         return;
     }
 
+    std::lock_guard<std::mutex> lock(lock_);
+    if (taskNameSet_.find(task.name) == taskNameSet_.end()) {
+        XCOLLIE_LOGI("sample stack task %{public}s reach max count, skip reinsert", task.name.c_str());
+        return;
+    }
+
     task.nextTickTime = task.nextTickTime + task.checkInterval;
-    std::unique_lock<std::mutex> lock(lock_);
     checkerQueue_.push(task);
 }
 
@@ -1647,9 +1656,9 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     description += ") blocked " + std::to_string(FFRT_CALLBACK_TIME / TIME_MS_TO_S) + "s";
     std::string info(taskInfo);
     if (info.find("Queue_Schedule_Timeout") != std::string::npos) {
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr, false);
+        WatchdogInner::SendFfrtEvent({description, "SERVICE_WARNING", taskInfo, faultTimeStr, false, ""});
         description += ", report twice instead of exiting process.";
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
+        WatchdogInner::SendFfrtEvent({description, "SERVICE_BLOCK", taskInfo, faultTimeStr, true, ""});
         IsExistProcess(description);
         return;
     }
@@ -1666,11 +1675,19 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
 
     if (isExist) {
         description += ", report twice instead of exiting process."; // 1s = 1000ms
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_BLOCK", taskInfo, faultTimeStr);
+        std::string sampleStackName = "ffrt_sample_stack_" + std::to_string(taskId);
+        std::string sampleStack = SampleStackMap::GetInstance().GetAndRemove(sampleStackName);
         WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
+        WatchdogInner::SendFfrtEvent({description, "SERVICE_BLOCK", taskInfo, faultTimeStr, true, sampleStack});
+        WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
+        if (!WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName)) {
+            std::unique_lock<std::mutex> lock(WatchdogInner::GetInstance().lock_);
+            WatchdogInner::GetInstance().taskNameSet_.erase(sampleStackName);
+        }
         IsExistProcess(description);
     } else {
-        WatchdogInner::SendFfrtEvent(description, "SERVICE_WARNING", taskInfo, faultTimeStr);
+        InsertFfrtSampleStackTask(taskId);
+        WatchdogInner::SendFfrtEvent({description, "SERVICE_WARNING", taskInfo, faultTimeStr, true, ""});
     }
 }
 
@@ -1682,6 +1699,41 @@ void WatchdogInner::IsExistProcess(std::string description)
     }
 }
 
+void WatchdogInner::InsertFfrtSampleStackTask(uint64_t taskId)
+{
+    std::string sampleStackName = "ffrt_sample_stack_" + std::to_string(taskId);
+    pid_t tid = getproctid();
+    uint64_t sampleInterval = FFRT_CALLBACK_TIME / SAMPLE_STACK_INTERVAL_DIVISOR;
+    InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
+}
+
+void WatchdogInner::InsertSampleStackTaskImpl(const std::string& sampleStackName, pid_t tid, uint64_t sampleInterval)
+{
+    std::string headerInfo = "#ThreadInfos Tid: " + std::to_string(tid) + "\n";
+    auto count = std::make_shared<int>(0);
+    auto task = [tid, sampleStackName, count, headerInfo] {
+        std::string timePrefix = "SnapshotTime:" + FormatTimeWithMs("%Y-%m-%d-%H-%M-%S") + "\n";
+
+        std::string stack;
+        if (GetBacktraceStringByTid(stack, tid, 0, true)) {
+            std::string oldStack = SampleStackMap::GetInstance().GetAndRemove(sampleStackName);
+            std::string newStack = timePrefix + stack;
+            if (oldStack.empty()) {
+                SampleStackMap::GetInstance().Set(sampleStackName, headerInfo + newStack);
+            } else {
+                SampleStackMap::GetInstance().Set(sampleStackName, oldStack + "\n" + newStack);
+            }
+        } else {
+            XCOLLIE_LOGW("sample stack failed, tid:%{public}d", tid);
+        }
+        if (++(*count) >= SAMPLE_STACK_MAX_COUNT) {
+            std::lock_guard<std::mutex> lock(WatchdogInner::GetInstance().lock_);
+            WatchdogInner::GetInstance().taskNameSet_.erase(sampleStackName);
+        }
+    };
+    WatchdogInner::GetInstance().RunPeriodicalTask(sampleStackName, task, sampleInterval, sampleInterval);
+}
+
 void WatchdogInner::InitFfrtWatchdog()
 {
     CreateWatchdogThreadIfNeed();
@@ -1689,8 +1741,7 @@ void WatchdogInner::InitFfrtWatchdog()
     ffrt_task_timeout_set_threshold(FFRT_CALLBACK_TIME);
 }
 
-void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eventName, const char * taskInfo,
-    const std::string& faultTimeStr, const bool isDumpStack)
+void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
 {
     int32_t pid = getprocpid();
     if (IsProcessDebug(pid)) {
@@ -1702,7 +1753,7 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     time_t curTime = time(nullptr);
     char* timeStr = ctime(&curTime);
     std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) +
-        "\n" + msg + "\n";
+        "\n" + param.msg + "\n";
     char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
     buffer[FFRT_BUFFER_SIZE] = 0;
     ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
@@ -1710,26 +1761,34 @@ void WatchdogInner::SendFfrtEvent(const std::string &msg, const std::string &eve
     delete[] buffer;
     int32_t tid = pid;
     GetFfrtTaskTid(tid, sendMsg);
-    sendMsg += faultTimeStr;
-    pid_t watchdogTid = ParseTidFromInfo(std::string(taskInfo));
+    pid_t watchdogTid = ParseTidFromInfo(std::string(param.taskInfo));
     std::string kernelStack = "\n" + GetKernelStackByTid(watchdogTid);
+    sendMsg += param.faultTimeStr;
+    std::string binderInfo;
+    if (param.eventName == "SERVICE_WARNING") {
+        std::string rawBinderInfo;
+        binderInfo = GetBinderInfoString(pid, tid, rawBinderInfo);
+        binderInfo = binderInfo.empty() ? rawBinderInfo : rawBinderInfo + "PROCESS_NAME:" + binderInfo;
+    }
 #ifdef HISYSEVENT_ENABLE
-    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
+    int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
         "PID", pid, "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid,
-        "MODULE_NAME", taskInfo, "PROCESS_NAME", GetSelfProcName(),
-        "MSG", sendMsg, "STACK", (isDumpStack ? GetProcessStacktrace() : "") + kernelStack);
-    if (ret == ERR_OVER_SIZE) {
+        "MODULE_NAME", param.taskInfo, "PROCESS_NAME", GetSelfProcName(),
+        "MSG", sendMsg, "STACK", (param.isDumpStack ? GetProcessStacktrace() : "") + kernelStack,
+        "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo);
+        if (ret == ERR_OVER_SIZE) {
         std::string stack = "";
-        if (isDumpStack) {
+        if (param.isDumpStack) {
             GetBacktraceStringByTid(stack, tid, 0, true);
         }
-        ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT,
-            "PID", pid, "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", taskInfo,
-            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack + kernelStack);
-    }
+        ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT, "PID", pid,
+            "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", param.taskInfo,
+            "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack + kernelStack,
+            "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo);
+        }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
-        "msg=%{public}s", ret, eventName.c_str(), msg.c_str());
+        "msg=%{public}s", ret, param.eventName.c_str(), param.msg.c_str());
 #else
     XCOLLIE_LOGI("hisysevent not exists");
 #endif
@@ -1821,18 +1880,18 @@ void WatchdogInner::KillPeerBinderProcess(const std::string &description)
     }
 }
 
-void WatchdogInner::RemoveInnerTask(const std::string& name)
+bool WatchdogInner::RemoveInnerTask(const std::string& name)
 {
     if (name.empty()) {
         XCOLLIE_LOGI("RemoveInnerTask fail, cname is null");
-        return;
+        return false;
     }
     std::priority_queue<WatchdogTask> tmpQueue;
     std::unique_lock<std::mutex> lock(lock_);
     size_t size = checkerQueue_.size();
     if (size == 0) {
         XCOLLIE_LOGE("RemoveInnerTask %{public}s fail, empty queue!", name.c_str());
-        return;
+        return false;
     }
     while (!checkerQueue_.empty()) {
         const WatchdogTask& task = checkerQueue_.top();
@@ -1842,17 +1901,19 @@ void WatchdogInner::RemoveInnerTask(const std::string& name)
             size_t nameSize = taskNameSet_.size();
             if (nameSize != 0 && !task.isOneshotTask) {
                 taskNameSet_.erase(name);
-                XCOLLIE_LOGD("RemoveInnerTask name %{public}s, remove result=%{public}d",
+                XCOLLIE_LOGI("RemoveInnerTask name %{public}s, remove result=%{public}d",
                     name.c_str(), nameSize > taskNameSet_.size());
             }
         }
         checkerQueue_.pop();
     }
+    tmpQueue.swap(checkerQueue_);
     if (tmpQueue.size() == size) {
         XCOLLIE_LOGE("RemoveInnerTask fail, can not find name %{public}s, size=%{public}zu!",
             name.c_str(), size);
+        return false;
     }
-    tmpQueue.swap(checkerQueue_);
+    return true;
 }
 
 void InitBeginFunc(const char* name)

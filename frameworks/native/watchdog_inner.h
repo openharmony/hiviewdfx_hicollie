@@ -63,8 +63,17 @@ public:
     void InitFfrtWatchdog();
     static bool WriteStringToFile(int32_t pid, const char *str);
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
-    static void SendFfrtEvent(const std::string &msg, const std::string &eventName, const char *taskInfo,
-        const std::string& faultTimeStr, const bool isDumpStack = true);
+    static void InsertFfrtSampleStackTask(uint64_t taskId);
+    static void InsertSampleStackTaskImpl(const std::string& sampleStackName, pid_t tid, uint64_t sampleInterval);
+    struct FfrtEventParam {
+        std::string msg;
+        std::string eventName;
+        const char* taskInfo;
+        std::string faultTimeStr;
+        bool isDumpStack;
+        std::string sampleStack;
+    };
+    static void SendFfrtEvent(const FfrtEventParam& param);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);
     bool StartScrollProfile(const TimePoint& endTime, int64_t durationTime, int sampleInterval);
@@ -76,7 +85,7 @@ public:
     bool GetSystemApp();
     void SetForeground(const bool& isForeground);
     bool GetForeground();
-    void RemoveInnerTask(const std::string& name);
+    bool RemoveInnerTask(const std::string& name);
     void InitMainLooperWatcher(WatchdogInnerBeginFunc* beginFunc, WatchdogInnerEndFunc* endFunc);
     void SetAppDebug(bool isAppDebug);
     bool GetAppDebug();
