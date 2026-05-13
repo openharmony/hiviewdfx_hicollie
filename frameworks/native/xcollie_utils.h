@@ -203,7 +203,7 @@ pid_t ParseTidFromInfo(const std::string& taskInfo);
  
 int64_t GetNumFromString(const std::string &str);
  
-int64_t GetAvailbleMemory();
+int64_t GetAvailMemory();
 } // end of HiviewDFX
 } // end of OHOS
 #endif
