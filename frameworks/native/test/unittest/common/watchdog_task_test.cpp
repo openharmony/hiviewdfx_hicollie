@@ -475,12 +475,14 @@ HWTEST_F(WatchdogTaskTest, WatchdogTask_ShouldSkipSendEventForLowMemory_001, Tes
     int taskResult = 0;
     auto taskFunc = [&taskResult]() { taskResult = 1; };
     WatchdogTask task("ShouldSkipSendEventForLowMemory_001", taskFunc, 0, 1000, true);
- 
+
+    task.lowMemoryCheck = true;
     task.hadSendEvent = false;
+    task.lastLowMemoryTime = GetCurrentTickMillseconds();
     EXPECT_FALSE(task.ShouldSkipSendEventForLowMemory());
     EXPECT_TRUE(task.hadSendEvent); // 第一次调用后应设置为 true
 }
- 
+
 /**
  * @tc.name: WatchdogTask_ShouldSkipSendEventForLowMemory_002
  * @tc.desc: verify ShouldSkipSendEventForLowMemory returns true when hadSendEvent is true
@@ -491,8 +493,10 @@ HWTEST_F(WatchdogTaskTest, WatchdogTask_ShouldSkipSendEventForLowMemory_002, Tes
     int taskResult = 0;
     auto taskFunc = [&taskResult]() { taskResult = 1; };
     WatchdogTask task("ShouldSkipSendEventForLowMemory_002", taskFunc, 0, 1000, true);
- 
+
+    task.lowMemoryCheck = true;
     task.hadSendEvent = true;
+    task.lastLowMemoryTime = GetCurrentTickMillseconds();
     EXPECT_TRUE(task.ShouldSkipSendEventForLowMemory());
 }
  
