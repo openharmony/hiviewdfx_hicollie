@@ -1025,13 +1025,13 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetNumFromString_002, TestSize.Lev
 }
  
 /**
- * @tc.name: GetAvailbleMemory normal test
- * @tc.desc: Test GetAvailbleMemory with normal memory info file
+ * @tc.name: GetAvailMemory normal test
+ * @tc.desc: Test GetAvailMemory with normal memory info file
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAvailbleMemory_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAvailMemory_001, TestSize.Level1)
 {
-    int64_t result = GetAvailbleMemory();
+    int64_t result = GetAvailMemory();
     EXPECT_TRUE(result > 0);
     EXPECT_TRUE(result < INT64_MAX);
 }
