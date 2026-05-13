@@ -76,7 +76,6 @@ constexpr static uint16_t FREE_ASYNC_MAX = 1000;
 constexpr const char* RECLAIM_AVAIL_MEMORY = "ReclaimAvailBuffer";
 constexpr const char* PROC_MEMORYVIEW = "/proc/memview";
 constexpr const char* PROC_MEMORYINFO = "/proc/meminfo";
-constexpr int DECIMAL = 10;
 
 static std::string g_curProcName;
 static int32_t g_lastPid;
@@ -1054,7 +1053,7 @@ int64_t GetNumFromString(const std::string &str)
     return num;
 }
  
-int64_t GetAvailbleMemory()
+int64_t GetAvailMemory()
 {
     std::string content;
     std::string memInfoPath = OHOS::FileExists(PROC_MEMORYVIEW) ? PROC_MEMORYVIEW : PROC_MEMORYINFO;
