@@ -60,6 +60,10 @@ ohos_source_set("libhicollie_source") {
     defines += [ "SUSPEND_CHECK_ENABLE" ]
   }
 
+  if (hicollie_low_memory_freeze_strategy_enable) {
+    defines += [ "LOW_MEMORY_FREEZE_STRATEGY_ENABLE" ]
+  }
+
   if (hicollie_jank_detection_enable) {
     defines += [ "HICOLLIE_JANK_ENABLE" ]
   }

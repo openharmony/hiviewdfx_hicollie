@@ -88,7 +88,6 @@ constexpr uint32_t FFRT_SAMPLE_INTERVAL = FFRT_CALLBACK_TIME / SAMPLE_STACK_INTE
 constexpr uint32_t AUDIO_SERVER_UID = 1041;
 constexpr uint32_t DATA_MANAGE_SERVICE_UID = 3012;
 constexpr uint32_t FOUNDATION_UID = 5523;
-constexpr uint32_t RENDER_SERVICE_UID = 1003;
 #ifdef KICK_WATCHDOG_ENABLE
 constexpr uint32_t MEDIA_SERVICE_UID = 1013;
 #endif
@@ -1908,7 +1907,7 @@ bool WatchdogInner::RemoveInnerTask(const std::string& name)
         checkerQueue_.pop();
     }
     tmpQueue.swap(checkerQueue_);
-    if (tmpQueue.size() == size) {
+    if (checkerQueue_.size() == size) {
         XCOLLIE_LOGE("RemoveInnerTask fail, can not find name %{public}s, size=%{public}zu!",
             name.c_str(), size);
         return false;

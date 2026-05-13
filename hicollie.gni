@@ -18,6 +18,7 @@ hicollie_libthread_sampler =
 declare_args() {
   hicollie_jank_detection_enable = true
   hicollie_suspend_check_enable = false
+  hicollie_low_memory_freeze_strategy_enable = false
   hicollie_kick_watchdog_enable = false
   hicollie_asyncbinderspacefull_enable = false
 }

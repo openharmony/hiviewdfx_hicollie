@@ -82,7 +82,15 @@ public:
 #ifdef SUSPEND_CHECK_ENABLE
     bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
 #endif
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+    bool ShouldCheckLowMemory();
+    bool ShouldSkipExitForLowMemory();
+    bool ShouldSkipSendEventForLowMemory();
+    bool IsLowMemoryStatus();
+#endif
     void EvaluateCheckerState();
+    void HandleWaitedHalfState(std::string &description, const std::string &faultTimeStr);
+    void HandleWaitedFullState(std::string &description, const std::string &faultTimeStr);
     std::string GetBlockDescription(uint64_t interval);
     void InsertSampleStackTask();
     void ParseTidFromMsg(const std::string& sendMsg);
@@ -117,6 +125,12 @@ public:
     unsigned int reportCount;
     unsigned int binderSpaceFullCount;
     std::string sampleStack;
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+    bool lowMemoryCheck = false;
+    uint64_t lastLowMemoryTime = 0;
+    uint64_t lastLowMemoryFreezeTime = 0;
+    bool hadSendEvent = false;
+#endif
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

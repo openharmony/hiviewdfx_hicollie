@@ -1001,6 +1001,42 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetLimitedSizeName_001, TestSize.L
 }
 
 /**
+ * @tc.name: GetNumFromString mixed format test
+ * @tc.desc: Test GetNumFromString with mixed format like memory info
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetNumFromString_01, TestSize.Level1)
+{
+    std::string testStr = "MemAvailable: 1234567 kB";
+    int64_t result = GetNumFromString(testStr);
+    EXPECT_EQ(result, 1234567);
+}
+ 
+/**
+ * @tc.name: GetNumFromString boundary value test
+ * @tc.desc: Test GetNumFromString with INT64_MAX boundary value
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetNumFromString_002, TestSize.Level1)
+{
+    std::string testStr = "9223372036854775807"; // INT64_MAX
+    int64_t result = GetNumFromString(testStr);
+    EXPECT_EQ(result, INT64_MAX);
+}
+ 
+/**
+ * @tc.name: GetAvailbleMemory normal test
+ * @tc.desc: Test GetAvailbleMemory with normal memory info file
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAvailbleMemory_001, TestSize.Level1)
+{
+    int64_t result = GetAvailbleMemory();
+    EXPECT_TRUE(result > 0);
+    EXPECT_TRUE(result < INT64_MAX);
+}
+
+/**
  * @tc.name: WatchdogInner IsInSleep test;
  * @tc.desc: add testcase
  * @tc.type: FUNC
