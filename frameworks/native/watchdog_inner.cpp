@@ -1908,7 +1908,7 @@ bool WatchdogInner::RemoveInnerTask(const std::string& name)
         checkerQueue_.pop();
     }
     tmpQueue.swap(checkerQueue_);
-    if (tmpQueue.size() == size) {
+    if (checkerQueue_.size() == size) {
         XCOLLIE_LOGE("RemoveInnerTask fail, can not find name %{public}s, size=%{public}zu!",
             name.c_str(), size);
         return false;
