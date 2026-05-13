@@ -186,7 +186,7 @@ void WatchdogTask::Run(uint64_t now)
 #endif
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
     if (lowMemoryCheck) {
-        int64_t mem = GetAvailbleMemory();
+        int64_t mem = GetAvailMemory();
         if (mem > 0 && mem <= BELOW_MEM_SIZE) {
             lastLowMemoryTime = now;
         }
