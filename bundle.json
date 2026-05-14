@@ -31,6 +31,7 @@
         "ram": "",
         "deps": {
             "components": [
+                "api_metrics",
                 "hilog",
                 "hisysevent",
                 "c_utils",

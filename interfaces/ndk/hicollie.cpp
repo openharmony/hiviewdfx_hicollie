@@ -29,6 +29,9 @@
 #include "fault_data.h"
 #include "app_mgr_client.h"
 #include "hisysevent.h"
+#ifdef HICOLLIE_ENABLE_API_METRICS
+#include "histogram_plugin_macros.h"
+#endif
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -242,6 +245,9 @@ HiCollie_ErrorCode OH_HiCollie_Init_StuckDetection(OH_HiCollie_Task task)
 
 HiCollie_ErrorCode OH_HiCollie_Init_StuckDetectionWithTimeout(OH_HiCollie_Task task, uint32_t timeout)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_StuckDetectionWithTimeout", 1);
+#endif
 #ifdef SUPPORT_ASAN
     timeout = OHOS::HiviewDFX::CHECK_INTERVAL_TIME;
 #else
@@ -256,6 +262,9 @@ HiCollie_ErrorCode OH_HiCollie_Init_StuckDetectionWithTimeout(OH_HiCollie_Task t
 HiCollie_ErrorCode OH_HiCollie_Init_JankDetection(OH_HiCollie_BeginFunc* beginFunc,
     OH_HiCollie_EndFunc* endFunc, HiCollie_DetectionParam param)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+#endif
     if (OHOS::HiviewDFX::IsAppMainThread()) {
         return HICOLLIE_WRONG_THREAD_CONTEXT;
     }
@@ -268,6 +277,9 @@ HiCollie_ErrorCode OH_HiCollie_Init_JankDetection(OH_HiCollie_BeginFunc* beginFu
 
 HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+#endif
     if (OHOS::HiviewDFX::IsAppMainThread()) {
         return HICOLLIE_WRONG_THREAD_CONTEXT;
     }
@@ -286,6 +298,9 @@ HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
 
 HiCollie_ErrorCode OH_HiCollie_ReportInputBlock()
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+#endif
     if (OHOS::HiviewDFX::Watchdog::GetInstance().GetAppDebug()) {
         XCOLLIE_LOGD("Bussiness Input Block: Get appDebug state is true");
         return HICOLLIE_SUCCESS;
@@ -298,6 +313,9 @@ HiCollie_ErrorCode OH_HiCollie_ReportInputBlock()
 
 HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+#endif
     if (param.name == nullptr) {
         XCOLLIE_LOGE("timer name is nullptr");
         return HICOLLIE_INVALID_TIMER_NAME;
@@ -333,6 +351,9 @@ HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id)
 
 void OH_HiCollie_CancelTimer(int id)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_CancelTimer", 1);
+#endif
     if (id <= 0) {
         XCOLLIE_LOGE("invalid timer id, cancel timer failed");
         return;
@@ -363,6 +384,9 @@ static std::string FreezeInvoker(void* handler, int type)
 
 void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_SetFreezeCallback", 1);
+#endif
     OH_HiCollie_FreezeCallback result = nullptr;
     {
         std::lock_guard<std::mutex> lock(g_callbackMutex);
@@ -379,6 +403,9 @@ void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 
 HiCollie_ErrorCode OH_HiCollie_AssociateProcessReport(bool isFreezeEvent)
 {
+#ifdef HICOLLIE_ENABLE_API_METRICS
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_AssociateProcessReport", 1);
+#endif
     if (OHOS::HiviewDFX::ReportEvent(isFreezeEvent) != 0) {
         return OH_HICOLLIE_REACH_REPORT_LIMIT;
     }

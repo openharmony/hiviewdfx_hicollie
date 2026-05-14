@@ -20,4 +20,9 @@ declare_args() {
   hicollie_suspend_check_enable = false
   hicollie_kick_watchdog_enable = false
   hicollie_asyncbinderspacefull_enable = false
+  hiviewdfx_hicollie_api_metrics_enable = true
+  if (defined(global_parts_info) &&
+      !defined(global_parts_info.hiviewdfx_api_metrics)) {
+    hiviewdfx_hicollie_api_metrics_enable = false
+  }
 }

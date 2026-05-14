@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import("//build/ohos.gni")
+import("//base/hiviewdfx/hicollie/hicollie.gni")
 
 ohos_shared_library("ohhicollie") {
   include_dirs = [
@@ -33,6 +34,12 @@ ohos_shared_library("ohhicollie") {
     "hisysevent:libhisysevent",
   ]
   defines = []
+  if (hiviewdfx_hicollie_api_metrics_enable) {
+    defines = [ "HICOLLIE_ENABLE_API_METRICS" ]
+    external_deps += [
+      "api_metrics:histogrammanager"
+    ]
+  }
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
