@@ -42,7 +42,7 @@ constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr int BUFF_STACK_SIZE = 20 * 1024;
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
-constexpr uint32_t RENDER_SERVICE_UID = 1003
+constexpr uint32_t RENDER_SERVICE_UID = 1003;
 
 #define XCOLLIE_LOGF(...) HILOG_FATAL(LOG_CORE, ##__VA_ARGS__)
 #define XCOLLIE_LOGE(...) HILOG_ERROR(LOG_CORE, ##__VA_ARGS__)
