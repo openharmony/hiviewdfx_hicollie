@@ -52,6 +52,11 @@ constexpr const char* CORE_PROCS[] = {
 constexpr const int ASYNC_BINDER_SPACE_NUM = 2;
 constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
 constexpr int SAMPLE_STACK_MAX_COUNT = 10;
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+constexpr uint64_t LOW_MEMORY_CHECK_WINDOW = 60 * 1000;
+constexpr uint64_t MAX_LOW_MEMORY_FREEZE_TIME = 60 * 1000;
+constexpr int64_t BELOW_MEM_SIZE = 500 * 1024;
+#endif
 }
 
 int64_t WatchdogTask::curId = 0;
@@ -66,6 +71,9 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+    lowMemoryCheck = ShouldCheckLowMemory();
+#endif
 }
 
 WatchdogTask::WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag)
@@ -174,6 +182,14 @@ void WatchdogTask::Run(uint64_t now)
             " now:%{public}" PRIu64 " lastSuspendStartTime:%{public}f lastSuspendEndTime:%{public}f",
             checkInterval, now, lastSuspendStartTime, lastSuspendEndTime);
         return;
+    }
+#endif
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+    if (lowMemoryCheck) {
+        int64_t mem = GetAvailMemory();
+        if (mem > 0 && mem <= BELOW_MEM_SIZE) {
+            lastLowMemoryTime = now;
+        }
     }
 #endif
     constexpr int resetRatio = 2;
@@ -432,6 +448,12 @@ void WatchdogTask::EvaluateCheckerState()
     int waitState = checker->GetCheckState();
     if (waitState == CheckStatus::COMPLETED) {
         reportCount = 0;
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+        if (lowMemoryCheck) {
+            lastLowMemoryFreezeTime = 0;
+            hadSendEvent = false;
+        }
+#endif
         return;
     }
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
@@ -447,25 +469,46 @@ void WatchdogTask::EvaluateCheckerState()
     }
     std::string description = GetBlockDescription(checkInterval / TO_MILLISECOND_MULTPLE);
     if (waitState == CheckStatus::WAITED_HALF) {
-        description += "\nReportCount = " + std::to_string(++reportCount);
-        if (name != IPC_FULL_TASK) {
-            SendEvent(description, "SERVICE_WARNING", faultTimeStr);
-        } else if (flag & XCOLLIE_FLAG_LOG) {
-            SendEvent(description, "IPC_FULL_WARNING", faultTimeStr);
-        }
+        HandleWaitedHalfState(description, faultTimeStr);
     } else {
-        description += ", report twice instead of exiting process.\nReportCount = " + std::to_string(++reportCount);
-        if (name != IPC_FULL_TASK) {
+        HandleWaitedFullState(description, faultTimeStr);
+    }
+}
+
+void WatchdogTask::HandleWaitedHalfState(std::string &description, const std::string &faultTimeStr)
+{
+    description += "\nReportCount = " + std::to_string(++reportCount);
+    if (name != IPC_FULL_TASK) {
+        SendEvent(description, "SERVICE_WARNING", faultTimeStr);
+    } else if (flag & XCOLLIE_FLAG_LOG) {
+        SendEvent(description, "IPC_FULL_WARNING", faultTimeStr);
+    }
+}
+
+void WatchdogTask::HandleWaitedFullState(std::string &description, const std::string &faultTimeStr)
+{
+    description += ", report twice instead of exiting process.\nReportCount = " + std::to_string(++reportCount);
+    if (name != IPC_FULL_TASK) {
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+        if (!lowMemoryCheck || !ShouldSkipSendEventForLowMemory()) {
             SendEvent(description, "SERVICE_BLOCK", faultTimeStr);
-        } else if (flag & XCOLLIE_FLAG_LOG) {
-            SendEvent(description, "IPC_FULL", faultTimeStr);
         }
-        // peer binder log is collected in hiview asynchronously
-        // if blocked process exit early, binder blocked state will change
-        // thus delay exit and let hiview have time to collect log.
-        if ((name != IPC_FULL_TASK) || (flag & XCOLLIE_FLAG_RECOVERY)) {
-            WatchdogInner::KillPeerBinderProcess(description);
+#else
+        SendEvent(description, "SERVICE_BLOCK", faultTimeStr);
+#endif
+    } else if (flag & XCOLLIE_FLAG_LOG) {
+        SendEvent(description, "IPC_FULL", faultTimeStr);
+    }
+    // peer binder log is collected in hiview asynchronously
+    // if blocked process exit early, binder blocked state will change
+    // thus delay exit and let hiview have time to collect log.
+    if ((name != IPC_FULL_TASK) || (flag & XCOLLIE_FLAG_RECOVERY)) {
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+        if (lowMemoryCheck && ShouldSkipExitForLowMemory()) {
+            return;
         }
+#endif
+        WatchdogInner::KillPeerBinderProcess(description);
     }
 }
 
@@ -474,5 +517,67 @@ std::string WatchdogTask::GetBlockDescription(uint64_t interval)
     std::string desc = "Watchdog: thread(" + name + ") blocked " + std::to_string(interval) + "s";
     return desc;
 }
+
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+bool WatchdogTask::ShouldCheckLowMemory()
+{
+    if (getuid() == RENDER_SERVICE_UID) {
+        return true;
+    }
+    return false;
+}
+ 
+bool WatchdogTask::IsLowMemoryStatus()
+{
+    if (!lowMemoryCheck) {
+        return false;
+    }
+    if (lastLowMemoryTime == 0) {
+        return false;
+    }
+ 
+    uint64_t now = GetCurrentTickMillseconds();
+    if (now - lastLowMemoryTime <= LOW_MEMORY_CHECK_WINDOW) {
+        return true;
+    }
+    return false;
+}
+ 
+bool WatchdogTask::ShouldSkipExitForLowMemory()
+{
+    if (!IsLowMemoryStatus()) {
+        return false;
+    }
+    uint64_t now = GetCurrentTickMillseconds();
+ 
+    if (lastLowMemoryFreezeTime == 0) {
+        lastLowMemoryFreezeTime = now;
+        XCOLLIE_LOGW("Detected low memory status, skip kill process.");
+        return true;
+    }
+    if (now - lastLowMemoryFreezeTime <= MAX_LOW_MEMORY_FREEZE_TIME) {
+        XCOLLIE_LOGW("Detected low memory status, skip kill process.");
+        return true;
+    } else {
+        lastLowMemoryFreezeTime = 0;
+        XCOLLIE_LOGE("Detected low memory status, freeze too long time, kill process.");
+        return false;
+    }
+    return false;
+}
+ 
+bool WatchdogTask::ShouldSkipSendEventForLowMemory()
+{
+    if (!IsLowMemoryStatus()) {
+        return false;
+    }
+    if (hadSendEvent) {
+        return true;
+    } else {
+        hadSendEvent = true;
+        return false;
+    }
+}
+#endif
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

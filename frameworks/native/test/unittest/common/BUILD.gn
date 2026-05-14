@@ -215,6 +215,9 @@ ohos_unittest("WatchdogTaskTest") {
   if (hicollie_suspend_check_enable) {
     defines += [ "SUSPEND_CHECK_ENABLE" ]
   }
+  if (hicollie_low_memory_freeze_strategy_enable) {
+    defines += [ "LOW_MEMORY_FREEZE_STRATEGY_ENABLE" ]
+  }
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
     external_deps += [ "eventhandler:libeventhandler" ]
