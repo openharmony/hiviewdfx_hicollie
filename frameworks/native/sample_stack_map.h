@@ -34,13 +34,13 @@ public:
     std::string GetAndRemove(const std::string& key);
  
 private:
-    void ExpireOldEntries();
- 
     struct Value {
         std::string value;
         std::list<std::string>::iterator orderIt;
         uint64_t timestamp;
     };
+
+    void ExpireOldEntries();
     std::map<std::string, Value> map_;
     std::list<std::string> order_;
     mutable std::mutex mutex_;

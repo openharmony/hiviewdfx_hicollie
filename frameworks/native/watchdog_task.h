@@ -33,6 +33,15 @@ namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
 public:
+    struct HisyseventParam {
+        int32_t pid;
+        uint32_t gid;
+        uint32_t uid;
+        std::string sendMsg;
+        std::string eventName;
+        std::string binderInfo;
+    };
+
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority);
     WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag);
@@ -94,14 +103,6 @@ public:
     std::string GetBlockDescription(uint64_t interval);
     void InsertSampleStackTask();
     void ParseTidFromMsg(const std::string& sendMsg);
-    struct HisyseventParam {
-        int32_t pid;
-        uint32_t gid;
-        uint32_t uid;
-        std::string sendMsg;
-        std::string eventName;
-        std::string binderInfo;
-    };
     void SendHisyseventEvent(const HisyseventParam& param);
     std::string name;
     std::string message;
