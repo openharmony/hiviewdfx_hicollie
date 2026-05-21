@@ -1645,9 +1645,9 @@ HWTEST_F(WatchdogInnerTest, InsertSampleStackTaskImplTest_001, TestSize.Level1)
 {
     std::string sampleStackName = "test_sample_stack";
     pid_t tid = getproctid();
-    uint64_t sampleInterval = 100;
+    uint64_t sampleInterval = 160;
     WatchdogInner::GetInstance().InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
-    sleep(1);
+    usleep(100 * 1000);
     bool removed = WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
     EXPECT_TRUE(removed);
 }
@@ -1661,9 +1661,9 @@ HWTEST_F(WatchdogInnerTest, InsertFfrtSampleStackTaskTest_001, TestSize.Level1)
 {
     std::string sampleStackName = "test_ffrt_sample_stack";
     pid_t tid = getproctid();
-    uint64_t sampleInterval = 100;
+    uint64_t sampleInterval = 160;
     WatchdogInner::GetInstance().InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
-    sleep(1);
+    sleep(100 * 1000);
     bool removed = WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
     EXPECT_TRUE(removed);
 }
@@ -1702,6 +1702,261 @@ HWTEST_F(WatchdogInnerTest, SampleStackMapTest_002, TestSize.Level1)
 {
     std::string result = SampleStackMap::GetInstance().GetAndRemove("non_existent_key");
     EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: SampleStackMapTest
+ * @tc.desc: test SampleStackMap Set with value size too large
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, SampleStackMapTest_003, TestSize.Level1)
+{
+    std::string key = "test_large_value_key";
+    std::string value(257 * 1024, 'a');
+    SampleStackMap::GetInstance().Set(key, value);
+    std::string result = SampleStackMap::GetInstance().GetAndRemove(key);
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: SampleStackMapTest
+ * @tc.desc: test SampleStackMap Set when map is full (evict oldest)
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, SampleStackMapTest_004, TestSize.Level1)
+{
+    SampleStackMap::GetInstance().GetAndRemove("key1");
+    SampleStackMap::GetInstance().GetAndRemove("key2");
+    SampleStackMap::GetInstance().GetAndRemove("key3");
+    SampleStackMap::GetInstance().GetAndRemove("key4");
+    SampleStackMap::GetInstance().GetAndRemove("key5");
+    SampleStackMap::GetInstance().Set("key1", "value1");
+    SampleStackMap::GetInstance().Set("key2", "value2");
+    SampleStackMap::GetInstance().Set("key3", "value3");
+    SampleStackMap::GetInstance().Set("key4", "value4");
+    SampleStackMap::GetInstance().Set("key5", "value5");
+    SampleStackMap::GetInstance().Set("key6", "value6");
+    std::string result1 = SampleStackMap::GetInstance().GetAndRemove("key1");
+    EXPECT_TRUE(result1.empty());
+    std::string result2 = SampleStackMap::GetInstance().GetAndRemove("key6");
+    EXPECT_EQ(result2, "value6");
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with empty manager
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_001, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+    std::set<int> pids;
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, true};
+
+    ParseBinderCallChain(param);
+    EXPECT_TRUE(pids.empty());
+    EXPECT_EQ(terminalBinder.pid, -1);
+    EXPECT_EQ(terminalBinder.tid, -1);
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with single binder info
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_002, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+    std::list<BinderInfo> infoList;
+    BinderInfo info = {100, 101, 200, 201, 5};
+    infoList.push_back(info);
+    manager[100] = infoList;
+
+    std::set<int> pids;
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, true};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 1u);
+    EXPECT_EQ(terminalBinder.pid, 200);
+    EXPECT_EQ(terminalBinder.tid, 201);
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with chain of binder infos
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_003, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+
+    std::list<BinderInfo> infoList1;
+    BinderInfo info1 = {100, 101, 200, 201, 5};
+    infoList1.push_back(info1);
+    manager[100] = infoList1;
+
+    std::list<BinderInfo> infoList2;
+    BinderInfo info2 = {200, 201, 300, 301, 3};
+    infoList2.push_back(info2);
+    manager[200] = infoList2;
+
+    std::set<int> pids;
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, true};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 2u);
+    EXPECT_TRUE(pids.find(200) != pids.end());
+    EXPECT_TRUE(pids.find(300) != pids.end());
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with getTerminal=false
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_004, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+
+    std::list<BinderInfo> infoList1;
+    BinderInfo info1 = {100, 101, 200, 201, 5};
+    infoList1.push_back(info1);
+    manager[100] = infoList1;
+
+    std::list<BinderInfo> infoList2;
+    BinderInfo info2 = {200, 201, 300, 301, 3};
+    infoList2.push_back(info2);
+    manager[200] = infoList2;
+
+    std::set<int> pids;
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, false};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 2u);
+    EXPECT_TRUE(pids.find(200) != pids.end());
+    EXPECT_TRUE(pids.find(300) != pids.end());
+    EXPECT_EQ(terminalBinder.pid, -1);
+    EXPECT_EQ(terminalBinder.tid, -1);
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain when serverPid already in pids
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_005, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+
+    std::list<BinderInfo> infoList1;
+    BinderInfo info1 = {100, 101, 200, 201, 5};
+    infoList1.push_back(info1);
+    manager[100] = infoList1;
+
+    std::set<int> pids;
+    pids.insert(200);
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, true};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 1u);
+    EXPECT_TRUE(pids.find(200) != pids.end());
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with initial terminalBinder value
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_006, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+
+    std::list<BinderInfo> infoList1;
+    BinderInfo info1 = {100, 101, 200, 201, 5};
+    infoList1.push_back(info1);
+    manager[100] = infoList1;
+
+    std::list<BinderInfo> infoList2;
+    BinderInfo info2 = {200, 201, 300, 301, 3};
+    infoList2.push_back(info2);
+    manager[200] = infoList2;
+
+    std::set<int> pids;
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {400, 401};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, true};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 2u);
+    EXPECT_TRUE(pids.find(200) != pids.end());
+    EXPECT_TRUE(pids.find(300) != pids.end());
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with eventPid matching client
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_007, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+
+    std::list<BinderInfo> infoList1;
+    BinderInfo info1 = {100, 101, 200, 201, 5};
+    infoList1.push_back(info1);
+    manager[100] = infoList1;
+
+    std::list<BinderInfo> infoList2;
+    BinderInfo info2 = {200, 201, 300, 301, 3};
+    infoList2.push_back(info2);
+    manager[200] = infoList2;
+
+    std::set<int> pids;
+    ParseBinderParam params = {200, 201};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, true};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 2u);
+    EXPECT_TRUE(pids.find(200) != pids.end());
+    EXPECT_TRUE(pids.find(300) != pids.end());
+}
+
+/**
+ * @tc.name: ParseBinderCallChainTest
+ * @tc.desc: test ParseBinderCallChain with multiple binder infos for same pid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_008, TestSize.Level1)
+{
+    std::map<int, std::list<BinderInfo>> manager;
+
+    std::list<BinderInfo> infoList1;
+    BinderInfo info1 = {100, 101, 200, 201, 5};
+    BinderInfo info2 = {100, 102, 300, 301, 3};
+    infoList1.push_back(info1);
+    infoList1.push_back(info2);
+    manager[100] = infoList1;
+
+    std::set<int> pids;
+    ParseBinderParam params = {100, 101};
+    TerminalBinderInfo terminalBinder = {-1, -1};
+    ParseBinderCallChainParam param = {manager, pids, 100, params, terminalBinder, false};
+
+    ParseBinderCallChain(param);
+    EXPECT_EQ(pids.size(), 2u);
+    EXPECT_TRUE(pids.find(200) != pids.end());
+    EXPECT_TRUE(pids.find(300) != pids.end());
 }
 } // namespace HiviewDFX
 } // namespace OHOS

@@ -40,6 +40,15 @@ class WatchdogInner : public Singleton<WatchdogInner> {
 
     static const uint64_t PRIORITY_IMMEDIATE = 1;
 public:
+    struct FfrtEventParam {
+        std::string msg;
+        std::string eventName;
+        const char* taskInfo;
+        std::string faultTimeStr;
+        bool isDumpStack;
+        std::string sampleStack;
+    };
+
     std::map<int64_t, int> taskIdCnt;
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval, uint32_t priority = PRIORITY_IMMEDIATE);
@@ -65,14 +74,6 @@ public:
     static void FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t delayedTaskCount);
     static void InsertFfrtSampleStackTask(uint64_t taskId);
     static void InsertSampleStackTaskImpl(const std::string& sampleStackName, pid_t tid, uint64_t sampleInterval);
-    struct FfrtEventParam {
-        std::string msg;
-        std::string eventName;
-        const char* taskInfo;
-        std::string faultTimeStr;
-        bool isDumpStack;
-        std::string sampleStack;
-    };
     static void SendFfrtEvent(const FfrtEventParam& param);
     static void LeftTimeExitProcess(const std::string &description);
     static void KillPeerBinderProcess(const std::string &description);

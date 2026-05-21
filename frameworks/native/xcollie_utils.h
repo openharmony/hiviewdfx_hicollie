@@ -161,6 +161,8 @@ std::string StrSplit(const std::string& str, uint16_t index);
 std::string GetBinderPeerPids(int32_t pid, int32_t tid, std::set<int>& syncPids, std::set<int>& asyncPids,
     TerminalBinderInfo& terminalBinder);
 
+void ParseBinderCallChain(const ParseBinderCallChainParam& param);
+
 bool CreateDir(const std::string& dirPath);
 
 void GetFilesByDir(std::vector<FileInfo> &fileList, const std::string& dir);
