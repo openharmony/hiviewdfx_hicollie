@@ -203,7 +203,7 @@ int GetNSPid()
         if (pos != std::string::npos) {
             std::string valueStr = line.substr(pos + 1);
             int value = 0;
-            auto result =std::from_chars(valueStr.data(), valueStr.data() + valueStr.size(), value);
+            auto result = std::from_chars(valueStr.data(), valueStr.data() + valueStr.size(), value);
             if (result.ec != std::errc()) {
                 XCOLLIE_LOGI("Error: Failed to convert pid from NSpid");
             }
