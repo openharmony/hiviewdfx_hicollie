@@ -29,15 +29,22 @@ namespace HiviewDFX {
 namespace {
 std::atomic<int> g_callbackCount(0);
 
-std::string TestCallback(void* handler, int type)
+size_t TestCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
 {
     g_callbackCount++;
-    return "test_data_" + std::to_string(type);
+    std::string source = "test_data_" + std::to_string(type);
+    char* temp = (char*)buffer;
+    int needed = snprintf(temp, size, "%s", source.c_str());
+    return needed;
 }
 
-std::string SimpleCallback(void* handler, int type)
+size_t SimpleCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
 {
-    return "data";
+    g_callbackCount++;
+    std::string source = "data" + std::to_string(type);
+    char* temp = (char*)buffer;
+    int needed = snprintf(temp, size, "%s", source.c_str());
+    return needed;
 }
 }
 
@@ -69,8 +76,7 @@ HWTEST_F(XcollieMgrTest, XcollieMgrConcurrency_001, TestSize.Level1)
     XcollieMgr& mgr = XcollieMgr::GetInstance();
     std::atomic<bool> running(true);
 
-    mgr.SetInvoker(TestCallback);
-    mgr.SetHandler(reinterpret_cast<void*>(0x1234));
+    mgr.SetHandler(TestCallback);
 
     std::vector<std::thread> threads;
     const int threadCount = 10;
@@ -91,8 +97,7 @@ HWTEST_F(XcollieMgrTest, XcollieMgrConcurrency_001, TestSize.Level1)
     std::thread setter([&mgr, &running]() {
         int j = 0;
         while (running.load() && j < 50) {
-            mgr.SetInvoker(SimpleCallback);
-            mgr.SetHandler(reinterpret_cast<void*>(0x5678));
+            mgr.SetHandler(SimpleCallback);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             j++;
         }

@@ -17,6 +17,7 @@ config("hicollie_include") {
   include_dirs = [
     ".",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
+    "${hicollie_part_path}/interfaces/ndk/include",
   ]
   if (is_ohos) {
     cflags_cc = [ "-D__XCOLLIE_OHOS__" ]

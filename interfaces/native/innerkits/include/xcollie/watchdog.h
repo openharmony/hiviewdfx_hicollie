@@ -20,6 +20,7 @@
 #include <string>
 #include "singleton.h"
 #include "xcollie_define.h"
+#include "hicollie.h"
 
 using Task = std::function<void()>;
 using TimeOutCallback = std::function<void(const std::string &name, int waitState)>;
@@ -208,9 +209,9 @@ public:
      */
     int32_t GetReservedTimeForLogging();
 
-    void SetFreezeInvoker(OHOS::HiviewDFX::XCollieInnerCallback callback);
-    void SetFreezeHandler(void* handler);
+    void* SetFreezeHandler(OH_HiCollie_FreezeCallback callback);
     std::string ReadDataFromBuffer(int type);
+    std::string GetOutSelfProcName();
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
