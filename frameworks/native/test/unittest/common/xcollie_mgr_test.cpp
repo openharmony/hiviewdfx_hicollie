@@ -33,8 +33,7 @@ size_t TestCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
 {
     g_callbackCount++;
     std::string source = "test_data_" + std::to_string(type);
-    char* temp = (char*)buffer;
-    int needed = snprintf(temp, size, "%s", source.c_str());
+    size_t needed = source.size();
     return needed;
 }
 
@@ -42,8 +41,7 @@ size_t SimpleCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
 {
     g_callbackCount++;
     std::string source = "data" + std::to_string(type);
-    char* temp = (char*)buffer;
-    int needed = snprintf(temp, size, "%s", source.c_str());
+    size_t needed = source.size();
     return needed;
 }
 }
