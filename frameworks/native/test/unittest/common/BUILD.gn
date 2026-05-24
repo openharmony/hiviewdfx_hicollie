@@ -25,6 +25,7 @@ config("module_private_config") {
     "${hicollie_part_path}/frameworks/native",
     "${hicollie_part_path}/frameworks/native/test",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
+    "${hicollie_part_path}/interfaces/ndk/include",
   ]
 }
 

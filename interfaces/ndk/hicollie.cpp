@@ -22,6 +22,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <mutex>
+#include <fstream>
+#include <charconv>
 #include "watchdog.h"
 #include "xcollie.h"
 #include "xcollie_define.h"
@@ -42,12 +44,13 @@ namespace {
     constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
     constexpr uint32_t RATIO = 2;
     constexpr int32_t BACKGROUND_REPORT_COUNT_MAX = 5;
-    constexpr std::size_t MAX_BUFFER_SIZE = 64 * 1024; // 65536 bytes
     constexpr int32_t BUSINESS_THREAD_BLOCK_3S_TYPE = 5;
     constexpr int32_t BUSINESS_THREAD_BLOCK_6S_TYPE = 6;
     constexpr int32_t BUSINESS_INPUT_BLOCK_TYPE = 7;
     constexpr uint32_t TIME_MIN_TO_S = 60;
     constexpr uint32_t TIME_S_TO_MS = 1000;
+    constexpr int ARKWEB_UID_START = 20100000;
+    constexpr int ARKWEB_UID_END = 20109999;
 }
 
 static int32_t g_bussinessTid = 0;
@@ -183,6 +186,34 @@ int ReportInputBlock()
     return result;
 }
 
+int GetNSPid()
+{
+    std::fstream inputFile("/proc/self/status");
+    if (!inputFile.is_open()) {
+        XCOLLIE_LOGI("Error: Could not open /proc/self/status");
+        return 0;
+    }
+
+    std::string line;
+    while (std::getline(inputFile, line)) {
+        if (line.find("NSpid:") != 0) {
+            continue;
+        }
+        size_t pos = line.find(":");
+        if (pos != std::string::npos) {
+            std::string valueStr = line.substr(pos + 1);
+            int value = 0;
+            auto result = std::from_chars(valueStr.data(), valueStr.data() + valueStr.size(), value);
+            if (result.ec != std::errc()) {
+                XCOLLIE_LOGI("Error: Failed to convert pid from NSpid");
+            }
+            return value;
+        }
+    }
+    XCOLLIE_LOGI("Error: Failed to read from /proc/self/status");
+    return 0;
+}
+
 int ReportEvent(bool isFreezeEvent)
 {
     if (!CheckManualReportDuration(isFreezeEvent)) {
@@ -192,11 +223,19 @@ int ReportEvent(bool isFreezeEvent)
     std::string eventName = isFreezeEvent ? "BUSSINESS_THREAD_BLOCK_6S" : "BUSSINESS_THREAD_BLOCK_3S";
     int type = isFreezeEvent ? BUSINESS_THREAD_BLOCK_6S_TYPE : BUSINESS_THREAD_BLOCK_3S_TYPE;
     std::string log = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(type);
+    int uid = static_cast<int>(getuid());
+    int pid = 0;
+    if (uid >= ARKWEB_UID_START && uid <= ARKWEB_UID_END) {
+        pid = GetNSPid();
+    } else {
+        pid = static_cast<int>(getpid());
+    }
     int result = HiSysEventWrite(HiSysEvent::Domain::AAFWK, eventName, HiSysEvent::EventType::FAULT,
         "PID", getpid(),
         "UID", getuid(),
         "IS_HICOLLIE", true,
-        "EXTERNAL_LOG", log);
+        "EXTERNAL_LOG", log,
+        "PROCESS_NAME", OHOS::HiviewDFX::Watchdog::GetInstance().GetOutSelfProcName());
     if (result != 0) {
         XCOLLIE_LOGE("OH_HiCollie_AssociateProcessReport result:%{public}d, current pid:%{public}d",
             result, getpid());
@@ -205,11 +244,6 @@ int ReportEvent(bool isFreezeEvent)
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
-static std::string FreezeInvoker(void* handler, int type);
-OH_HiCollie_FreezeCallback g_callback = nullptr;
-static std::mutex g_callbackMutex;
-OHOS::HiviewDFX::XCollieInnerCallback g_invoker = FreezeInvoker;
-static bool g_isInvokerSet = false;
 
 inline HiCollie_ErrorCode InitStuckDetection(OH_HiCollie_Task task, uint32_t timeout)
 {
@@ -340,41 +374,9 @@ void OH_HiCollie_CancelTimer(int id)
     OHOS::HiviewDFX::XCollie::GetInstance().CancelTimer(id);
 }
 
-static std::string FreezeInvoker(void* handler, int type)
-{
-    OH_HiCollie_FreezeCallback callback = (OH_HiCollie_FreezeCallback)handler;
-    if (callback == nullptr) {
-        XCOLLIE_LOGE("no freeze callback");
-        return "";
-    }
-    size_t mmapSize = OHOS::HiviewDFX::MAX_BUFFER_SIZE;
-    void* mptr = mmap(nullptr, mmapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (mptr == MAP_FAILED) {
-        XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
-        return "";
-    }
-    OH_Hicollie_Freeze_Type freezeType = static_cast<OH_Hicollie_Freeze_Type>(type);
-    size_t callbackSize = callback(freezeType, mptr, mmapSize);
-    XCOLLIE_LOGD("Freeze Invoker %{public}zu", callbackSize);
-    std::string buffer((char*)mptr);
-    munmap(mptr, mmapSize);
-    return buffer;
-}
-
 void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 {
-    OH_HiCollie_FreezeCallback result = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_callbackMutex);
-        result = g_callback;
-        g_callback = callback;
-        if (!g_isInvokerSet) {
-            OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeInvoker(g_invoker);
-            g_isInvokerSet = true;
-        }
-        OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeHandler((void*)g_callback);
-    }
-    return (void*)result;
+    return OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeHandler(callback);
 }
 
 HiCollie_ErrorCode OH_HiCollie_AssociateProcessReport(bool isFreezeEvent)
