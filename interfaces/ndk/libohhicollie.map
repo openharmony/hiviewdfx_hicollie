@@ -12,6 +12,7 @@
         OH_HiCollie_AssociateProcessReport;
     };
     extern "C++" {
+        "OHOS::HiviewDFX::Watchdog::SetFreezeHandler(unsigned long (*)(OH_Hicollie_Freeze_Type, void*, unsigned long))";
     };
   local:
     *;
