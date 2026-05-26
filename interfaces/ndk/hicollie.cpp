@@ -234,8 +234,8 @@ int ReportEvent(bool isFreezeEvent)
         pid = static_cast<int>(getpid());
     }
     int result = HiSysEventWrite(HiSysEvent::Domain::AAFWK, eventName, HiSysEvent::EventType::FAULT,
-        "PID", getpid(),
-        "UID", getuid(),
+        "PID", pid,
+        "UID", uid,
         "IS_HICOLLIE", true,
         "EXTERNAL_LOG", log,
         "PROCESS_NAME", OHOS::HiviewDFX::Watchdog::GetInstance().GetOutSelfProcName());

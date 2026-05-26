@@ -94,7 +94,7 @@ std::string XcollieMgr::ReadDataFromBuffer(int type)
             XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
             return ;
         }
-        size_t callbackSize = handler((OH_Hicollie_Freeze_Type)type, mptr, OHOS::HiviewDFX::MAX_BUFFER_SIZE);
+        size_t callbackSize = handler((OH_HiCollie_Freeze_Type)type, mptr, OHOS::HiviewDFX::MAX_BUFFER_SIZE);
         if (callbackSize > OHOS::HiviewDFX::MAX_BUFFER_SIZE) {
             XCOLLIE_LOGW("callback size over 64KB size:%{public}zu", callbackSize);
             munmap(mptr, mmapSize);

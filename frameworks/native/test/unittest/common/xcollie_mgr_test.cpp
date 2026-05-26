@@ -29,7 +29,7 @@ namespace HiviewDFX {
 namespace {
 std::atomic<int> g_callbackCount(0);
 
-size_t TestCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
+size_t TestCallback(OH_HiCollie_Freeze_Type type, void* buffer, size_t size)
 {
     g_callbackCount++;
     std::string source = "test_data_" + std::to_string(type);
@@ -37,7 +37,7 @@ size_t TestCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
     return needed;
 }
 
-size_t SimpleCallback(OH_Hicollie_Freeze_Type type, void* buffer, size_t size)
+size_t SimpleCallback(OH_HiCollie_Freeze_Type type, void* buffer, size_t size)
 {
     g_callbackCount++;
     std::string source = "data" + std::to_string(type);
