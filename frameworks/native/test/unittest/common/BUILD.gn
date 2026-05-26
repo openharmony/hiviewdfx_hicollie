@@ -25,6 +25,7 @@ config("module_private_config") {
     "${hicollie_part_path}/frameworks/native",
     "${hicollie_part_path}/frameworks/native/test",
     "${hicollie_part_path}/interfaces/native/innerkits/include/xcollie",
+    "${hicollie_part_path}/interfaces/ndk/include",
   ]
 }
 
@@ -214,6 +215,9 @@ ohos_unittest("WatchdogTaskTest") {
   defines = []
   if (hicollie_suspend_check_enable) {
     defines += [ "SUSPEND_CHECK_ENABLE" ]
+  }
+  if (hicollie_low_memory_freeze_strategy_enable) {
+    defines += [ "LOW_MEMORY_FREEZE_STRATEGY_ENABLE" ]
   }
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {

@@ -16,6 +16,9 @@
 #include "xcollie_mgr.h"
 
 #include <string>
+#include <memory>
+#include <thread>
+#include <sys/mman.h>
 
 #include "xcollie_define.h"
 #include "xcollie_utils.h"
@@ -23,11 +26,18 @@
 
 namespace OHOS {
 namespace HiviewDFX {
+struct SharedState {
+    std::mutex cvMutex;
+    std::condition_variable cv;
+    std::string result = "";
+    bool ready = false;
+};
 namespace {
     constexpr uint32_t TIME_MIN_TO_S = 60;
     constexpr uint32_t TIME_S_TO_MS = 1000;
     constexpr uint32_t COUNT_OF_FAULT_TYPE = 8;
-    constexpr uint32_t CALLBACK_WAIT_TIME = 10000; // 10s
+    constexpr uint32_t CALLBACK_WAIT_TIME = 1;
+    constexpr std::size_t MAX_BUFFER_SIZE = 64 * 1024; // 65536 bytes
 }
 XcollieMgr::XcollieMgr()
 {
@@ -37,16 +47,12 @@ XcollieMgr::~XcollieMgr()
 {
 }
 
-void XcollieMgr::SetInvoker(XCollieInnerCallback callback)
+void* XcollieMgr::SetHandler(OH_HiCollie_FreezeCallback handler)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    lastFreezeCallback_ = callback;
-}
-
-void XcollieMgr::SetHandler(void* handler)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
+    void* temp = (void*)handler_;
     handler_ = handler;
+    return temp;
 }
 
 bool XcollieMgr::CheckCallDuration(int type)
@@ -71,18 +77,45 @@ std::string XcollieMgr::ReadDataFromBuffer(int type)
         XCOLLIE_LOGE("can not ReadDataFromBuffer twice within 1 min");
         return "";
     }
-    XCollieInnerCallback callback;
-    void* handler;
+    OH_HiCollie_FreezeCallback handler;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        callback = lastFreezeCallback_;
         handler = handler_;
     }
-    if (callback == nullptr) {
+    if (handler == nullptr) {
         XCOLLIE_LOGE("no freeze callback");
         return "";
     }
-    return callback(handler, type);
+    auto state = std::make_shared<SharedState>();
+    std::thread worker([state, handler, type]() {
+        size_t mmapSize = OHOS::HiviewDFX::MAX_BUFFER_SIZE;
+        void* mptr = mmap(nullptr, mmapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (mptr == MAP_FAILED) {
+            XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
+            return ;
+        }
+        size_t callbackSize = handler((OH_Hicollie_Freeze_Type)type, mptr, OHOS::HiviewDFX::MAX_BUFFER_SIZE);
+        if (callbackSize > OHOS::HiviewDFX::MAX_BUFFER_SIZE) {
+            XCOLLIE_LOGW("callback size over 64KB size:%{public}zu", callbackSize);
+            munmap(mptr, mmapSize);
+            return;
+        }
+        state->result = (char*)mptr;
+        munmap(mptr, mmapSize);
+        {
+            std::lock_guard<std::mutex> innerLock(state->cvMutex);
+            state->ready = true;
+        }
+        state->cv.notify_one();
+    });
+    std::unique_lock<std::mutex> lock(state->cvMutex);
+    if (!state->cv.wait_for(lock, std::chrono::seconds(CALLBACK_WAIT_TIME), [&]() { return state->ready; })) {
+        XCOLLIE_LOGE("freeze callback timeout!");
+        worker.detach();
+        return "";
+    }
+    worker.join();
+    return state->result;
 }
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

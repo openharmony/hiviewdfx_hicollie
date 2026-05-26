@@ -33,6 +33,15 @@ namespace HiviewDFX {
 class WatchdogTask {
     static int64_t curId;
 public:
+    struct HisyseventParam {
+        int32_t pid;
+        uint32_t gid;
+        uint32_t uid;
+        std::string sendMsg;
+        std::string eventName;
+        std::string binderInfo;
+    };
+
     WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority);
     WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag);
@@ -82,18 +91,18 @@ public:
 #ifdef SUSPEND_CHECK_ENABLE
     bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
 #endif
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+    bool ShouldCheckLowMemory();
+    bool ShouldSkipExitForLowMemory();
+    bool ShouldSkipSendEventForLowMemory();
+    bool IsLowMemoryStatus();
+#endif
     void EvaluateCheckerState();
+    void HandleWaitedHalfState(std::string &description, const std::string &faultTimeStr);
+    void HandleWaitedFullState(std::string &description, const std::string &faultTimeStr);
     std::string GetBlockDescription(uint64_t interval);
     void InsertSampleStackTask();
     void ParseTidFromMsg(const std::string& sendMsg);
-    struct HisyseventParam {
-        int32_t pid;
-        uint32_t gid;
-        uint32_t uid;
-        std::string sendMsg;
-        std::string eventName;
-        std::string binderInfo;
-    };
     void SendHisyseventEvent(const HisyseventParam& param);
     std::string name;
     std::string message;
@@ -117,6 +126,12 @@ public:
     unsigned int reportCount;
     unsigned int binderSpaceFullCount;
     std::string sampleStack;
+#ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
+    bool lowMemoryCheck = false;
+    uint64_t lastLowMemoryTime = 0;
+    uint64_t lastLowMemoryFreezeTime = 0;
+    bool hadSendEvent = false;
+#endif
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

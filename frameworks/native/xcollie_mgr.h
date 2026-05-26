@@ -20,22 +20,21 @@
 #include <unordered_map>
 #include "singleton.h"
 #include "xcollie_define.h"
+#include "hicollie.h"
 
 namespace OHOS {
 namespace HiviewDFX {
 class XcollieMgr : public Singleton<XcollieMgr> {
     DECLARE_SINGLETON(XcollieMgr);
 public:
-    void SetInvoker(XCollieInnerCallback callback);
-    void SetHandler(void* handler);
+    void* SetHandler(OH_HiCollie_FreezeCallback handler);
     std::string ReadDataFromBuffer(int type);
 
 private:
-    std::mutex mutex_;
-    void* handler_ = nullptr;
-    XCollieInnerCallback lastFreezeCallback_ = nullptr;
-    std::unordered_map<int, int64_t> lastCallTime_;
     bool CheckCallDuration(int type);
+    std::mutex mutex_;
+    std::unordered_map<int, int64_t> lastCallTime_;
+    OH_HiCollie_FreezeCallback handler_;
 };
 } // end of HiviewDFX
 } // end of OHOS

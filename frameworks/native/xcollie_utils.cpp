@@ -73,6 +73,10 @@ constexpr static uint8_t DECIMAL = 10;
 constexpr static uint8_t FREE_ASYNC_INDEX = 6;
 constexpr static uint16_t FREE_ASYNC_MAX = 1000;
 
+constexpr const char* RECLAIM_AVAIL_MEMORY = "ReclaimAvailBuffer";
+constexpr const char* PROC_MEMORYVIEW = "/proc/memview";
+constexpr const char* PROC_MEMORYINFO = "/proc/meminfo";
+
 static std::string g_curProcName;
 static int32_t g_lastPid;
 static std::mutex g_lock;
@@ -1027,6 +1031,55 @@ std::string GetBinderInfoString(int32_t pid, int32_t tid, std::string& rawBinder
             "," + std::to_string(terminalBinder.tid);
     }
     return binderInfo;
+}
+
+int64_t GetNumFromString(const std::string &str)
+{
+    int64_t num = 0;
+    int64_t digit = 0;
+    int64_t maxDivTen = INT64_MAX / DECIMAL;
+    int64_t maxLastDigit = INT64_MAX % DECIMAL;
+ 
+    for (const char &c : str) {
+        if (!isdigit(c)) {
+            continue;
+        }
+        digit = c - '0';
+        if (num > maxDivTen || (num == maxDivTen && digit > maxLastDigit)) {
+            return INT64_MAX;
+        }
+        num = num * DECIMAL + digit;
+    }
+    return num;
+}
+ 
+int64_t GetAvailMemory()
+{
+    std::string content;
+    std::string memInfoPath = OHOS::FileExists(PROC_MEMORYVIEW) ? PROC_MEMORYVIEW : PROC_MEMORYINFO;
+    if (!OHOS::LoadStringFromFile(memInfoPath, content)) {
+        XCOLLIE_LOGE("Get memInfoPath failed!");
+        return -1;
+    }
+    int64_t memsize = -1;
+    if (content.empty()) {
+        XCOLLIE_LOGE("get reclaim avail buffer failed, content is empty");
+        return memsize;
+    }
+    std::vector<std::string> vec;
+    SplitStr(content, "\n", vec);
+ 
+    for (const std::string &mem : vec) {
+        if (mem.find(RECLAIM_AVAIL_MEMORY) != std::string::npos) {
+            memsize = GetNumFromString(mem);
+            break;
+        }
+    }
+    if (memsize < 0) {
+        XCOLLIE_LOGE("get reclaim avail buffer failed, memsize error");
+        return -1;
+    }
+    return memsize;
 }
 } // end of HiviewDFX
 } // end of OHOS
