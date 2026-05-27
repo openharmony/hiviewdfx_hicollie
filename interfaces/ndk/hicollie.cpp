@@ -353,7 +353,7 @@ static std::string FreezeInvoker(void* handler, int type)
         XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
         return "";
     }
-    OH_Hicollie_Freeze_Type freezeType = static_cast<OH_Hicollie_Freeze_Type>(type);
+    OH_HiCollie_Freeze_Type freezeType = static_cast<OH_HiCollie_Freeze_Type>(type);
     size_t callbackSize = callback(freezeType, mptr, mmapSize);
     XCOLLIE_LOGD("Freeze Invoker %{public}zu", callbackSize);
     std::string buffer((char*)mptr);
