@@ -272,7 +272,7 @@ void OH_HiCollie_CancelTimer(int id);
  *
  * @since 24
  */
-typedef enum OH_Hicollie_Freeze_Type {
+typedef enum OH_HiCollie_Freeze_Type {
     /**
      * @brief Main thread watchdog timeout for one period.
      *
@@ -321,7 +321,7 @@ typedef enum OH_Hicollie_Freeze_Type {
      * @since 24
      */
     OH_BUSINESS_INPUT_BLOCK,
-} OH_Hicollie_Freeze_Type;
+} OH_HiCollie_Freeze_Type;
 
 /**
  * @brief the freeze callback used in {@link OH_HiCollie_SetFreezeCallback}
@@ -333,7 +333,7 @@ typedef enum OH_Hicollie_Freeze_Type {
  * @return used buffer size
  * @since 24
  */
-typedef size_t (*OH_HiCollie_FreezeCallback)(OH_Hicollie_Freeze_Type type, void* buffer, size_t size);
+typedef size_t (*OH_HiCollie_FreezeCallback)(OH_HiCollie_Freeze_Type type, void* buffer, size_t size);
 
 /**
  * @brief Set freeze callback to system, system will callback when system detect freeze
