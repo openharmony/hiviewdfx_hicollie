@@ -55,6 +55,7 @@
         "OHOS::HiviewDFX::ProcessKillReason::GetKillReason(int)";
         "OHOS::HiviewDFX::ProcessKillReason::GetAppExitReason(int)";
         "OHOS::HiviewDFX::Watchdog::SetFreezeHandler(unsigned int (*)(OH_HiCollie_Freeze_Type, void*, unsigned int))";
+        "OHOS::HiviewDFX::Watchdog::SetFreezeHandler(unsigned long (*)(OH_HiCollie_Freeze_Type, void*, unsigned long))";
         "OHOS::HiviewDFX::Watchdog::ReadDataFromBuffer(int)";
         "OHOS::HiviewDFX::Watchdog::GetOutSelfProcName()";
     };
