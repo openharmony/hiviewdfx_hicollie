@@ -39,7 +39,7 @@ namespace {
     constexpr uint32_t CALLBACK_WAIT_TIME = 1;
     constexpr std::size_t MAX_BUFFER_SIZE = 64 * 1024; // 65536 bytes
 }
-XcollieMgr::XcollieMgr()
+XcollieMgr::XcollieMgr() : handler_(nullptr)
 {
 }
 
@@ -74,7 +74,7 @@ std::string XcollieMgr::ReadDataFromBuffer(int type)
         return "";
     }
     if (!CheckCallDuration(type)) {
-        XCOLLIE_LOGE("can not ReadDataFromBuffer twice within 1 min");
+        XCOLLIE_LOGE("can not ReadDataFromBuffer twice within 1 min, type:%{public}d", type);
         return "";
     }
     OH_HiCollie_FreezeCallback handler;
@@ -92,7 +92,7 @@ std::string XcollieMgr::ReadDataFromBuffer(int type)
         void* mptr = mmap(nullptr, mmapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (mptr == MAP_FAILED) {
             XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
-            return ;
+            return;
         }
         size_t callbackSize = handler((OH_HiCollie_Freeze_Type)type, mptr, OHOS::HiviewDFX::MAX_BUFFER_SIZE);
         if (callbackSize > OHOS::HiviewDFX::MAX_BUFFER_SIZE) {
