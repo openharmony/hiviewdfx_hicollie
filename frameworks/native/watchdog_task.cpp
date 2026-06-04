@@ -15,6 +15,7 @@
 
 #include "watchdog_task.h"
 
+#include <charconv>
 #include <cinttypes>
 #include <ctime>
 #include <cstdio>
@@ -357,7 +358,9 @@ void WatchdogTask::ParseTidFromMsg(const std::string& sendMsg)
             if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char &c) {
                 return isdigit(c);
             })) {
-                watchdogTid = std::stoi(tidStr);
+                pid_t tid = 0;
+                auto result = std::from_chars(tidStr.data(), tidStr.data() + tidStr.size(), tid);
+                watchdogTid = (result.ec == std::errc()) ? tid : watchdogTid;
             }
         }
     }
