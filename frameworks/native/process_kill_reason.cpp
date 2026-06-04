@@ -99,6 +99,7 @@ inline std::unordered_map<int32_t, KillReasonInfo> killReasonConfig = {
     {REASON_ANCO_START_QUICK_KILL, {"AncoStartQuickKill", "LowMemoryKill"}},
     {REASON_BG_DEPDED_MINI_SYS_KILL, {"BgDepdedMiniSysKill", "LowMemoryKill"}},
     {REASON_FORE_UNDEPD_MINI_SYS_KILL, {"ForeUndepdMiniSysKill", "LowMemoryKill"}},
+    {REASON_INACTIVE_PROC_KILL, {"InactiveProcKill", "LowMemoryKill"}},
     {REASON_TEMPERATURE_CONTROL, {"Temperature Control", "HighTemperature"}},
     {REASON_CPU_EXT_HIGHLOAD, {"CPU_EXT Highload", "PowerSaveClean"}},
     {REASON_SCREEN_OFF_CLEAN, {"Screen Off Clean", "PowerSaveClean"}},
