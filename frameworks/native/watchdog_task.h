@@ -88,9 +88,6 @@ public:
     bool IsBinderSpaceInsufficient();
 #endif
 
-#ifdef SUSPEND_CHECK_ENABLE
-    bool ShouldSkipCheckForSuspend(uint64_t &now, double &suspendStartTime, double &suspendEndTime);
-#endif
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
     bool ShouldCheckLowMemory();
     bool ShouldSkipExitForLowMemory();

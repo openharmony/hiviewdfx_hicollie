@@ -1459,6 +1459,9 @@ void WatchdogInner::ReInsertTaskIfNeed(WatchdogTask& task)
     }
 
     task.nextTickTime = task.nextTickTime + task.checkInterval;
+#ifdef SUSPEND_CHECK_ENABLE
+    CalculateTimes(task.bootTimeStart, task.monoTimeStart);
+#endif
     checkerQueue_.push(task);
 }
 

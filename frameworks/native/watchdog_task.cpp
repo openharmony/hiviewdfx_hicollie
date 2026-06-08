@@ -37,10 +37,6 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
-#ifdef SUSPEND_CHECK_ENABLE
-constexpr const char* LAST_SUSPEND_TIME_PATH = "/sys/power/last_sr";
-constexpr double SUSPEND_TIME_RATIO = 0.2;
-#endif
 constexpr int COUNT_LIMIT_NUM_MAX_RATIO = 2;
 constexpr int TIME_LIMIT_NUM_MAX_RATIO = 2;
 constexpr int BINDER_SPACE_FULL_COUNT_HALF = 2;
@@ -156,35 +152,12 @@ void WatchdogTask::DoCallback()
     }
 }
 
-#ifdef SUSPEND_CHECK_ENABLE
-bool WatchdogTask::ShouldSkipCheckForSuspend(uint64_t &now, double &lastSuspendStartTime, double &lastSuspendEndTime)
-{
-    if (lastSuspendStartTime < 0 || lastSuspendEndTime < 0) {
-        return false;
-    }
-    if (lastSuspendStartTime > lastSuspendEndTime) {
-        return true;
-    }
-    return (lastSuspendEndTime - lastSuspendStartTime) > (SUSPEND_TIME_RATIO * checkInterval) &&
-        (static_cast<double>(now) - lastSuspendStartTime) < checkInterval;
-}
-#endif
-
 void WatchdogTask::Run(uint64_t now)
 {
     if (countLimit > 0) {
         TimerCountTask();
         return;
     }
-#ifdef SUSPEND_CHECK_ENABLE
-    auto [lastSuspendStartTime, lastSuspendEndTime] = GetSuspendTime(LAST_SUSPEND_TIME_PATH, now);
-    if (ShouldSkipCheckForSuspend(now, lastSuspendStartTime, lastSuspendEndTime)) {
-        XCOLLIE_LOGI("in suspend status, ship check, reset next tick time.interval:%{public}" PRIu64
-            " now:%{public}" PRIu64 " lastSuspendStartTime:%{public}f lastSuspendEndTime:%{public}f",
-            checkInterval, now, lastSuspendStartTime, lastSuspendEndTime);
-        return;
-    }
-#endif
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
     if (lowMemoryCheck) {
         int64_t mem = GetAvailMemory();
