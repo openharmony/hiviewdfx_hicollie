@@ -81,44 +81,6 @@ static std::string g_curProcName;
 static int32_t g_lastPid;
 static std::mutex g_lock;
 }
-#ifdef SUSPEND_CHECK_ENABLE
-std::pair<double, double> GetSuspendTime(const char *path, uint64_t &now)
-{
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        XCOLLIE_LOGE("Failed to open file: %{public}s", path);
-        return {-1.0, -1.0};
-    }
-
-    std::string line;
-    if (!std::getline(file, line)) {
-        XCOLLIE_LOGE("Failed to read file: %{public}s", path);
-        file.close();
-        return {-1.0, -1.0};
-    }
-    file.close();
-    double suspendStartTime = -1.0;
-    double suspendEndTime = -1.0;
-    std::istringstream iss(line);
-    if (!(iss >> suspendStartTime >> suspendEndTime)) {
-        XCOLLIE_LOGE("Parse failed: %{public}s", line.c_str());
-        return {-1.0, -1.0};
-    }
-    suspendStartTime *= SEC_TO_MILLISEC;
-    suspendEndTime *= SEC_TO_MILLISEC;
-    uint64_t currentTime = GetCurrentTickMillseconds();
-    uint64_t diff = (currentTime > now) ? (currentTime - now) : (now - currentTime);
-    XCOLLIE_LOGW("open file %{public}s, suspendStartTime: %{public}f, suspendEndTime: %{public}f, currentTime: "
-                 "%{public}" PRIu64 " now: %{public}" PRIu64 " diff: %{public}" PRIu64,
-        path,
-        suspendStartTime,
-        suspendEndTime,
-        currentTime,
-        now,
-        diff);
-    return {suspendStartTime, suspendEndTime};
-}
-#endif
 
 std::string FormatTimeImpl(const std::string &format, int64_t* ns)
 {
