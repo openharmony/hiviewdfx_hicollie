@@ -1347,6 +1347,7 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
     });
 }
 
+#ifdef SUSPEND_CHECK_ENABLE
 bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 {
     if (IsInAppspwan() || queuedTaskCheck.bootTimeStart <= 0 || queuedTaskCheck.monoTimeStart <= 0) {
@@ -1364,6 +1365,7 @@ bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
     }
     return false;
 }
+#endif
 
 bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
 {
@@ -1494,11 +1496,15 @@ bool WatchdogInner::Start()
             nextWeakUpTime_ = now + leftTimeMill;
         }
         if (leftTimeMill == 0) {
+#ifdef SUSPEND_CHECK_ENABLE
             if (!IsInSleep(task)) {
+#endif
                 task.Run(now);
-                ReInsertTaskIfNeed(task);
                 currentScene_ = "thread DfxWatchdog: Current scenario is hicollie.\n";
+#ifdef SUSPEND_CHECK_ENABLE
             }
+#endif
+            ReInsertTaskIfNeed(task);
             continue;
         } else if (isNeedStop_) {
             break;

@@ -64,8 +64,10 @@ public:
           watchdogTid(0),
           timeLimit(0),
           countLimit(0),
+#ifdef SUSPEND_CHECK_ENABLE
           bootTimeStart(0),
           monoTimeStart(0),
+#endif
           reportCount(0),
           binderSpaceFullCount(0) {};
     ~WatchdogTask() {};
@@ -118,8 +120,10 @@ public:
     uint64_t timeLimit;
     int countLimit;
     std::vector<uint64_t> triggerTimes;
+#ifdef SUSPEND_CHECK_ENABLE
     uint64_t bootTimeStart;
     uint64_t monoTimeStart;
+#endif
     unsigned int reportCount;
     unsigned int binderSpaceFullCount;
     std::string sampleStack;

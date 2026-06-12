@@ -105,11 +105,13 @@ struct ParseBinderCallChainParam {
 
 uint64_t GetCurrentTickMillseconds();
 
+#ifdef SUSPEND_CHECK_ENABLE
 uint64_t GetCurrentBootMillseconds();
 
 void CalculateTimes(uint64_t& bootTimeStart, uint64_t& monoTimeStart);
 
 uint64_t GetNumsDiffAbs(const uint64_t& numOne, const uint64_t& numTwo);
+#endif
 
 bool IsFileNameFormat(char c);
 
