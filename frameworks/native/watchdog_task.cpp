@@ -57,17 +57,20 @@ constexpr int64_t BELOW_MEM_SIZE = 500 * 1024;
 }
 
 int64_t WatchdogTask::curId = 0;
+
 WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHandler> handler,
     TimeOutCallback timeOutCallback, uint64_t interval, AppExecFwk::EventQueue::Priority priority)
     : name(name), task(nullptr), timeOutCallback(timeOutCallback), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0),
-      binderSpaceFullCount(0)
+      watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0), binderSpaceFullCount(0)
 {
     id = ++curId;
     checker = std::make_shared<HandlerChecker>(name, handler, priority);
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
+#ifdef SUSPEND_CHECK_ENABLE
+    CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
     lowMemoryCheck = ShouldCheckLowMemory();
 #endif
@@ -75,7 +78,7 @@ WatchdogTask::WatchdogTask(std::string name, std::shared_ptr<AppExecFwk::EventHa
 
 WatchdogTask::WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallback func, void *arg, unsigned int flag)
     : task(nullptr), timeOutCallback(nullptr), timeout(0), func(std::move(func)), arg(arg),
-      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0), reportCount(0)
+      flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
     checker = (count > 0) ? nullptr:std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
@@ -84,17 +87,22 @@ WatchdogTask::WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallbac
     nextTickTime = GetCurrentTickMillseconds();
     isOneshotTask = false;
     binderSpaceFullCount = count;
+#ifdef SUSPEND_CHECK_ENABLE
+    CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, Task&& task, uint64_t delay, uint64_t interval, bool isOneshot)
     : name(name), task(std::move(task)), timeOutCallback(nullptr), checker(nullptr), timeout(0), func(nullptr),
-      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), bootTimeStart(0), monoTimeStart(0),
-      reportCount(0), binderSpaceFullCount(0)
+      arg(nullptr), flag(0), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0), binderSpaceFullCount(0)
 {
     id = ++curId;
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds() + delay;
     isOneshotTask = isOneshot;
+#ifdef SUSPEND_CHECK_ENABLE
+    CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallback func, void *arg, unsigned int flag)
@@ -106,17 +114,22 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeout, XCollieCallba
     nextTickTime = GetCurrentTickMillseconds() + timeout;
     isOneshotTask = true;
     watchdogTid = getproctid();
+#ifdef SUSPEND_CHECK_ENABLE
     CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 }
 
 WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLimit)
     : name(name), task(nullptr), timeOutCallback(nullptr), timeout(0), func(nullptr), arg(nullptr), flag(0),
-      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit), bootTimeStart(0),
-      monoTimeStart(0), reportCount(0), binderSpaceFullCount(0)
+      isOneshotTask(false), watchdogTid(0), timeLimit(timeLimit), countLimit(countLimit),
+      reportCount(0), binderSpaceFullCount(0)
 {
     id = ++curId;
     checkInterval = timeLimit / TIME_LIMIT_NUM_MAX_RATIO;
     nextTickTime = GetCurrentTickMillseconds();
+#ifdef SUSPEND_CHECK_ENABLE
+    CalculateTimes(bootTimeStart, monoTimeStart);
+#endif
 }
 
 void WatchdogTask::DoCallback()
