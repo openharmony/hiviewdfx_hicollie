@@ -1019,7 +1019,7 @@ int64_t GetNumFromString(const std::string &str)
 int64_t GetAvailMemory()
 {
     std::string content;
-    std::string memInfoPath = OHOS::FileExists(PROC_MEMORYINFO);
+    std::string memInfoPath = PROC_MEMORYINFO;
     if (!OHOS::LoadStringFromFile(memInfoPath, content)) {
         XCOLLIE_LOGE("Get memInfoPath failed!");
         return -1;
