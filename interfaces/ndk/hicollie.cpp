@@ -267,7 +267,6 @@ inline HiCollie_ErrorCode InitStuckDetection(OH_HiCollie_Task task, uint32_t tim
         OHOS::HiviewDFX::g_bussinessTid = syscall(SYS_gettid);
         OHOS::HiviewDFX::Watchdog::GetInstance().RunPeriodicalTask("BussinessWatchdog", task,
             timeout, OHOS::HiviewDFX::INI_TIMER_FIRST_SECOND);
-        OHOS::HiviewDFX::Watchdog::GetInstance().RemovePeriodicalTask("AppkitWatchdog");
     }
     return HICOLLIE_SUCCESS;
 }
