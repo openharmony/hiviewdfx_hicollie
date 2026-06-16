@@ -33,6 +33,7 @@
         "deps": {
             "components": [
                 "api_metrics",
+                "bounds_checking_function",
                 "hilog",
                 "hisysevent",
                 "c_utils",
