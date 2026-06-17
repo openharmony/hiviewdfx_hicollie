@@ -68,12 +68,14 @@ constexpr const char* const ENABLE_VAULE = "true";
 constexpr const char* const ENABLE_BETA_VAULE = "beta";
 constexpr const char* const KEY_REPORT_TIMES_TYPE = "persist.hiview.jank.reporttimes";
 constexpr const char* BBOX_PATH = "/dev/bbox";
-constexpr static uint8_t ARR_SIZE = 7;
-constexpr static uint8_t DECIMAL = 10;
-constexpr static uint8_t FREE_ASYNC_INDEX = 6;
-constexpr static uint16_t FREE_ASYNC_MAX = 1000;
+static constexpr uint8_t ARR_SIZE = 7;
+static constexpr uint8_t DECIMAL = 10;
+static constexpr uint8_t FREE_ASYNC_INDEX = 6;
+static constexpr uint16_t FREE_ASYNC_MAX = 1000;
 
+constexpr const char* RECLAIM_AVAIL_BUFFER = "ReclaimAvailBuffer";
 constexpr const char* MEM_AVAILABLE = "MemAvailable";
+constexpr const char* PROC_MEMORYVIEW = "/proc/memview";
 constexpr const char* PROC_MEMORYINFO = "/proc/meminfo";
 
 static std::string g_curProcName;
@@ -102,7 +104,7 @@ std::string FormatTimeImpl(const std::string &format, int64_t* ns)
     }
     return std::string(buffer);
 }
- 
+
 std::vector<std::string> GetFileToList(std::string line)
 {
     std::vector<std::string> strList;
@@ -113,14 +115,14 @@ std::vector<std::string> GetFileToList(std::string line)
     }
     return strList;
 }
- 
+
 std::string StrSplit(const std::string& str, uint16_t index)
 {
     std::vector<std::string> strings;
     SplitStr(str, ":", strings);
     return index < strings.size() ? strings[index] : "";
 }
- 
+
 void BinderInfoLineParser(std::ifstream& fin,
     std::map<int, std::list<BinderInfo>>& manager,
     std::map<uint32_t, uint32_t>& asyncBinderMap,
@@ -131,11 +133,11 @@ void BinderInfoLineParser(std::ifstream& fin,
     bool isBinderMatchup = false;
     while (getline(fin, line)) {
         rawBinderInfo += line + "\n";
- 
+
         if (line.find("context") != line.npos) {
             isBinderMatchup = true;
         }
- 
+
         std::vector<std::string> strList = GetFileToList(line);
         if (isBinderMatchup) {
             if (line.find("free_async_space") == line.npos && strList.size() == ARR_SIZE &&
@@ -165,7 +167,7 @@ void BinderInfoLineParser(std::ifstream& fin,
         }
     }
 }
- 
+
 void BinderInfoParser(std::ifstream& fin,
     std::map<int, std::list<BinderInfo>>& manager,
     std::set<int>& asyncPids,
@@ -174,13 +176,13 @@ void BinderInfoParser(std::ifstream& fin,
     std::map<uint32_t, uint32_t> asyncBinderMap;
     std::vector<std::pair<uint32_t, uint64_t>> freeAsyncSpacePairs;
     BinderInfoLineParser(fin, manager, asyncBinderMap, freeAsyncSpacePairs, rawBinderInfo);
- 
+
     std::sort(freeAsyncSpacePairs.begin(), freeAsyncSpacePairs.end(),
         [] (const auto& pairOne, const auto& pairTwo) { return pairOne.second < pairTwo.second; });
     std::vector<std::pair<uint32_t, uint32_t>> asyncBinderPairs(asyncBinderMap.begin(), asyncBinderMap.end());
     std::sort(asyncBinderPairs.begin(), asyncBinderPairs.end(),
         [] (const auto& pairOne, const auto& pairTwo) { return pairOne.second > pairTwo.second; });
- 
+
     size_t freeAsyncSpaceSize = freeAsyncSpacePairs.size();
     size_t asyncBinderSize = asyncBinderPairs.size();
     size_t individualMaxSize = 2;
@@ -193,7 +195,7 @@ void BinderInfoParser(std::ifstream& fin,
         }
     }
 }
- 
+
 void ParseBinderCallChain(const ParseBinderCallChainParam& param)
 {
     auto it = param.manager.find(param.pid);
@@ -218,7 +220,7 @@ void ParseBinderCallChain(const ParseBinderCallChainParam& param)
             param.terminalBinder, false});
     }
 }
- 
+
 std::string GetBinderPeerPids(int32_t pid, int32_t tid, std::set<int>& syncPids, std::set<int>& asyncPids,
     TerminalBinderInfo& terminalBinder)
 {
@@ -229,16 +231,16 @@ std::string GetBinderPeerPids(int32_t pid, int32_t tid, std::set<int>& syncPids,
         XCOLLIE_LOGE("open binder file failed, %{public}s.", path.c_str());
         return "";
     }
- 
+
     std::map<int, std::list<BinderInfo>> manager;
     std::string rawBinderInfo;
     BinderInfoParser(fin, manager, asyncPids, rawBinderInfo);
     fin.close();
- 
+
     if (pid <= 0 || manager.size() == 0 || manager.find(pid) == manager.end()) {
         return rawBinderInfo;
     }
- 
+
     int actualTid = (tid > 0) ? tid : pid;
     ParseBinderParam params = {pid, actualTid};
     ParseBinderCallChain({manager, syncPids, pid, params, terminalBinder, true});
@@ -883,7 +885,7 @@ int64_t GetNumFromString(const std::string &str)
 int64_t GetAvailMemory()
 {
     std::string content;
-    std::string memInfoPath = PROC_MEMORYINFO;
+    std::string memInfoPath = OHOS::FileExists(PROC_MEMORYVIEW) ? PROC_MEMORYVIEW : PROC_MEMORYINFO;
     if (!OHOS::LoadStringFromFile(memInfoPath, content)) {
         XCOLLIE_LOGE("Get memInfoPath failed!");
         return -1;
@@ -895,9 +897,9 @@ int64_t GetAvailMemory()
     }
     std::vector<std::string> vec;
     SplitStr(content, "\n", vec);
- 
-    std::string targetField = MEM_AVAILABLE;
- 
+
+    std::string targetField = (memInfoPath == PROC_MEMORYVIEW) ? RECLAIM_AVAIL_BUFFER : MEM_AVAILABLE;
+
     for (const std::string &mem : vec) {
         if (mem.find(targetField) != std::string::npos) {
             memsize = GetNumFromString(mem);

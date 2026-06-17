@@ -151,6 +151,7 @@ static std::shared_ptr<XCollieFfrtTask> xcollieFfrtTask_ = nullptr;
 
 SigActionType WatchdogInner::threadSamplerSigHandler_ = nullptr;
 std::mutex WatchdogInner::threadSamplerSignalMutex_;
+
 std::atomic_bool WatchdogInner::isTestExist_ = false;
 
 namespace {
@@ -305,7 +306,6 @@ bool WatchdogInner::CheckEventTimer(int64_t currentTime, int64_t reportBegin, in
     if (reportBegin == timeContent_.curBegin && reportEnd == timeContent_.curEnd) {
         return false;
     }
-
     int64_t intervalNanos = static_cast<int64_t>(interval) * MILLISEC_TO_NANOSEC;
     bool isTimeExpired = timeContent_.curEnd <= timeContent_.curBegin &&
         (currentTime - timeContent_.curBegin >= intervalNanos);
@@ -1685,13 +1685,12 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
         description += ", report twice instead of exiting process."; // 1s = 1000ms
         std::string sampleStackName = "ffrt_sample_stack_" + std::to_string(taskId);
         std::string sampleStack = SampleStackMap::GetInstance().GetAndRemove(sampleStackName);
-        WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
-        WatchdogInner::SendFfrtEvent({description, "SERVICE_BLOCK", taskInfo, faultTimeStr, true, sampleStack});
-        WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
         if (!WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName)) {
-            std::unique_lock<std::mutex> lock(WatchdogInner::GetInstance().lock_);
+            std::lock_guard<std::mutex> lock(WatchdogInner::GetInstance().lock_);
             WatchdogInner::GetInstance().taskNameSet_.erase(sampleStackName);
         }
+        WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
+        WatchdogInner::SendFfrtEvent({description, "SERVICE_BLOCK", taskInfo, faultTimeStr, true, sampleStack});
         IsExistProcess(description);
     } else {
         InsertFfrtSampleStackTask(taskId);
@@ -1784,7 +1783,7 @@ void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
         "MODULE_NAME", param.taskInfo, "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg, "STACK", (param.isDumpStack ? GetProcessStacktrace() : "") + kernelStack,
         "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo);
-        if (ret == ERR_OVER_SIZE) {
+    if (ret == ERR_OVER_SIZE) {
         std::string stack = "";
         if (param.isDumpStack) {
             GetBacktraceStringByTid(stack, tid, 0, true);
@@ -1793,7 +1792,7 @@ void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
             "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", param.taskInfo,
             "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack + kernelStack,
             "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo);
-        }
+    }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", ret, param.eventName.c_str(), param.msg.c_str());

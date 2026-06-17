@@ -61,7 +61,7 @@ HWTEST_F(XCollieInterfaceTest, XCollieTimerParam_001, TestSize.Level1)
     ASSERT_GT(id, 0);
 
     /**
-     * @tc.steps: step2. input param name include special string,cancel timer
+     * @tc.steps: step2. input param name include special string, cancel timer
      * @tc.expected: step2. update timer successfully;
      */
     XCollie::GetInstance().CancelTimer(id);
@@ -223,7 +223,7 @@ HWTEST_F(XCollieInterfaceTest, IsOverseaTest_001, TestSize.Level1)
     bool result = IsOversea();
     ASSERT_FALSE(result);
 }
- 
+
 /**
  * @tc.name: FormatTimeImplTest
  * @tc.desc: test FormatTimeImpl function
@@ -236,7 +236,7 @@ HWTEST_F(XCollieInterfaceTest, FormatTimeImplTest_001, TestSize.Level1)
     EXPECT_FALSE(result.empty());
     EXPECT_GE(ns, 0);
 }
- 
+
 /**
  * @tc.name: GetFileToListTest
  * @tc.desc: test GetFileToList function
@@ -248,7 +248,7 @@ HWTEST_F(XCollieInterfaceTest, GetFileToListTest_001, TestSize.Level1)
     std::vector<std::string> result = GetFileToList(line);
     EXPECT_EQ(result.size(), 5);
 }
- 
+
 /**
  * @tc.name: StrSplitTest
  * @tc.desc: test StrSplit function
@@ -260,7 +260,7 @@ HWTEST_F(XCollieInterfaceTest, StrSplitTest_001, TestSize.Level1)
     std::string result = StrSplit(str, 1);
     EXPECT_EQ(result, "b");
 }
- 
+
 /**
  * @tc.name: GetBinderPeerPidsTest
  * @tc.desc: test GetBinderPeerPids function

@@ -280,13 +280,13 @@ typedef enum OH_HiCollie_Freeze_Type {
      */
     OH_THREAD_BLOCK_3S,
     /**
-     * @brief Main thread watchdog timeout for two period.
+     * @brief Main thread watchdog timeout for two periods.
      *
      * @since 24
      */
     OH_THREAD_BLOCK_6S,
     /**
-     * @brief Ability lifecycle timeout for one periods.
+     * @brief Ability lifecycle timeout for one period.
      *
      * @since 24
      */
@@ -320,15 +320,15 @@ typedef enum OH_HiCollie_Freeze_Type {
      *
      * @since 24
      */
-    OH_BUSINESS_INPUT_BLOCK,
+    OH_BUSINESS_INPUT_BLOCK
 } OH_HiCollie_Freeze_Type;
 
 /**
  * @brief the freeze callback used in {@link OH_HiCollie_SetFreezeCallback}
  *
- * @param type Freeze event type in {@link OH_HiCollie_Freeze_Type}.
+ * @param type Freeze event type in {@link OH_HiCollie_Freeze_Type}
  * @param buffer log buffer provided by the system, whose content will be moved to APP_FREEZE or APP_HICOLLIE
- *                 HiAppEvent
+                HiAppEvent
  * @param size buffer size can be used
  * @return used buffer size
  * @since 24

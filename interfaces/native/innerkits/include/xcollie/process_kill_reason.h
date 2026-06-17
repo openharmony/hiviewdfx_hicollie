@@ -21,6 +21,17 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace ProcessKillReason {
+// note: It is recommended to ensure that new values follow the range divisions
+//      in the table(e.g., App Exit in 1~1000), maintain consistency in code or documentation.
+// +-----------+--------------------------+
+// | number    | explain                  |
+// +-----------+--------------------------+
+// | 1~1000    | App Exit                 |
+// | 1000~2000 | User Behavior            |
+// | 2000~3000 | Crash Exit               |
+// | 3000~4000 | System Exit              |
+// | 4000~5000 | Kernel Level Termination |
+// +-----------+--------------------------+
 enum KillEventId {
     // app exit: 1 ~ 1000
     REASON_APP_EXIT_MIN = 1,

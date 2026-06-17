@@ -194,16 +194,16 @@ bool IsNum(const std::string& str);
 
 bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& value,
     char flag);
+ 
+int64_t GetNumFromString(const std::string &str);
+ 
+int64_t GetAvailMemory();
 
 void DumpKernelStack(struct HstackVal& val, int& ret);
 
 std::string GetKernelStackByTid(pid_t watchdogTid);
 
 pid_t ParseTidFromInfo(const std::string& taskInfo);
- 
-int64_t GetNumFromString(const std::string &str);
- 
-int64_t GetAvailMemory();
 } // end of HiviewDFX
 } // end of OHOS
 #endif
