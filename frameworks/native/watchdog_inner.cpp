@@ -1350,7 +1350,8 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
 #ifdef SUSPEND_CHECK_ENABLE
 bool WatchdogInner::IsInSleep(const WatchdogTask& queuedTaskCheck)
 {
-    if (IsInAppspwan() || queuedTaskCheck.bootTimeStart <= 0 || queuedTaskCheck.monoTimeStart <= 0) {
+    if (IsInAppspwan() || queuedTaskCheck.bootTimeStart <= 0 || queuedTaskCheck.monoTimeStart <= 0 ||
+        queuedTaskCheck.monoTimeStart.name == KICK_WATCHDOG_TASK) {
         return false;
     }
 
