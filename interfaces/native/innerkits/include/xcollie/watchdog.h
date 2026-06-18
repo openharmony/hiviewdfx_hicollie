@@ -209,7 +209,7 @@ public:
      */
     int32_t GetReservedTimeForLogging();
 
-    void* SetFreezeHandler(OH_HiCollie_FreezeCallback callback);
+    void* SetFreezeHandler(OH_HiCollie_FreezeCallback handler);
     std::string ReadDataFromBuffer(int type);
     std::string GetOutSelfProcName();
 };

@@ -170,37 +170,6 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendEvent_001, TestSize.Level1)
     EXPECT_TRUE(!name.empty());
 }
 
-/**
- * @tc.name: WatchdogTaskTest ParseTidFromMsg
- * @tc.desc: test ParseTidFromMsg function
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_ParseTidFromMsg_001, TestSize.Level1)
-{
-    std::string name = "WatchdogTaskTest_ParseTidFromMsg_001";
-    auto runner = EventRunner::Create(true);
-    auto handler = std::make_shared<EventHandler>(runner);
-    WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
-    task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_WARNING", "");
-    EXPECT_TRUE(!name.empty());
-}
- 
-/**
- * @tc.name: WatchdogTaskTest InsertSampleStackTask
- * @tc.desc: test InsertSampleStackTask function
- * @tc.type: FUNC
- */
-HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_InsertSampleStackTask_001, TestSize.Level1)
-{
-    std::string name = "WatchdogTaskTest_InsertSampleStackTask_001";
-    auto runner = EventRunner::Create(true);
-    auto handler = std::make_shared<EventHandler>(runner);
-    WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
-    task.sampleStack = "";
-    task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_BLOCK", "");
-    EXPECT_TRUE(!name.empty());
-}
-
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
 /**
  * @tc.name: WatchdogTask_ShouldCheckLowMemory_001
@@ -447,5 +416,36 @@ HWTEST_F(WatchdogTaskTest, WatchdogTask_LowMemoryStrategy_002, TestSize.Level1)
     EXPECT_FALSE(task.ShouldSkipExitForLowMemory());
 }
 #endif
+
+/**
+ * @tc.name: WatchdogTaskTest ParseTidFromMsg
+ * @tc.desc: test ParseTidFromMsg function
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_ParseTidFromMsg_001, TestSize.Level1)
+{
+    std::string name = "WatchdogTaskTest_ParseTidFromMsg_001";
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<EventHandler>(runner);
+    WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
+    task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_WARNING", "");
+    EXPECT_TRUE(!name.empty());
+}
+
+/**
+ * @tc.name: WatchdogTaskTest InsertSampleStackTask
+ * @tc.desc: test InsertSampleStackTask function
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_InsertSampleStackTask_001, TestSize.Level1)
+{
+    std::string name = "WatchdogTaskTest_InsertSampleStackTask_001";
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<EventHandler>(runner);
+    WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
+    task.sampleStack = "";
+    task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_BLOCK", "");
+    EXPECT_TRUE(!name.empty());
+}
 } // namespace HiviewDFX
 } // namespace OHOS

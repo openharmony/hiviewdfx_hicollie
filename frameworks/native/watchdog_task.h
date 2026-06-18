@@ -20,7 +20,6 @@
 #include <string>
 #include <sys/types.h>
 
-
 #include "event_handler.h"
 #include "handler_checker.h"
 
@@ -126,13 +125,13 @@ public:
 #endif
     unsigned int reportCount;
     unsigned int binderSpaceFullCount;
-    std::string sampleStack;
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
     bool lowMemoryCheck = false;
     uint64_t lastLowMemoryTime = 0;
     uint64_t lastLowMemoryFreezeTime = 0;
     bool hadSendEvent = false;
 #endif
+    std::string sampleStack;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS

@@ -437,7 +437,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_001, TestSize.Level1
 {
     EXPECT_TRUE(IsProcessDebug(getprocpid()));
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
-    WatchdogInner::SendFfrtEvent({"msg", "testName", "taskInfo", faultTimeStr, true, ""});;
+    WatchdogInner::SendFfrtEvent({"msg", "testName", "taskInfo", faultTimeStr, true, ""});
 }
 
 /**
@@ -1032,6 +1032,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetNumFromString_002, TestSize.Lev
 HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAvailMemory_001, TestSize.Level1)
 {
     int64_t result = GetAvailMemory();
+    EXPECT_TRUE(result > 0);
     EXPECT_TRUE(result < INT64_MAX);
 }
 
@@ -1247,7 +1248,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckSample_001, TestSize.Level1)
     TimePoint endTime = std::chrono::steady_clock::now();
     int64_t durationTime = 1000;
     bool result = WatchdogInner::GetInstance().CheckSample(endTime, durationTime);
-    printf("result: %d\n", result);
+    EXPECT_TRUE(!result);
     WatchdogInner::GetInstance().isScroll_ = false;
     result = WatchdogInner::GetInstance().CheckSample(endTime, durationTime);
     EXPECT_TRUE(!result);
@@ -1405,7 +1406,6 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SystemApp_Test001, TestSize.Level1
     WatchdogInner::GetInstance().SetSystemApp(true);
     std::string bundleName = "WatchdogInnerTest";
     WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0");
-    
     EXPECT_EQ(WatchdogInner::GetInstance().GetBundleName(), bundleName);
     TimePoint endTime = std::chrono::steady_clock::now();
     WatchdogInner::GetInstance().StartProfileMainThread(endTime, 150, 150);
@@ -1565,11 +1565,11 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckTaskValid_001, TestSize.Level
     ret = WatchdogInner::GetInstance().CheckTaskValid(100, 200, targetCount, result);
     EXPECT_FALSE(ret);
     ret = WatchdogInner::GetInstance().CheckTaskValid(100, 100, targetCount, result);
-    printf("ret:%d\n", ret);
-    printf("targetCount:%d\n", targetCount);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(targetCount, 1);
     ret = WatchdogInner::GetInstance().CheckTaskValid(200, 100, targetCount, result);
-    printf("ret:%d\n", ret);
-    printf("targetCount:%d\n", targetCount);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(targetCount, 2);
 }
 
 /**
@@ -1603,12 +1603,262 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_StartSample_003, TestSize.Level1)
     int duration = 1;
     int interval = 2;
     std::string ret = WatchdogInner::GetInstance().StartSample(duration, interval);
-    printf("ret:%s\n", ret.c_str());
+    EXPECT_TRUE(ret.empty());
     duration = 99;
     interval = 100;
     ret = WatchdogInner::GetInstance().StartSample(duration, interval);
-    printf("ret:%s\n", ret.c_str());
-    EXPECT_TRUE(duration > 0);
+    EXPECT_TRUE(ret.empty());
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with valid tid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_001, TestSize.Level1)
+{
+    std::string taskInfo = R"({"queue_task_info":"test","tid":"12345"})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, 12345);
+
+    // tid=0
+    taskInfo = R"({"tid":"0"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, 0);
+
+    // tid=1
+    taskInfo = R"({"tid":"1"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, 1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with empty string
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_002, TestSize.Level1)
+{
+    std::string taskInfo = "";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo without tid key
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_003, TestSize.Level1)
+{
+    std::string taskInfo = R"({"queue_task_info":"test","name":"test_task"})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tdi":"12345"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with empty tid value
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_004, TestSize.Level1)
+{
+    std::string taskInfo = R"({"tid":""})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tid":""""})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with non-numeric characters
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_005, TestSize.Level1)
+{
+    std::string taskInfo = R"({"tid":"123abc"})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tid":"abc"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tid":"12-34"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with negative number
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_006, TestSize.Level1)
+{
+    std::string taskInfo = R"({"tid":"-123"})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    // tid=-1
+    taskInfo = R"({"tid":"-1"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with overflow value
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_007, TestSize.Level1)
+{
+    std::string taskInfo = R"({"tid":"999999999999999999"})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tid":"123456789012345678901234567890"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with malformed format
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_008, TestSize.Level1)
+{
+    std::string taskInfo = R"({"tid":"12345})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tid""12345"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+
+    taskInfo = R"({"tid":})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with whitespace
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_009, TestSize.Level1)
+{
+    std::string taskInfo = R"({"tid": "12345"})";
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, 12345);
+
+    taskInfo = R"({"tid":   "12345"})";
+    tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, 12345);
+}
+
+/**
+ * @tc.name: WatchdogInner ParseTidFromInfo Test;
+ * @tc.desc: Test ParseTidFromInfo with valid current tid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_ParseTidFromInfo_010, TestSize.Level1)
+{
+    pid_t currentTid = gettid();
+    std::stringstream ss;
+    ss << R"({"queue_task_info":"test","tid":")" << currentTid << R"("})";
+    std::string taskInfo = ss.str();
+
+    pid_t tid = ParseTidFromInfo(taskInfo);
+    EXPECT_EQ(tid, currentTid);
+}
+
+/**
+ * @tc.name: WatchdogInner FfrtCallback Test
+ * @tc.desc: add teatcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FfrtCallbackTestTest_001, TestSize.Level1)
+{
+    printf("WatchdogInnerTest_FfrtCallbackTestTest_001 begin\n");
+    EXPECT_TRUE(!WatchdogInner::GetInstance().isTestExist_.load());
+    WatchdogInner::GetInstance().isTestExist_.store(true);
+    uint64_t taskId = 1;
+    int tid = gettid();
+    std::string dfxInfo = "WatchdogInnerTest";
+    uint64_t timeout = 10;
+    int timeoutCnt = 10;
+    std::stringstream ss;
+    ss << R"({"queue_task_info":")" << dfxInfo << ", timeout for [" << timeout <<
+        "]s, reported count: " << timeoutCnt << R"(", "tid":")" << tid << R"("})";
+    uint32_t delayedTaskCount = 0;
+    WatchdogInner::GetInstance().FfrtCallback(taskId, ss.str().c_str(), delayedTaskCount);
+    sleep(10);
+
+    tid = 1;
+    taskId = 2;
+    ss.str("");
+    ss << R"({"queue_task_info":")" << dfxInfo << ", timeout for [" << timeout <<
+        "]s, reported count: " << timeoutCnt << R"(", "tid":")" << tid << R"("})";
+    WatchdogInner::GetInstance().FfrtCallback(taskId, ss.str().c_str(), delayedTaskCount);
+    sleep(5);
+
+    tid = gettid();
+    taskId = 1;
+    ss.str("");
+    ss << R"({"queue_task_info":")" << dfxInfo << ", timeout for [" << timeout <<
+        "]s, reported count: " << timeoutCnt << R"(", "tid":")" << tid << R"("})";
+    WatchdogInner::GetInstance().FfrtCallback(taskId, ss.str().c_str(), delayedTaskCount);
+    sleep(5);
+
+    tid = 1;
+    taskId = 2;
+    ss.str("");
+    ss << R"({"queue_task_info":")" << dfxInfo << ", timeout for [" << timeout <<
+        "]s, reported count: " << timeoutCnt << R"(", "tid":")" << tid << R"("})";
+    WatchdogInner::GetInstance().FfrtCallback(taskId, ss.str().c_str(), delayedTaskCount);
+    sleep(5);
+    WatchdogInner::GetInstance().isTestExist_.store(false);
+}
+
+/**
+ * @tc.name: WatchdogInner FfrtCallback Test
+ * @tc.desc: add teatcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FfrtCallbackTestTest_002, TestSize.Level1)
+{
+    printf("WatchdogInnerTest_FfrtCallback_002 begin\n");
+    EXPECT_TRUE(!WatchdogInner::GetInstance().isTestExist_.load());
+    WatchdogInner::GetInstance().isTestExist_.store(true);
+    uint64_t taskId = 100;
+    int tid = gettid();
+    std::string dfxInfo = "WatchdogInnerTest";
+    uint64_t timeout = 10;
+    int timeoutCnt = 10;
+    std::stringstream ss;
+    ss << R"({"queue_task_info":")" << dfxInfo << ", timeout for [" << timeout <<
+        "]s, reported count: " << timeoutCnt << R"(", "tid":")" << tid << R"("})";
+    uint32_t delayedTaskCount = 0;
+    WatchdogInner::GetInstance().FfrtCallback(taskId, ss.str().c_str(), delayedTaskCount);
+    sleep(10);
+
+    tid = 1;
+    taskId = 100;
+    ss.str("");
+    ss << R"({"queue_task_info":")" << dfxInfo << ", timeout for [" << timeout <<
+        "]s, reported count: " << timeoutCnt << R"(", "tid":")" << tid << R"("})";
+    WatchdogInner::GetInstance().FfrtCallback(taskId, ss.str().c_str(), delayedTaskCount);
+    sleep(5);
+    WatchdogInner::GetInstance().isTestExist_.store(false);
 }
 
 /**
@@ -1625,7 +1875,7 @@ HWTEST_F(WatchdogInnerTest, FormatTimeWithMsTest_001, TestSize.Level1)
     std::string msStr = result.substr(dotPos + 1);
     EXPECT_EQ(msStr.length(), 6);
 }
- 
+
 /**
  * @tc.name: GetBinderInfoStringTest
  * @tc.desc: test GetBinderInfoString function
@@ -1637,7 +1887,7 @@ HWTEST_F(WatchdogInnerTest, GetBinderInfoStringTest_001, TestSize.Level1)
     std::string result = GetBinderInfoString(-1, -1, rawBinderInfo);
     EXPECT_TRUE(result.empty());
 }
- 
+
 /**
  * @tc.name: InsertSampleStackTaskImplTest
  * @tc.desc: test InsertSampleStackTaskImpl function
@@ -1646,15 +1896,14 @@ HWTEST_F(WatchdogInnerTest, GetBinderInfoStringTest_001, TestSize.Level1)
 HWTEST_F(WatchdogInnerTest, InsertSampleStackTaskImplTest_001, TestSize.Level1)
 {
     std::string sampleStackName = "test_sample_stack";
-    EXPECT_FALSE(sampleStackName.empty());
     pid_t tid = getproctid();
     uint64_t sampleInterval = 160;
     WatchdogInner::GetInstance().InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
     usleep(100 * 1000);
     bool removed = WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
-    printf("removed:%d\n", removed);
+    EXPECT_TRUE(removed);
 }
- 
+
 /**
  * @tc.name: InsertFfrtSampleStackTaskTest
  * @tc.desc: test InsertFfrtSampleStackTask function
@@ -1663,15 +1912,14 @@ HWTEST_F(WatchdogInnerTest, InsertSampleStackTaskImplTest_001, TestSize.Level1)
 HWTEST_F(WatchdogInnerTest, InsertFfrtSampleStackTaskTest_001, TestSize.Level1)
 {
     std::string sampleStackName = "test_ffrt_sample_stack";
-    EXPECT_FALSE(sampleStackName.empty());
     pid_t tid = getproctid();
     uint64_t sampleInterval = 160;
     WatchdogInner::GetInstance().InsertSampleStackTaskImpl(sampleStackName, tid, sampleInterval);
-    sleep(100 * 1000);
+    usleep(100 * 1000);
     bool removed = WatchdogInner::GetInstance().RemoveInnerTask(sampleStackName);
-    printf("removed:%d\n", removed);
+    EXPECT_TRUE(removed);
 }
- 
+
 /**
  * @tc.name: RemoveInnerTaskTest
  * @tc.desc: test RemoveInnerTask function returns bool
@@ -1682,7 +1930,7 @@ HWTEST_F(WatchdogInnerTest, RemoveInnerTaskTest_001, TestSize.Level1)
     bool ret = WatchdogInner::GetInstance().RemoveInnerTask("non_existent_task");
     EXPECT_FALSE(ret);
 }
- 
+
 /**
  * @tc.name: SampleStackMapTest
  * @tc.desc: test SampleStackMap Set and GetAndRemove
@@ -1696,7 +1944,7 @@ HWTEST_F(WatchdogInnerTest, SampleStackMapTest_001, TestSize.Level1)
     std::string result = SampleStackMap::GetInstance().GetAndRemove(key);
     EXPECT_EQ(result, value);
 }
- 
+
 /**
  * @tc.name: SampleStackMapTest GetAndRemove non-existent
  * @tc.desc: test SampleStackMap GetAndRemove with non-existent key

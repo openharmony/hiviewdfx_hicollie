@@ -42,6 +42,7 @@ namespace {
     constexpr uint32_t CHECK_INTERVAL_TIME = 45000;
 #else
     constexpr uint32_t CHECK_INTERVAL_TIME = 3000;
+    constexpr uint32_t TIME_S_TO_MS = 1000;
     constexpr uint32_t MAX_TIMEOUT = 15000;
 #endif
     constexpr uint32_t INI_TIMER_FIRST_SECOND = 10000;
@@ -50,8 +51,6 @@ namespace {
     constexpr int32_t BUSINESS_THREAD_BLOCK_3S_TYPE = 5;
     constexpr int32_t BUSINESS_THREAD_BLOCK_6S_TYPE = 6;
     constexpr int32_t BUSINESS_INPUT_BLOCK_TYPE = 7;
-    constexpr uint32_t TIME_MIN_TO_S = 60;
-    constexpr uint32_t TIME_S_TO_MS = 1000;
     constexpr int ARKWEB_UID_START = 20100000;
     constexpr int ARKWEB_UID_END = 20109999;
 }
@@ -68,16 +67,22 @@ bool IsAppMainThread()
     static int pid = getpid();
     static uint64_t uid = getuid();
     int tid = gettid();
+    XCOLLIE_LOGI("IsAppMainThread pid: %{public}d, uid: %{public}llu, current tid: %{public}d",
+        pid, static_cast<unsigned long long>(uid), tid);
     if (pid == tid && uid >= MIN_APP_UID) {
         return true;
     }
     return false;
 }
 
-bool IsArkWebThread()
+bool CheckManualReportDuration(bool isFreezeEvent)
 {
-    static int uid = static_cast<int>(getuid());
-    if (uid >= ARKWEB_UID_START && uid <= ARKWEB_UID_END) {
+    constexpr uint32_t reportIntervalMs = 60000;
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
+        steady_clock::now().time_since_epoch()).count();
+    int64_t& lastReportTime = isFreezeEvent ? g_lastWatchTimeReport6S : g_lastWatchTimeReport3S;
+    if (now - lastReportTime > reportIntervalMs) {
+        lastReportTime = now;
         return true;
     }
     return false;
@@ -103,27 +108,6 @@ bool CheckInBackGround(bool* isSixSecond)
         return true;
     }
     return false;
-}
-
-bool CheckManualReportDuration(bool isFreezeEvent)
-{
-    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::
-        steady_clock::now().time_since_epoch()).count();
-    if (isFreezeEvent) {
-        if (now - g_lastWatchTimeReport6S > TIME_MIN_TO_S * TIME_S_TO_MS) {
-            g_lastWatchTimeReport6S = now;
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        if (now - g_lastWatchTimeReport3S > TIME_MIN_TO_S * TIME_S_TO_MS) {
-            g_lastWatchTimeReport3S = now;
-            return true;
-        } else {
-            return false;
-        }
-    }
 }
 
 int Report(bool* isSixSecond)
@@ -164,7 +148,7 @@ int Report(bool* isSixSecond)
     faultData.tid = g_bussinessTid > 0 ? g_bussinessTid : pid;
     faultData.stuckTimeout = g_stuckTimeout;
     int type = (faultData.errorObject.name == "BUSSINESS_THREAD_BLOCK_3S") ?
-            BUSINESS_THREAD_BLOCK_3S_TYPE : BUSINESS_THREAD_BLOCK_6S_TYPE;
+        BUSINESS_THREAD_BLOCK_3S_TYPE : BUSINESS_THREAD_BLOCK_6S_TYPE;
     faultData.callbackLog = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(type);
     auto result = DelayedSingleton<AppExecFwk::AppMgrClient>::GetInstance()->NotifyAppFault(faultData);
     XCOLLIE_LOGI("OH_HiCollie_Report result: %{public}d, current tid: %{public}d, timeout: %{public}u",
@@ -200,9 +184,9 @@ int ReportInputBlock()
 
 int GetNSPid()
 {
-    std::fstream inputFile("/proc/self/status");
+    std::ifstream inputFile("/proc/self/status");
     if (!inputFile.is_open()) {
-        XCOLLIE_LOGI("Error: Could not open /proc/self/status");
+        XCOLLIE_LOGI("Error: Could not open proc/self/status");
         return 0;
     }
 
@@ -222,7 +206,7 @@ int GetNSPid()
             return value;
         }
     }
-    XCOLLIE_LOGI("Error: Failed to read from /proc/self/status");
+    XCOLLIE_LOGI("Error: Failed to read pid from /proc/self/status");
     return 0;
 }
 
@@ -237,7 +221,7 @@ int ReportEvent(bool isFreezeEvent)
     std::string log = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(type);
     int uid = static_cast<int>(getuid());
     int pid = 0;
-    if (uid >= ARKWEB_UID_START && uid <= ARKWEB_UID_END) {
+    if (uid >= ARKWEB_UID_START && uid <= ARKWEB_UID_END) { // is arkweb process
         pid = GetNSPid();
     } else {
         pid = static_cast<int>(getpid());
@@ -249,7 +233,7 @@ int ReportEvent(bool isFreezeEvent)
         "EXTERNAL_LOG", log,
         "PROCESS_NAME", OHOS::HiviewDFX::Watchdog::GetInstance().GetOutSelfProcName());
     if (result != 0) {
-        XCOLLIE_LOGE("OH_HiCollie_AssociateProcessReport result:%{public}d, current pid:%{public}d",
+        XCOLLIE_LOGE("OH_HiCollie_AssociateProcessReport result: %{public}d, current pid: %{public}d",
             result, getpid());
     }
     return 0;
@@ -321,7 +305,7 @@ HiCollie_ErrorCode OH_HiCollie_Init_JankDetection(OH_HiCollie_BeginFunc* beginFu
 HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Report", 1);
 #endif
     if (OHOS::HiviewDFX::IsAppMainThread()) {
         return HICOLLIE_WRONG_THREAD_CONTEXT;
@@ -342,7 +326,7 @@ HiCollie_ErrorCode OH_HiCollie_Report(bool* isSixSecond)
 HiCollie_ErrorCode OH_HiCollie_ReportInputBlock()
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_ReportInputBlock", 1);
 #endif
     if (OHOS::HiviewDFX::Watchdog::GetInstance().GetAppDebug()) {
         XCOLLIE_LOGD("Bussiness Input Block: Get appDebug state is true");
@@ -357,7 +341,7 @@ HiCollie_ErrorCode OH_HiCollie_ReportInputBlock()
 HiCollie_ErrorCode OH_HiCollie_SetTimer(HiCollie_SetTimerParam param, int *id)
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_Init_JankDetection", 1);
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_SetTimer", 1);
 #endif
     if (param.name == nullptr) {
         XCOLLIE_LOGE("timer name is nullptr");
@@ -407,9 +391,7 @@ void OH_HiCollie_CancelTimer(int id)
 void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    if (!OHOS::HiviewDFX::IsArkWebThread()) {
-        HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_SetFreezeCallback", 1);
-    }
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_SetFreezeCallback", 1);
 #endif
     return OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeHandler(callback);
 }
@@ -417,9 +399,7 @@ void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 HiCollie_ErrorCode OH_HiCollie_AssociateProcessReport(bool isFreezeEvent)
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    if (!OHOS::HiviewDFX::IsArkWebThread()) {
-        HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_AssociateProcessReport", 1);
-    }
+    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_AssociateProcessReport", 1);
 #endif
     if (OHOS::HiviewDFX::ReportEvent(isFreezeEvent) != 0) {
         return OH_HICOLLIE_REACH_REPORT_LIMIT;

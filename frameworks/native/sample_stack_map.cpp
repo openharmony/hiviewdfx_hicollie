@@ -12,11 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "sample_stack_map.h"
- 
+
 #include "xcollie_utils.h"
- 
+
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
@@ -24,11 +24,11 @@ constexpr size_t SAMPLE_STACK_MAP_MAX_SIZE = 5;
 constexpr uint64_t SAMPLE_STACK_MAP_EXPIRE_MS = 180000;
 constexpr size_t SAMPLE_STACK_MAP_VALUE_MAX_SIZE = 256 * 1024;
 }
- 
+
 SampleStackMap::SampleStackMap() {}
- 
+
 SampleStackMap::~SampleStackMap() {}
- 
+
 void SampleStackMap::Set(const std::string& key, const std::string& value)
 {
     if (value.size() > SAMPLE_STACK_MAP_VALUE_MAX_SIZE) {
@@ -46,7 +46,7 @@ void SampleStackMap::Set(const std::string& key, const std::string& value)
     auto orderIt = order_.insert(order_.end(), key);
     map_[key] = {value, orderIt, GetCurrentTickMillseconds()};
 }
- 
+
 std::string SampleStackMap::GetAndRemove(const std::string& key)
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -61,7 +61,7 @@ std::string SampleStackMap::GetAndRemove(const std::string& key)
     order_.erase(orderIt);
     return value;
 }
- 
+
 void SampleStackMap::ExpireOldEntries()
 {
     uint64_t now = GetCurrentTickMillseconds();

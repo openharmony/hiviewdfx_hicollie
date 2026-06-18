@@ -267,6 +267,7 @@ ohos_unittest("XCollieFfrtTaskTest") {
     "hilog:libhilog",
     "init:libbegetutil",
   ]
+
   defines = []
   if (defined(global_parts_info) &&
       defined(global_parts_info.notification_eventhandler)) {
@@ -282,11 +283,11 @@ ohos_unittest("XCollieFfrtTaskTest") {
 ohos_unittest("XcollieMgrTest") {
   module_out_path = module_output_path
   sources = [ "xcollie_mgr_test.cpp" ]
- 
+
   configs = [ ":module_private_config" ]
- 
+
   deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
- 
+
   external_deps = [
     "c_utils:utils",
     "googletest:gtest_main",

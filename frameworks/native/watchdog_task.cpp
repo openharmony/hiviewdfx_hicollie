@@ -47,13 +47,13 @@ constexpr const char* CORE_PROCS[] = {
     "multimodalinput", "com.ohos.sceneboard", "render_service"
 };
 constexpr const int ASYNC_BINDER_SPACE_NUM = 2;
-constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
-constexpr int SAMPLE_STACK_MAX_COUNT = 10;
 #ifdef LOW_MEMORY_FREEZE_STRATEGY_ENABLE
 constexpr uint64_t LOW_MEMORY_CHECK_WINDOW = 60 * 1000;
 constexpr uint64_t MAX_LOW_MEMORY_FREEZE_TIME = 60 * 1000;
 constexpr int64_t BELOW_MEM_SIZE = 500 * 1024;
 #endif
+constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
+constexpr int SAMPLE_STACK_MAX_COUNT = 10;
 }
 
 int64_t WatchdogTask::curId = 0;
@@ -245,7 +245,6 @@ bool WatchdogTask::IsBinderSpaceInsufficient()
     uint32_t pid = static_cast<uint32_t>(getprocpid());
     unsigned long totalSize = UINT32_MAX;
     unsigned long oneWayFreeSize = UINT32_MAX;
-
     if (IPCSkeleton::GetMemoryUsage(pid, totalSize, oneWayFreeSize) != 0) {
         XCOLLIE_LOGE("GetMemoryUsage failed for pid %{public}d", pid);
         return false;
@@ -360,7 +359,7 @@ void WatchdogTask::SendHisyseventEvent(const HisyseventParam& param)
     std::string stackTrace = GetProcessStacktrace();
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
         "PID", param.pid, "TID", watchdogTid, "TGID", param.gid, "UID", param.uid, "MODULE_NAME", moduleName,
-        "PROCESS_NAME", processName, "MSG", param.sendMsg,  "STACK", stackTrace,
+        "PROCESS_NAME", processName, "MSG", param.sendMsg, "STACK", stackTrace,
         "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo);
     if (ret == ERR_OVER_SIZE) {
         std::string stack;
