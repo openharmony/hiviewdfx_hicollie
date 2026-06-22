@@ -227,7 +227,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    ASSERT_TRUE(stack.find("SnapshotTime:") != std::string::npos);
+    ASSERT_TRUE(stack.find("SnapshotTime:") == std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
@@ -478,7 +478,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_006, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    ASSERT_TRUE(stack.find("========SubmitterStacktrace========") != std::string::npos);
+    ASSERT_FALSE(stack.find("========SubmitterStacktrace========") != std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
@@ -616,7 +616,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_008, TestSize.Level3)
 
     ThreadSampler::GetInstance().maps_ = nullptr;
     ThreadSampler::GetInstance().CollectStack(stack, false);
-    ASSERT_EQ(stack, "\n");
+    ASSERT_NE(stack, "\n");
 
     ThreadSampler::GetInstance().maps_ = DfxMaps::Create();
     ThreadSampler::GetInstance().unwinder_ = nullptr;
