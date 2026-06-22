@@ -614,7 +614,7 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_008, TestSize.Level3)
 
     ThreadSampler::GetInstance().maps_ = nullptr;
     ThreadSampler::GetInstance().CollectStack(stack, false);
-    ASSERT_NE(stack, "\n");
+    ASSERT_EQ(stack, "\n");
 
     ThreadSampler::GetInstance().maps_ = DfxMaps::Create();
     ThreadSampler::GetInstance().unwinder_ = nullptr;

@@ -75,6 +75,15 @@ bool IsAppMainThread()
     return false;
 }
 
+bool IsArkWebThread()
+{
+    static int uid = static_cast<int>(getuid());
+    if (uid >= ARKWEB_UID_START && uid <= ARKWEB_UID_END) {
+        return true;
+    }
+    return false;
+}
+
 bool CheckManualReportDuration(bool isFreezeEvent)
 {
     constexpr uint32_t reportIntervalMs = 60000;
@@ -391,7 +400,9 @@ void OH_HiCollie_CancelTimer(int id)
 void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_SetFreezeCallback", 1);
+    if (!OHOS::HiviewDFX::IsArkWebThread()) {
+        HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_SetFreezeCallback", 1);
+    }
 #endif
     return OHOS::HiviewDFX::Watchdog::GetInstance().SetFreezeHandler(callback);
 }
@@ -399,7 +410,9 @@ void* OH_HiCollie_SetFreezeCallback(OH_HiCollie_FreezeCallback callback)
 HiCollie_ErrorCode OH_HiCollie_AssociateProcessReport(bool isFreezeEvent)
 {
 #ifdef HICOLLIE_ENABLE_API_METRICS
-    HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_AssociateProcessReport", 1);
+    if (!OHOS::HiviewDFX::IsArkWebThread()) {
+        HISTOGRAM_BOOLEAN("PerformanceAnalysisKit.ApiCall.OH_HiCollie_AssociateProcessReport", 1);
+    }
 #endif
     if (OHOS::HiviewDFX::ReportEvent(isFreezeEvent) != 0) {
         return OH_HICOLLIE_REACH_REPORT_LIMIT;
