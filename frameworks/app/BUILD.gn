@@ -26,6 +26,7 @@ config("app_hicollie_include") {
 
 ohos_source_set("libapp_hicollie_source") {
   branch_protector_ret = "pac_ret"
+  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
   sources = [
     "src/app_watchdog.cpp",
     "src/app_watchdog_inner.cpp",

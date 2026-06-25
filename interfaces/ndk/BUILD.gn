@@ -15,6 +15,7 @@ import("//build/ohos.gni")
 import("//base/hiviewdfx/hicollie/hicollie.gni")
 
 ohos_shared_library("ohhicollie") {
+  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
   include_dirs = [
     "include",
     "../native/innerkits/include/xcollie",
