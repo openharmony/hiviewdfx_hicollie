@@ -26,6 +26,7 @@ config("hicollie_include") {
 
 ohos_source_set("libhicollie_source") {
   branch_protector_ret = "pac_ret"
+  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
   sources = [
     "handler_checker.cpp",
     "ipc_full.cpp",

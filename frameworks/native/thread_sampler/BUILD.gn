@@ -21,6 +21,7 @@ config("thread_sampler_config") {
 }
 
 ohos_shared_library("libthread_sampler") {
+  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
   sources = [
     "thread_sampler.cpp",
     "thread_sampler_api.cpp",
@@ -49,6 +50,7 @@ ohos_shared_library("libthread_sampler") {
 }
 
 ohos_static_library("libthread_sampler_static") {
+  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
   sources = [
     "thread_sampler.cpp",
     "thread_sampler_api.cpp",
