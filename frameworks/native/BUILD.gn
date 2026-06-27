@@ -33,7 +33,7 @@ ohos_source_set("libhicollie_source") {
     "-fno-omit-frame-pointer",
   ]
   if (target_cpu == "arm64") {
-    cflags_cc += [
+    cflags_cc = [
       "-fno-unwind-tables",
       "-fno-asynchronous-unwind-tables",
     ]
