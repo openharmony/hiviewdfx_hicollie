@@ -34,7 +34,12 @@ ohos_shared_library("libthread_sampler") {
       "-fno-unwind-tables",
       "-fno-asynchronous-unwind-tables",
     ]
-    ldflags = [ "-Wl,-s" ]
+    ldflags = [
+      "-flto=auto",
+      "-Wl,--gc-sections",
+      "-Wl,-z,nocopyreloc",
+      "-Wl,-s",
+    ]
   }
   sources = [
     "thread_sampler.cpp",
