@@ -16,8 +16,14 @@ import("//build/ohos.gni")
 ohos_rust_shared_library("hicollie_rust") {
   sources = [ "src/lib.rs" ]
   rustflags = [ "-Zstack-protector=all" ]
+  rustflags = [
+    "-Zstack-protector=all",
+    "-Copt-level=z",
+    "-Clto",
+    "-Zdylib-lto",
+  ]
 
-  deps = [ "../native/innerkits:libhicollie" ] //
+  deps = [ "../native/innerkits:libhicollie" ]
 
   crate_name = "hicollie_rust"
   crate_type = "dylib"
