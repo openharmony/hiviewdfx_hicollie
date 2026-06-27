@@ -19,8 +19,7 @@ ohos_rust_shared_library("hicollie_rust") {
   rustflags = [
     "-Zstack-protector=all",
     "-Copt-level=z",
-    "-Clto",
-    "-Zdylib-lto",
+    "-Ccodegen-units=1",
   ]
 
   deps = [ "../native/innerkits:libhicollie" ]
