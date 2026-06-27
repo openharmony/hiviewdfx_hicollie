@@ -26,7 +26,6 @@ ohos_shared_library("libthread_sampler") {
     "-fno-exceptions",
     "-fno-rtti",
     "-fno-omit-frame-pointer",
-    "-fdata-sections",
   ]
   if (target_cpu == "arm64") {
     cflags_cc = [
