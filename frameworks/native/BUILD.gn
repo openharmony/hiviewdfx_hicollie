@@ -26,7 +26,18 @@ config("hicollie_include") {
 
 ohos_source_set("libhicollie_source") {
   branch_protector_ret = "pac_ret"
-  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
+  cflags_cc = [
+    "-Oz",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-omit-frame-pointer",
+  ]
+  if (target_cpu == "arm64") {
+    cflags_cc += [
+      "-fno-unwind-tables",
+      "-fno-asynchronous-unwind-tables",
+    ]
+  }
   sources = [
     "handler_checker.cpp",
     "ipc_full.cpp",

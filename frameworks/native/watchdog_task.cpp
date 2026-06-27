@@ -54,6 +54,7 @@ constexpr int64_t BELOW_MEM_SIZE = 500 * 1024;
 #endif
 constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
 constexpr int SAMPLE_STACK_MAX_COUNT = 10;
+constexpr int LEFT_TIME_EXIT_ALARM_SECONDS = 11;
 }
 
 int64_t WatchdogTask::curId = 0;
@@ -155,6 +156,7 @@ void WatchdogTask::DoCallback()
     if (flag & XCOLLIE_FLAG_RECOVERY) {
         XCOLLIE_LOGE("%{public}s blocked, after timeout %{public}llu ,process will exit", name.c_str(),
             static_cast<long long>(timeout));
+        alarm(LEFT_TIME_EXIT_ALARM_SECONDS);
         std::thread exitFunc([] {
             std::string description = "timeout, exit...";
             WatchdogInner::LeftTimeExitProcess(description);
