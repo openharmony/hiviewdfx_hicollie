@@ -28,26 +28,7 @@ config("libhicollie_pub_config") {
 
 ohos_shared_library("libhicollie") {
   branch_protector_ret = "pac_ret"
-  cflags_cc = [
-    "-Oz",
-    "-fno-exceptions",
-    "-fno-rtti",
-    "-flto",
-    "-ffunction-sections",
-    "-fdata-sections",
-  ]
-  if (target_cpu == "arm64") {
-    cflags_cc += [
-      "-fno-unwind-tables",
-      "-fno-asynchronous-unwind-tables",
-    ]
-    ldflags = [
-      "-flto=auto",
-      "-Wl,--gc-sections",
-      "-Wl,-z,nocopyreloc",
-      "-Wl,-s",
-    ]
-  }
+  ldflags = [ "-Wl,-s" ]
 
   public_configs = [ ":libhicollie_pub_config" ]
   deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
