@@ -26,7 +26,6 @@ ohos_shared_library("libthread_sampler") {
     "-fno-exceptions",
     "-fno-rtti",
     "-fno-omit-frame-pointer",
-    "-ffunction-sections",
     "-fdata-sections",
   ]
   if (target_cpu == "arm64") {
@@ -34,12 +33,7 @@ ohos_shared_library("libthread_sampler") {
       "-fno-unwind-tables",
       "-fno-asynchronous-unwind-tables",
     ]
-    ldflags = [
-      "-flto=auto",
-      "-Wl,--gc-sections",
-      "-Wl,-z,nocopyreloc",
-      "-Wl,-s",
-    ]
+    ldflags = [ "-Wl,-s", ]
   }
   sources = [
     "thread_sampler.cpp",
