@@ -35,7 +35,6 @@ ohos_shared_library("libhicollie") {
     "-flto",
     "-ffunction-sections",
     "-fdata-sections",
-    "-fno-omit-frame-pointer",
   ]
   if (target_cpu == "arm64") {
     cflags_cc += [
