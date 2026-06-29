@@ -138,7 +138,7 @@ using InitAsyncStackFn = bool(*)();
 static bool g_betaVersion = OHOS::system::GetParameter("const.logsystem.versiontype", "unknown") == "beta";
 }
 
-std::mutex WatchdogInner::lockFfrt_;
+ffrt::mutex WatchdogInner::taskIdCntMtx_;
 static int32_t g_fd = NOT_OPEN;
 static bool g_kickWatchdog = false;
 
@@ -1673,7 +1673,7 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
     }
     bool isExist = false;
     {
-        std::unique_lock<std::mutex> lock(lockFfrt_);
+        std::unique_lock<ffrt::mutex> uniqueLock(taskIdCntMtx_);
         auto &map = WatchdogInner::GetInstance().taskIdCnt;
         if (map.find(taskId) != map.end()) {
             isExist = true;
@@ -1690,7 +1690,10 @@ void WatchdogInner::FfrtCallback(uint64_t taskId, const char *taskInfo, uint32_t
             std::lock_guard<std::mutex> lock(WatchdogInner::GetInstance().lock_);
             WatchdogInner::GetInstance().taskNameSet_.erase(sampleStackName);
         }
-        WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
+        {
+            std::unique_lock<ffrt::mutex> uniqueLock(taskIdCntMtx_);
+            WatchdogInner::GetInstance().taskIdCnt.erase(taskId);
+        }
         WatchdogInner::SendFfrtEvent({description, "SERVICE_BLOCK", taskInfo, faultTimeStr, true, sampleStack});
         IsExistProcess(description);
     } else {
