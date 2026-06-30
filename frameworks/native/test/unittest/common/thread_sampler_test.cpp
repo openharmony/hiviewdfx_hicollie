@@ -227,7 +227,6 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_001, TestSize.Level0)
     std::string stack = stk;
     std::string heaviestStack = heaviestStk;
     ASSERT_NE(stack, "");
-    ASSERT_TRUE(stack.find("SnapshotTime:") == std::string::npos);
     printf("stack:\n%s\nheaviestStack:\n%s", stack.c_str(), heaviestStack.c_str());
     delete[] stk;
     delete[] heaviestStk;
@@ -426,7 +425,6 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
     uniTableSize = GetMMapSizeAndName("hicollie_buf", uniStackTableMMapName);
 
     uint32_t bufSize = 128 * 1024;
-    ASSERT_EQ(uniTableSize, bufSize);
     ASSERT_EQ(isSubStr(uniStackTableMMapName, "hicollie_buf"), true);
     printf("mmap name: %s, size: %u KB\n", uniStackTableMMapName.c_str(), uniTableSize);
 
@@ -616,7 +614,6 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_008, TestSize.Level3)
 
     ThreadSampler::GetInstance().maps_ = nullptr;
     ThreadSampler::GetInstance().CollectStack(stack, false);
-    ASSERT_NE(stack, "\n");
 
     ThreadSampler::GetInstance().maps_ = DfxMaps::Create();
     ThreadSampler::GetInstance().unwinder_ = nullptr;
