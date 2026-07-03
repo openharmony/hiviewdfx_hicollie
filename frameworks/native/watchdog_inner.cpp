@@ -933,7 +933,7 @@ int32_t WatchdogInner::StartTraceProfile()
     traceContent_.dumpCount = 0;
     traceContent_.traceCount = 0;
     auto traceTask = [this] { this->DumpTraceTask(DURATION_TIME); };
-    WatchdogTask task("TraceCollector", traceTask, 0, DURATION_TIME, true);
+    WatchdogTask task("TraceCollector", traceTask, 0, DURATION_TIME, false);
     {
         std::unique_lock<std::mutex> lock(lock_);
         InsertWatchdogTaskLocked("TraceCollector", std::move(task));
