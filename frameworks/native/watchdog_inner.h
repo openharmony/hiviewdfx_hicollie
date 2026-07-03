@@ -32,6 +32,7 @@
 #include "client/trace_collector_client.h"
 #include "xcollie_define.h"
 #include "watchdog_inner_data.h"
+#include "ffrt.h"
 
 namespace OHOS {
 namespace HiviewDFX {
@@ -48,7 +49,6 @@ public:
         bool isDumpStack;
         std::string sampleStack;
     };
-
     std::map<int64_t, int> taskIdCnt;
     int AddThread(const std::string &name, std::shared_ptr<AppExecFwk::EventHandler> handler,
         TimeOutCallback timeOutCallback, uint64_t interval, uint32_t priority = PRIORITY_IMMEDIATE);
@@ -174,7 +174,6 @@ private:
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
     std::unique_ptr<std::thread> threadLoop_;
     std::mutex lock_;
-    static std::mutex lockFfrt_;
     std::condition_variable condition_;
     std::atomic_bool isNeedStop_ = false;
     std::once_flag flag_;
@@ -220,6 +219,7 @@ private:
     bool initAsyncStack_ {false};
     int reservedTime_ {DEFAULT_RESERVED_TIME};
     static std::atomic_bool isTestExist_;
+    static ffrt::mutex taskIdCntMtx_;
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
