@@ -21,6 +21,7 @@ config("thread_sampler_config") {
 }
 
 ohos_shared_library("libthread_sampler") {
+  branch_protector_ret = "pac_ret"
   cflags_cc = [
     "-Oz",
     "-fno-exceptions",
