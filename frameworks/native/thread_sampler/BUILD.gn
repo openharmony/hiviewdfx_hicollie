@@ -68,6 +68,7 @@ ohos_static_library("libthread_sampler_static") {
     "-fno-rtti",
     "-fno-omit-frame-pointer",
   ]
+  branch_protector_ret = "pac_ret"
   if (target_cpu == "arm64") {
     cflags_cc += [
       "-fno-unwind-tables",
