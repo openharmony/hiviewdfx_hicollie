@@ -78,7 +78,6 @@ ohos_source_set("libhicollie_source") {
     defines += [ "WEARABLE_FOUNDATION_FFRT_CALLBACK_TIME_ENABLE" ]
   }
 
-
   if (hicollie_low_memory_freeze_strategy_enable) {
     defines += [ "LOW_MEMORY_FREEZE_STRATEGY_ENABLE" ]
   }
