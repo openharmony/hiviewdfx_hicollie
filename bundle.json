@@ -17,7 +17,8 @@
             "hicollie_suspend_check_enable",
             "hicollie_low_memory_freeze_strategy_enable",
             "hicollie_kick_watchdog_enable",
-            "hicollie_asyncbinderspacefull_enable"
+            "hicollie_asyncbinderspacefull_enable",
+            "hicollie_wearable_foundation_ffrt_callback_time_enable"
         ],
         "syscap": [
             "SystemCapability.HiviewDFX.HiCollie"
