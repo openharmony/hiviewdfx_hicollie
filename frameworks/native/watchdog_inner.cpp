@@ -61,8 +61,8 @@ enum CatchLogType {
     LOGTYPE_SAMPLE_STACK = 1,
     LOGTYPE_COLLECT_TRACE = 2
 };
-constexpr char STACK_CHECKER[] = "ThreadSampler";
-constexpr char TRACE_CHECKER[] = "TraceCollector";
+constexpr const char* STACK_CHECKER = "ThreadSampler";
+constexpr const char* TRACE_CHECKER = "TraceCollector";
 constexpr const char* FREEZE_SAMPLE = "FreezeSampler";
 constexpr int ONE_DAY_LIMIT = 24 * 60 * 60 * 1000;
 constexpr int ONE_HOUR_LIMIT = 60 * 60 * 1000;
@@ -656,9 +656,9 @@ bool WatchdogInner::StartScrollProfile(const TimePoint& endTime, int64_t duratio
             isMainThreadStackEnabled_ = true;
         }
     };
-    WatchdogTask task("ThreadSampler", sampleTask, 0, sampleInterval, false);
+    WatchdogTask task(STACK_CHECKER, sampleTask, 0, sampleInterval, false);
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked("ThreadSampler", std::move(task));
+    InsertWatchdogTaskLocked(STACK_CHECKER, std::move(task));
     return true;
 }
 
@@ -717,7 +717,7 @@ void WatchdogInner::StartProfileMainThread(const TimePoint& endTime, int64_t dur
     };
 
     std::unique_lock<std::mutex> lock(lock_);
-    InsertWatchdogTaskLocked("ThreadSampler", WatchdogTask("ThreadSampler", sampleTask, 0, sampleInterval, false));
+    InsertWatchdogTaskLocked(STACK_CHECKER, WatchdogTask(STACK_CHECKER, sampleTask, 0, sampleInterval, false));
 }
 
 std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
@@ -933,10 +933,10 @@ int32_t WatchdogInner::StartTraceProfile()
     traceContent_.dumpCount = 0;
     traceContent_.traceCount = 0;
     auto traceTask = [this] { this->DumpTraceTask(DURATION_TIME); };
-    WatchdogTask task("TraceCollector", traceTask, 0, DURATION_TIME, false);
+    WatchdogTask task(TRACE_CHECKER, traceTask, 0, DURATION_TIME, false);
     {
         std::unique_lock<std::mutex> lock(lock_);
-        InsertWatchdogTaskLocked("TraceCollector", std::move(task));
+        InsertWatchdogTaskLocked(TRACE_CHECKER, std::move(task));
     }
     XCOLLIE_LOGI("success to submit start trace");
     return 0;
@@ -1266,11 +1266,11 @@ void WatchdogInner::UpdateAppStartContent(const std::map<std::string, int64_t>& 
 void WatchdogInner::ParseAppStartParams(const std::string& line, const std::string& eventName)
 {
     std::map<std::string, int64_t> keyValueMap;
-    std::stringstream iss(line);
-    std::string key;
-    std::string value;
-    std::string tokens;
-    while (getline(iss, tokens, ',') && !tokens.empty()) {
+    std::vector<std::string> tokensList;
+    SplitStr(line, ",", tokensList, true, false);
+    for (const std::string& tokens : tokensList) {
+        std::string key;
+        std::string value;
         if (!GetKeyValueByStr(tokens, key, value, ':') ||
             value.size() > std::to_string(INT64_MAX).length()) {
             XCOLLIE_LOGE("ParseAppStartParams failed, key:%{public}s value:%{public}s",
@@ -1302,10 +1302,10 @@ void WatchdogInner::ReadAppStartConfig(const std::string& filePath)
         XCOLLIE_LOGE("get content from file:%{public}s failed, errno:%{public}d", APP_START_CONFIG, errno);
         return;
     }
-    std::stringstream iss(str);
-    std::string line;
+    std::vector<std::string> lines;
+    SplitStr(str, "\n", lines, false, false);
     std::string eventName;
-    while (std::getline(iss, line)) {
+    for (const std::string& line : lines) {
         if (line.empty() || line.find(KEY_EVENT_NAME) == std::string::npos) {
             continue;
         }
@@ -1375,7 +1375,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
         XCOLLIE_LOGW("queuedTask name is empty.");
     } else if (queuedTaskCheck.name == STACK_CHECKER && isMainThreadStackEnabled_) {
         checkerQueue_.pop();
-        taskNameSet_.erase("ThreadSampler");
+        taskNameSet_.erase(STACK_CHECKER);
         if (!g_isDumpStack && !g_isReuseStack && Deinit()) {
             ResetThreadSamplerFuncs();
         }
@@ -1396,7 +1396,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
         XCOLLIE_LOGI("Detect app start sample task complete.");
     } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
         checkerQueue_.pop();
-        taskNameSet_.erase("TraceCollector");
+        taskNameSet_.erase(TRACE_CHECKER);
         isMainThreadTraceEnabled_ = false;
         if (traceContent_.dumpCount < COLLECT_TRACE_MIN) {
             traceContent_.traceState = DumpStackState::DEFAULT;
@@ -1723,7 +1723,7 @@ void WatchdogInner::InsertSampleStackTaskImpl(const std::string& sampleStackName
     std::string headerInfo = "#ThreadInfos Tid: " + std::to_string(tid) + "\n";
     auto count = std::make_shared<int>(0);
     auto task = [tid, sampleStackName, count, headerInfo] {
-        std::string timePrefix = "SnapshotTime:" + FormatTimeWithMs("%Y-%m-%d-%H-%M-%S") + "\n";
+        std::string timePrefix = "SnapshotTime:" + FormatTimeWithUs("%Y-%m-%d-%H-%M-%S") + "\n";
 
         std::string stack;
         if (GetBacktraceStringByTid(stack, tid, 0, true)) {
@@ -1821,27 +1821,29 @@ void WatchdogInner::GetFfrtTaskTid(int32_t& tid, const std::string& msg)
     std::string workerTidFrontStr = " worker tid ";
     std::string taskIdFrontStr = " is running, task id ";
     std::string queueNameStr = " name " + msg.substr(queueStartPos, queueNameLength);
-    std::istringstream issMsg(msg);
-    std::string line;
-    while (std::getline(issMsg, line, '\n')) {
+    size_t lineStart = 0;
+    size_t lineEnd = msg.find('\n');
+    while (lineEnd != std::string::npos) {
+        const std::string line = msg.substr(lineStart, lineEnd - lineStart);
+        lineStart = lineEnd + 1;
         size_t workerTidFrontPos = line.find(workerTidFrontStr);
         size_t taskIdFrontPos = line.find(taskIdFrontStr);
         size_t queueNamePos = line.find(queueNameStr);
         size_t workerStartPos = workerTidFrontPos + workerTidFrontStr.length();
         if (workerTidFrontPos == std::string::npos || taskIdFrontPos == std::string::npos ||
             queueNamePos == std::string::npos || taskIdFrontPos <= workerStartPos) {
+            lineEnd = msg.find('\n', lineStart);
             continue;
         }
         size_t tidLength = taskIdFrontPos - workerStartPos;
         if (tidLength < std::to_string(INT32_MAX).length()) {
             std::string tidStr = line.substr(workerStartPos, tidLength);
-            if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char& c) {
-                return isdigit(c);
-            })) {
+            if (IsNum(tidStr)) {
                 tid = std::stoi(tidStr);
                 return;
             }
         }
+        lineEnd = msg.find('\n', lineStart);
     }
 }
 
@@ -2043,9 +2045,7 @@ int WatchdogInner::ConvertStrToNum(const std::map<std::string, std::string>& par
 
     int num = -1;
     if (!value.empty() && value.size() < std::to_string(INT32_MAX).length()) {
-        if (std::all_of(std::begin(value), std::end(value), [] (const char &c) {
-            return isdigit(c);
-        })) {
+        if (IsNum(value)) {
             num = std::stoi(value);
         }
     }

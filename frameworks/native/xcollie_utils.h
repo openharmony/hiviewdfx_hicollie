@@ -19,7 +19,6 @@
 #include <chrono>
 #include <string>
 #include <sys/ioctl.h>
-#include <fstream>
 #include <map>
 #include <set>
 #include <vector>
@@ -40,6 +39,7 @@ constexpr uint64_t TO_MILLISECOND_MULTPLE = 1000;
 constexpr uint64_t IPC_FULL_TASK_PARAM = 0;
 constexpr int64_t SEC_TO_MICROSEC = 1000000;
 constexpr int BUFF_STACK_SIZE = 20 * 1024;
+constexpr size_t PROC_BUFFER_SIZE = 16384;
 constexpr const char* const WATCHDOG_DIR = "/data/storage/el2/log/watchdog/";
 constexpr const char* const FREEZE_DIR = "/data/storage/el2/log/watchdog/freeze/";
 constexpr uint32_t RENDER_SERVICE_UID = 1003;
@@ -132,7 +132,7 @@ std::string TrimStr(const std::string& str, const char cTrim = ' ');
 void SplitStr(const std::string& str, const std::string& sep,
     std::vector<std::string>& strs, bool canEmpty = false, bool needTrim = true);
 
-int ParsePeerBinderPid(std::ifstream& fin, int32_t pid);
+int ParsePeerBinderPid(const std::string& rawBinderInfo, int32_t pid);
 
 bool KillProcessByPid(int32_t pid);
 
@@ -148,11 +148,13 @@ std::string GetFormatDate();
 
 std::string FormatTime(const std::string &format);
 
-std::string FormatTimeWithMs(const std::string &format);
+std::string FormatTimeWithUs(const std::string &format);
 
 std::string FormatTimeImpl(const std::string &format, int64_t* ns);
 
 std::vector<std::string> GetFileToList(std::string line);
+
+bool ReadProcFile(const char* path, std::string& content, size_t readSize);
 
 std::string StrSplit(const std::string& str, uint16_t index);
 

@@ -24,6 +24,7 @@
 #include <sstream>
 #include <securec.h>
 #include <iostream>
+#include <new>
 #include <unistd.h>
 #include <fcntl.h>
 #include <filesystem>
@@ -55,13 +56,14 @@ const int START_PATH_LEN = 128;
 constexpr int64_t MAX_TIME_BUFF = 64;
 constexpr int64_t SEC_TO_MILLISEC = 1000;
 constexpr int64_t SEC_TO_NANOSEC = 1000000000;
-constexpr size_t MILLISEC_DIGIT_COUNT = 6;
+constexpr size_t MICROSEC_DIGIT_COUNT = 6;
 constexpr int64_t MINUTE_TO_S = 60; // 60s
 constexpr size_t TOTAL_HALF = 2; // 2 : remove half of the total
 constexpr size_t DEFAULT_LOGSTORE_MIN_KEEP_FILE_COUNT = 100;
 constexpr mode_t DEFAULT_LOG_DIR_MODE = 0770;
 constexpr unsigned int NEXT_POS = 1;
-constexpr const char* const LOGGER_TEANSPROC_PATH = "/proc/transaction_proc";
+constexpr size_t FIRST_LINE_BUFFER_SIZE = 256;
+constexpr const char* const LOGGER_TRANSPROC_PATH = "/proc/transaction_proc";
 constexpr const char* const KEY_DEVELOPER_MODE_STATE = "const.security.developermode.state";
 constexpr const char* const KEY_BETA_TYPE = "const.logsystem.versiontype";
 constexpr const char* const ENABLE_VAULE = "true";
@@ -73,9 +75,8 @@ static constexpr uint8_t DECIMAL = 10;
 static constexpr uint8_t FREE_ASYNC_INDEX = 6;
 static constexpr uint16_t FREE_ASYNC_MAX = 1000;
 
-constexpr const char* RECLAIM_AVAIL_BUFFER = "ReclaimAvailBuffer";
+constexpr size_t UID_PREFIX_LEN = 4;
 constexpr const char* MEM_AVAILABLE = "MemAvailable";
-constexpr const char* PROC_MEMORYVIEW = "/proc/memview";
 constexpr const char* PROC_MEMORYINFO = "/proc/meminfo";
 
 static std::string g_curProcName;
@@ -108,39 +109,85 @@ std::string FormatTimeImpl(const std::string &format, int64_t* ns)
 std::vector<std::string> GetFileToList(std::string line)
 {
     std::vector<std::string> strList;
-    std::istringstream lineStream(line);
-    std::string tmpstr;
-    while (lineStream >> tmpstr) {
-        strList.push_back(tmpstr);
+    const char* cur = line.data();
+    const char* end = cur + line.size();
+    while (cur < end) {
+        while (cur < end && std::isspace(*cur)) {
+            ++cur;
+        }
+        const char* begin = cur;
+        while (cur < end && !std::isspace(*cur)) {
+            ++cur;
+        }
+        if (begin < cur) {
+            strList.emplace_back(begin, static_cast<size_t>(cur - begin));
+        }
     }
     return strList;
 }
 
 std::string StrSplit(const std::string& str, uint16_t index)
 {
-    std::vector<std::string> strings;
-    SplitStr(str, ":", strings);
-    return index < strings.size() ? strings[index] : "";
+    size_t begin = 0;
+    uint16_t curIndex = 0;
+    while (begin <= str.size()) {
+        size_t end = str.find(':', begin);
+        if (curIndex == index) {
+            return str.substr(begin, end == std::string::npos ? end : end - begin);
+        }
+        if (end == std::string::npos) {
+            break;
+        }
+        begin = end + 1;
+        ++curIndex;
+    }
+    return "";
 }
 
-void BinderInfoLineParser(std::ifstream& fin,
+bool ReadProcFile(const char* path, std::string& content, size_t readSize)
+{
+    if (readSize == 0) {
+        return false;
+    }
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return false;
+    }
+    char* buffer = new(std::nothrow) char[readSize]();
+    if (buffer == nullptr) {
+        close(fd);
+        return false;
+    }
+    ssize_t bytes = read(fd, buffer, readSize - 1);
+    close(fd);
+    if (bytes <= 0) {
+        delete[] buffer;
+        return false;
+    }
+    content.assign(buffer, static_cast<size_t>(bytes));
+    delete[] buffer;
+    return true;
+}
+
+void BinderInfoLineParser(const std::string& rawBinderInfo,
     std::map<int, std::list<BinderInfo>>& manager,
     std::map<uint32_t, uint32_t>& asyncBinderMap,
-    std::vector<std::pair<uint32_t, uint64_t>>& freeAsyncSpacePairs,
-    std::string& rawBinderInfo)
+    std::vector<std::pair<uint32_t, uint64_t>>& freeAsyncSpacePairs)
 {
-    std::string line;
+    std::string::size_type start = 0;
     bool isBinderMatchup = false;
-    while (getline(fin, line)) {
-        rawBinderInfo += line + "\n";
-
-        if (line.find("context") != line.npos) {
+    while (start < rawBinderInfo.size()) {
+        std::string::size_type newlinePos = rawBinderInfo.find('\n', start);
+        std::string line = rawBinderInfo.substr(start,
+            (newlinePos == std::string::npos ? rawBinderInfo.size() : newlinePos) - start);
+        start = (newlinePos == std::string::npos ? rawBinderInfo.size() : newlinePos + 1);
+        if (line.find("context") != std::string::npos) {
             isBinderMatchup = true;
         }
 
         std::vector<std::string> strList = GetFileToList(line);
         if (isBinderMatchup) {
-            if (line.find("free_async_space") == line.npos && strList.size() == ARR_SIZE &&
+            if (line.find("free_async_space") == std::string::npos && strList.size() == ARR_SIZE &&
                 std::atoll(strList[FREE_ASYNC_INDEX].c_str()) < FREE_ASYNC_MAX) {
                 freeAsyncSpacePairs.emplace_back(std::atoi(strList[0].c_str()),
                     std::atoll(strList[FREE_ASYNC_INDEX].c_str()));
@@ -168,14 +215,13 @@ void BinderInfoLineParser(std::ifstream& fin,
     }
 }
 
-void BinderInfoParser(std::ifstream& fin,
+void BinderInfoParser(const std::string& rawBinderInfo,
     std::map<int, std::list<BinderInfo>>& manager,
-    std::set<int>& asyncPids,
-    std::string& rawBinderInfo)
+    std::set<int>& asyncPids)
 {
     std::map<uint32_t, uint32_t> asyncBinderMap;
     std::vector<std::pair<uint32_t, uint64_t>> freeAsyncSpacePairs;
-    BinderInfoLineParser(fin, manager, asyncBinderMap, freeAsyncSpacePairs, rawBinderInfo);
+    BinderInfoLineParser(rawBinderInfo, manager, asyncBinderMap, freeAsyncSpacePairs);
 
     std::sort(freeAsyncSpacePairs.begin(), freeAsyncSpacePairs.end(),
         [] (const auto& pairOne, const auto& pairTwo) { return pairOne.second < pairTwo.second; });
@@ -224,18 +270,19 @@ void ParseBinderCallChain(const ParseBinderCallChainParam& param)
 std::string GetBinderPeerPids(int32_t pid, int32_t tid, std::set<int>& syncPids, std::set<int>& asyncPids,
     TerminalBinderInfo& terminalBinder)
 {
-    std::ifstream fin;
-    std::string path = std::string(LOGGER_TEANSPROC_PATH);
-    fin.open(path.c_str());
-    if (!fin.is_open()) {
-        XCOLLIE_LOGE("open binder file failed, %{public}s.", path.c_str());
+    std::string rawBinderInfo;
+    std::string realPath = "";
+    if (!OHOS::PathToRealPath(LOGGER_TRANSPROC_PATH, realPath)) {
+        XCOLLIE_LOGE("Path to realPath failed, path:%{public}s", LOGGER_TRANSPROC_PATH);
+        return "";
+    }
+    if (!OHOS::LoadStringFromFile(realPath, rawBinderInfo)) {
+        XCOLLIE_LOGE("open binder file failed, %{public}s.", realPath.c_str());
         return "";
     }
 
     std::map<int, std::list<BinderInfo>> manager;
-    std::string rawBinderInfo;
-    BinderInfoParser(fin, manager, asyncPids, rawBinderInfo);
-    fin.close();
+    BinderInfoParser(rawBinderInfo, manager, asyncPids);
 
     if (pid <= 0 || manager.size() == 0 || manager.find(pid) == manager.end()) {
         return rawBinderInfo;
@@ -329,14 +376,16 @@ std::string GetFirstLine(const std::string& path)
         return "";
     }
 
-    std::ifstream inFile(checkPath);
-    if (!inFile) {
+    std::string content;
+    if (!ReadProcFile(checkPath, content, FIRST_LINE_BUFFER_SIZE)) {
         return "";
     }
-    std::string firstLine;
-    getline(inFile, firstLine);
-    inFile.close();
-    return firstLine;
+
+    size_t newlinePos = content.find('\n');
+    if (newlinePos != std::string::npos) {
+        return content.substr(0, newlinePos);
+    }
+    return content;
 }
 
 bool IsDeveloperOpen()
@@ -455,31 +504,42 @@ void SplitStr(const std::string& str, const std::string& sep,
     std::vector<std::string>& strs, bool canEmpty, bool needTrim)
 {
     strs.clear();
+    if (sep.empty()) {
+        strs.push_back(needTrim ? TrimStr(str) : str);
+        return;
+    }
     std::string strTmp = needTrim ? TrimStr(str) : str;
-    std::string strPart;
-    while (true) {
-        std::string::size_type pos = strTmp.find(sep);
-        if (pos == std::string::npos || sep.empty()) {
-            strPart = needTrim ? TrimStr(strTmp) : strTmp;
-            if (!strPart.empty() || canEmpty) {
-                strs.push_back(strPart);
-            }
-            break;
-        } else {
-            strPart = needTrim ? TrimStr(strTmp.substr(0, pos)) : strTmp.substr(0, pos);
-            if (!strPart.empty() || canEmpty) {
-                strs.push_back(strPart);
-            }
-            strTmp = strTmp.substr(sep.size() + pos, strTmp.size() - sep.size() - pos);
+    size_t start = 0;
+    size_t pos = strTmp.find(sep);
+    while (pos != std::string::npos) {
+        std::string strPart = strTmp.substr(start, pos - start);
+        if (needTrim) {
+            strPart = TrimStr(strPart);
         }
+        if (!strPart.empty() || canEmpty) {
+            strs.push_back(std::move(strPart));
+        }
+        start = pos + sep.size();
+        pos = strTmp.find(sep, start);
+    }
+    std::string strPart = strTmp.substr(start);
+    if (needTrim) {
+        strPart = TrimStr(strPart);
+    }
+    if (!strPart.empty() || canEmpty) {
+        strs.push_back(std::move(strPart));
     }
 }
 
-int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
+int ParsePeerBinderPid(const std::string& rawBinderInfo, int32_t pid)
 {
-    std::string line;
+    std::string::size_type start = 0;
     bool isBinderMatchup = false;
-    while (getline(fin, line)) {
+    while (start < rawBinderInfo.size()) {
+        std::string::size_type newlinePos = rawBinderInfo.find('\n', start);
+        std::string line = rawBinderInfo.substr(start,
+            (newlinePos == std::string::npos ? rawBinderInfo.size() : newlinePos) - start);
+        start = (newlinePos == std::string::npos ? rawBinderInfo.size() : newlinePos + 1);
         if (isBinderMatchup) {
             break;
         }
@@ -488,13 +548,7 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
             continue;
         }
 
-        std::istringstream lineStream(line);
-        std::vector<std::string> strList;
-        std::string tmpstr;
-        while (lineStream >> tmpstr) {
-            strList.push_back(tmpstr);
-        }
-
+        std::vector<std::string> strList = GetFileToList(line);
         auto splitPhase = [](const std::string& str, uint16_t index) -> std::string {
             std::vector<std::string> strings;
             SplitStr(str, ":", strings);
@@ -524,7 +578,7 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
             }
             return serverNum;
         }
-        if (line.find("context") != line.npos) {
+        if (line.find("context") != std::string::npos) {
             isBinderMatchup = true;
         }
     }
@@ -533,21 +587,18 @@ int ParsePeerBinderPid(std::ifstream& fin, int32_t pid)
 
 bool KillProcessByPid(int32_t pid)
 {
-    std::ifstream fin;
-    std::string path = std::string(LOGGER_TEANSPROC_PATH);
-    char resolvePath[PATH_MAX] = {0};
-    if (realpath(path.c_str(), resolvePath) == nullptr) {
-        XCOLLIE_LOGI("GetBinderPeerPids realpath error");
+    std::string rawBinderInfo;
+    std::string realPath = "";
+    if (!OHOS::PathToRealPath(LOGGER_TRANSPROC_PATH, realPath)) {
+        XCOLLIE_LOGI("Path to realPath failed, path:%{public}s", LOGGER_TRANSPROC_PATH);
         return false;
     }
-    fin.open(resolvePath);
-    if (!fin.is_open()) {
-        XCOLLIE_LOGI("open file failed, %{public}s.", resolvePath);
+    if (!OHOS::LoadStringFromFile(realPath, rawBinderInfo)) {
+        XCOLLIE_LOGI("open file failed, %{public}s.", realPath.c_str());
         return false;
     }
 
-    int peerBinderPid = ParsePeerBinderPid(fin, pid);
-    fin.close();
+    int peerBinderPid = ParsePeerBinderPid(rawBinderInfo, pid);
     if (peerBinderPid <= INIT_PID || peerBinderPid == pid) {
         XCOLLIE_LOGI("No PeerBinder process freeze occurs in the current process. "
             "peerBinderPid=%{public}d, pid=%{public}d", peerBinderPid, pid);
@@ -699,14 +750,17 @@ std::string FormatTime(const std::string &format)
     return FormatTimeImpl(format, nullptr);
 }
 
-std::string FormatTimeWithMs(const std::string &format)
+std::string FormatTimeWithUs(const std::string &format)
 {
     int64_t ns = 0;
     std::string result = FormatTimeImpl(format, &ns);
-    int64_t ms = ns / 1000;  // 纳秒转毫秒
-    std::ostringstream oss;
-    oss << std::setfill('0') << std::setw(MILLISEC_DIGIT_COUNT) << ms;
-    return result + "." + oss.str();
+    int64_t us = ns / 1000;  // 纳秒转微秒
+    char usBuf[MICROSEC_DIGIT_COUNT + 1];
+    if (snprintf_s(usBuf, sizeof(usBuf), sizeof(usBuf), "%06lld", static_cast<long long>(us)) < 0) {
+        XCOLLIE_LOGE("snprintf_s failed for us");
+        return result;
+    }
+    return result + "." + usBuf;
 }
 
 int64_t GetTimeStamp()
@@ -731,32 +785,29 @@ void* FunctionOpen(void* funcHandler, const char* funcName)
 
 int32_t GetUidByPid(const int32_t pid)
 {
-    std::string uidFlag = "Uid:";
     std::string cmdLinePath = "/proc/" + std::to_string(pid) + "/status";
-    std::string realPath = "";
-    if (!OHOS::PathToRealPath(cmdLinePath, realPath)) {
-        XCOLLIE_LOGE("Path to realPath failed.");
-        return -1;
-    }
-    std::ifstream file(realPath);
-    if (!file.is_open()) {
+    std::string content;
+    if (!ReadProcFile(cmdLinePath.c_str(), content, PROC_BUFFER_SIZE)) {
         XCOLLIE_LOGE("open realPath failed.");
         return -1;
     }
     int32_t uid = -1;
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.compare(0, uidFlag.size(), uidFlag) == 0) {
-            std::istringstream iss(line);
-            std::string temp;
-            if (std::getline(iss, temp, ':') && std::getline(iss, line)) {
-                std::istringstream(line) >> uid;
-                XCOLLIE_LOGI("get uid is %{public}d.", uid);
-                break;
-            }
+    std::string::size_type start = 0;
+    while (start < content.size()) {
+        std::string::size_type newlinePos = content.find('\n', start);
+        std::string line = content.substr(start,
+            (newlinePos == std::string::npos ? content.size() : newlinePos) - start);
+        start = (newlinePos == std::string::npos ? content.size() : newlinePos + 1);
+        if (line.compare(0, UID_PREFIX_LEN, "Uid:") != 0) {
+            continue;
         }
+        std::string::size_type colonPos = line.find(':', UID_PREFIX_LEN);
+        if (colonPos != std::string::npos) {
+            uid = std::strtol(line.c_str() + colonPos + 1, nullptr, DECIMAL);
+            XCOLLIE_LOGI("get uid is %{public}d.", uid);
+        }
+        break;
     }
-    file.close();
     return uid;
 }
 
@@ -800,11 +851,17 @@ std::map<std::string, int> GetReportTimesMap()
     std::map<std::string, int> keyValueMap;
     std::string reportTimes = system::GetParameter(KEY_REPORT_TIMES_TYPE, "");
     XCOLLIE_LOGD("get reporttimes value is %{public}s.", reportTimes.c_str());
-    std::stringstream reportParams(reportTimes);
-    std::string key;
-    std::string value;
-    std::string line;
-    while (getline(reportParams, line, ';') && !line.empty()) {
+    std::string::size_type start = 0;
+    while (start < reportTimes.size()) {
+        std::string::size_type semicolonPos = reportTimes.find(';', start);
+        std::string line = reportTimes.substr(start,
+            (semicolonPos == std::string::npos ? reportTimes.size() : semicolonPos) - start);
+        start = (semicolonPos == std::string::npos ? reportTimes.size() : semicolonPos + 1);
+        if (line.empty()) {
+            continue;
+        }
+        std::string key;
+        std::string value;
         if (!GetKeyValueByStr(line, key, value, ':')) {
             XCOLLIE_LOGE("Parse param failed, key:%{public}s value:%{public}s",
                 key.c_str(), value.c_str());
@@ -885,7 +942,7 @@ int64_t GetNumFromString(const std::string &str)
 int64_t GetAvailMemory()
 {
     std::string content;
-    std::string memInfoPath = OHOS::FileExists(PROC_MEMORYVIEW) ? PROC_MEMORYVIEW : PROC_MEMORYINFO;
+    std::string memInfoPath = PROC_MEMORYINFO;
     if (!OHOS::LoadStringFromFile(memInfoPath, content)) {
         XCOLLIE_LOGE("Get memInfoPath failed!");
         return -1;
@@ -898,7 +955,7 @@ int64_t GetAvailMemory()
     std::vector<std::string> vec;
     SplitStr(content, "\n", vec);
 
-    std::string targetField = (memInfoPath == PROC_MEMORYVIEW) ? RECLAIM_AVAIL_BUFFER : MEM_AVAILABLE;
+    std::string targetField = MEM_AVAILABLE;
 
     for (const std::string &mem : vec) {
         if (mem.find(targetField) != std::string::npos) {
@@ -922,13 +979,13 @@ void DumpKernelStack(struct HstackVal& val, int& ret)
     }
     fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
     ret = ioctl(fd, LOGGER_GET_STACK, &val);
-    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
-        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
-    }
     if (ret != 0) {
         XCOLLIE_LOGE("XCollieDumpKernel getStack failed");
     } else {
         XCOLLIE_LOGI("XCollieDumpKernel buff is %{public}s", val.hstackLogBuff);
+    }
+    if (fdsan_close_with_tag(fd, LOG_DOMAIN) != 0) {
+        XCOLLIE_LOGE("XCollieDumpKernel fdsan failed, errno:%{public}d", errno);
     }
 }
 

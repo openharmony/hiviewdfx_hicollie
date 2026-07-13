@@ -20,12 +20,18 @@
 namespace OHOS {
 namespace HiviewDFX {
 namespace {
-constexpr size_t SAMPLE_STACK_MAP_MAX_SIZE = 5;
-constexpr uint64_t SAMPLE_STACK_MAP_EXPIRE_MS = 180000;
+constexpr size_t SAMPLE_STACK_MAP_MAX_SIZE = 3;
+constexpr uint64_t SAMPLE_STACK_MAP_EXPIRE_MS = 120000;
 constexpr size_t SAMPLE_STACK_MAP_VALUE_MAX_SIZE = 256 * 1024;
 }
 
-SampleStackMap::SampleStackMap() {}
+SampleStackMap::SampleStackMap()
+{
+    for (size_t i = 0; i < SAMPLE_STACK_MAP_MAX_SIZE; i++) {
+        entries_[i].timestamp = 0;
+        entries_[i].valid = false;
+    }
+}
 
 SampleStackMap::~SampleStackMap() {}
 
@@ -38,40 +44,52 @@ void SampleStackMap::Set(const std::string& key, const std::string& value)
     }
     std::lock_guard<std::mutex> lock(mutex_);
     ExpireOldEntries();
-    if (map_.size() >= SAMPLE_STACK_MAP_MAX_SIZE) {
-        auto oldest = order_.begin();
-        map_.erase(*oldest);
-        order_.erase(oldest);
+
+    size_t oldestIdx = 0;
+    uint64_t oldestTime = UINT64_MAX;
+    size_t emptyIdx = SAMPLE_STACK_MAP_MAX_SIZE;
+
+    for (size_t i = 0; i < SAMPLE_STACK_MAP_MAX_SIZE; i++) {
+        if (entries_[i].valid && entries_[i].key == key) {
+            entries_[i].value = value;
+            entries_[i].timestamp = GetCurrentTickMillseconds();
+            return;
+        }
+        if (!entries_[i].valid) {
+            emptyIdx = i;
+        } else if (entries_[i].timestamp < oldestTime) {
+            oldestTime = entries_[i].timestamp;
+            oldestIdx = i;
+        }
     }
-    auto orderIt = order_.insert(order_.end(), key);
-    map_[key] = {value, orderIt, GetCurrentTickMillseconds()};
+
+    size_t idx = (emptyIdx < SAMPLE_STACK_MAP_MAX_SIZE) ? emptyIdx : oldestIdx;
+    entries_[idx].key = key;
+    entries_[idx].value = value;
+    entries_[idx].timestamp = GetCurrentTickMillseconds();
+    entries_[idx].valid = true;
 }
 
 std::string SampleStackMap::GetAndRemove(const std::string& key)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     ExpireOldEntries();
-    auto it = map_.find(key);
-    if (it == map_.end()) {
-        return "";
+    for (size_t i = 0; i < SAMPLE_STACK_MAP_MAX_SIZE; i++) {
+        if (entries_[i].valid && entries_[i].key == key) {
+            entries_[i].valid = false;
+            return std::move(entries_[i].value);
+        }
     }
-    auto orderIt = it->second.orderIt;
-    std::string value = std::move(it->second.value);
-    map_.erase(it);
-    order_.erase(orderIt);
-    return value;
+    return "";
 }
 
 void SampleStackMap::ExpireOldEntries()
 {
     uint64_t now = GetCurrentTickMillseconds();
-    for (auto it = order_.begin(); it != order_.end();) {
-        auto mapIt = map_.find(*it);
-        if (mapIt != map_.end() && (now - mapIt->second.timestamp) > SAMPLE_STACK_MAP_EXPIRE_MS) {
-            order_.erase(it++);
-            map_.erase(mapIt);
-        } else {
-            ++it;
+    for (size_t i = 0; i < SAMPLE_STACK_MAP_MAX_SIZE; i++) {
+        if (entries_[i].valid &&
+            (now - entries_[i].timestamp) > SAMPLE_STACK_MAP_EXPIRE_MS) {
+            entries_[i].valid = false;
         }
     }
 }
