@@ -194,10 +194,11 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
         printf("open path failed!, path=%s\n", path.c_str());
         FAIL();
     }
-    int result = ParsePeerBinderPid(fin, pid);
+    std::string content((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
     fin.close();
+    int result = ParsePeerBinderPid(content, pid);
     EXPECT_TRUE(result > 0);
- 
+
     path = "/data/test/log/test2.txt";
     ofs.open(path.c_str(), std::ios::trunc);
     if (!ofs.is_open()) {
@@ -211,8 +212,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_KillProcessTest, TestSize.Level1)
         printf("open path failed!, path=%s\n", path.c_str());
         FAIL();
     }
-    result = ParsePeerBinderPid(fin, pid);
+    content = std::string((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
     fin.close();
+    result = ParsePeerBinderPid(content, pid);
     EXPECT_TRUE(result < 0);
 }
 
@@ -1862,18 +1864,18 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_FfrtCallbackTestTest_002, TestSize
 }
 
 /**
- * @tc.name: FormatTimeWithMsTest
- * @tc.desc: test FormatTimeWithMs function
+ * @tc.name: FormatTimeWithUsTest
+ * @tc.desc: test FormatTimeWithUs function
  * @tc.type: FUNC
  */
-HWTEST_F(WatchdogInnerTest, FormatTimeWithMsTest_001, TestSize.Level1)
+HWTEST_F(WatchdogInnerTest, FormatTimeWithUsTest_001, TestSize.Level1)
 {
-    std::string result = FormatTimeWithMs("%Y-%m-%d %H:%M:%S");
+    std::string result = FormatTimeWithUs("%Y-%m-%d %H:%M:%S");
     EXPECT_FALSE(result.empty());
     size_t dotPos = result.find('.');
     EXPECT_NE(dotPos, std::string::npos);
-    std::string msStr = result.substr(dotPos + 1);
-    EXPECT_EQ(msStr.length(), 6);
+    std::string usStr = result.substr(dotPos + 1);
+    EXPECT_EQ(usStr.length(), 6);
 }
 
 /**

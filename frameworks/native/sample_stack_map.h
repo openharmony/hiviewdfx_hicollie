@@ -16,8 +16,6 @@
 #ifndef RELIABILITY_SAMPLE_STACK_MAP_H
 #define RELIABILITY_SAMPLE_STACK_MAP_H
 
-#include <list>
-#include <map>
 #include <mutex>
 #include <string>
 
@@ -28,21 +26,21 @@ namespace HiviewDFX {
 
 class SampleStackMap : public Singleton<SampleStackMap> {
     DECLARE_SINGLETON(SampleStackMap);
- 
+
 public:
     void Set(const std::string& key, const std::string& value);
     std::string GetAndRemove(const std::string& key);
 
 private:
-    struct Value {
+    struct Entry {
+        std::string key;
         std::string value;
-        std::list<std::string>::iterator orderIt;
-        uint64_t timestamp;
+        uint64_t timestamp = 0;
+        bool valid = false;
     };
 
     void ExpireOldEntries();
-    std::map<std::string, Value> map_;
-    std::list<std::string> order_;
+    Entry entries_[3];
     mutable std::mutex mutex_;
 };
 

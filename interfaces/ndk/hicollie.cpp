@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <unistd.h>
+#include <new>
 #include <string>
 #include <sys/syscall.h>
 #include <fcntl.h>
@@ -61,6 +62,31 @@ static int64_t g_lastWatchTime = 0;
 static std::atomic_int g_backgroundReportCount = 0;
 static int64_t g_lastWatchTimeReport3S = 0;
 static int64_t g_lastWatchTimeReport6S = 0;
+
+static bool ReadProcFileLocal(const char* path, std::string& content, size_t readSize)
+{
+    if (readSize == 0) {
+        return false;
+    }
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return false;
+    }
+    char* buffer = new(std::nothrow) char[readSize]();
+    if (buffer == nullptr) {
+        close(fd);
+        return false;
+    }
+    ssize_t bytes = read(fd, buffer, readSize - 1);
+    close(fd);
+    if (bytes <= 0) {
+        delete[] buffer;
+        return false;
+    }
+    content.assign(buffer, static_cast<size_t>(bytes));
+    delete[] buffer;
+    return true;
+}
 
 bool IsAppMainThread()
 {
@@ -135,11 +161,9 @@ int Report(bool* isSixSecond)
         faultData.forceExit = true;
         *isSixSecond = false;
         stuckTimeout = static_cast<int>(g_stuckTimeout) * RATIO;
-        std::ifstream statmStream("/proc/" + std::to_string(pid) + "/statm");
-        if (statmStream) {
-            std::string procStatm;
-            std::getline(statmStream, procStatm);
-            statmStream.close();
+        std::string statmPath = "/proc/" + std::to_string(pid) + "/statm";
+        std::string procStatm;
+        if (ReadProcFileLocal(statmPath.c_str(), procStatm, PROC_BUFFER_SIZE)) {
             faultData.procStatm = procStatm;
         }
     } else {
@@ -193,18 +217,21 @@ int ReportInputBlock()
 
 int GetNSPid()
 {
-    std::ifstream inputFile("/proc/self/status");
-    if (!inputFile.is_open()) {
+    std::string content;
+    if (!ReadProcFileLocal("/proc/self/status", content, PROC_BUFFER_SIZE)) {
         XCOLLIE_LOGI("Error: Could not open proc/self/status");
         return 0;
     }
-
-    std::string line;
-    while (std::getline(inputFile, line)) {
+    std::string::size_type start = 0;
+    while (start < content.size()) {
+        std::string::size_type newlinePos = content.find('\n', start);
+        std::string line = content.substr(start,
+            (newlinePos == std::string::npos ? content.size() : newlinePos) - start);
+        start = (newlinePos == std::string::npos ? content.size() : newlinePos + 1);
         if (line.find("NSpid:") != 0) {
             continue;
         }
-        size_t pos = line.find(":");
+        std::string::size_type pos = line.find(":");
         if (pos != std::string::npos) {
             std::string valueStr = line.substr(pos + 1);
             int value = 0;

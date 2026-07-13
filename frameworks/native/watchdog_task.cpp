@@ -55,6 +55,8 @@ constexpr int64_t BELOW_MEM_SIZE = 500 * 1024;
 constexpr int SAMPLE_STACK_INTERVAL_DIVISOR = 11;
 constexpr int SAMPLE_STACK_MAX_COUNT = 10;
 constexpr int LEFT_TIME_EXIT_ALARM_SECONDS = 11;
+constexpr size_t INT32_MAX_DIGITS = 10;
+constexpr int32_t DECIAML = 10;
 }
 
 int64_t WatchdogTask::curId = 0;
@@ -133,6 +135,22 @@ WatchdogTask::WatchdogTask(std::string name, unsigned int timeLimit, int countLi
 #endif
 }
 
+bool ParseTid(const char* str, size_t len, pid_t& tid)
+{
+    if (str == nullptr || len == 0 || len >= INT32_MAX_DIGITS) {
+        return false;
+    }
+    int32_t value = 0;
+    for (size_t i = 0; i < len; ++i) {
+        if (str[i] < '0' || str[i] > '9') {
+            return false;
+        }
+        value = value * DECIAML + str[i] - '0';
+    }
+    tid = value;
+    return true;
+}
+
 void WatchdogTask::DoCallback()
 {
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
@@ -181,8 +199,13 @@ void WatchdogTask::Run(uint64_t now)
         }
     }
 #endif
+#ifdef SUSPEND_CHECK_ENABLE
+    uint64_t blockedThresholdMs = 5000;
+#else
     constexpr int resetRatio = 2;
-    if ((checkInterval != 0) && (now - nextTickTime > (resetRatio * checkInterval))) {
+    uint64_t blockedThresholdMs = resetRatio * checkInterval;
+#endif
+    if ((checkInterval != 0) && (now - nextTickTime > blockedThresholdMs)) {
         XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."
             "now:%{public}" PRIu64 " expect:%{public}" PRIu64 " interval:%{public}" PRIu64 "",
             now, nextTickTime, checkInterval);
@@ -276,7 +299,7 @@ void WatchdogTask::TimerCountTask()
             HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, name, HiSysEvent::EventType::FAULT,
                 "PID", getprocpid(), "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg);
 #else
-       XCOLLIE_LOGI("hisysevent not exists");
+            XCOLLIE_LOGI("hisysevent not exists");
 #endif
             triggerTimes.clear();
             return;
@@ -333,23 +356,21 @@ void WatchdogTask::SendEvent(const std::string &msg, const std::string &eventNam
 
 void WatchdogTask::ParseTidFromMsg(const std::string& sendMsg)
 {
-    std::string tidFrontStr = "Thread ID = ";
-    std::string tidRearStr = ") is running";
-    std::size_t frontPos = sendMsg.find(tidFrontStr);
-    std::size_t rearPos = sendMsg.find(tidRearStr);
-    std::size_t startPos = frontPos + tidFrontStr.length();
-    if (frontPos != std::string::npos && rearPos != std::string::npos && rearPos > startPos) {
-        size_t tidLength = rearPos - startPos;
-        if (tidLength < std::to_string(INT32_MAX).length()) {
-            std::string tidStr = sendMsg.substr(startPos, tidLength);
-            if (std::all_of(std::begin(tidStr), std::end(tidStr), [] (const char &c) {
-                return isdigit(c);
-            })) {
-                pid_t tid = 0;
-                auto result = std::from_chars(tidStr.data(), tidStr.data() + tidStr.size(), tid);
-                watchdogTid = (result.ec == std::errc()) ? tid : watchdogTid;
-            }
-        }
+    constexpr char tidFrontStr[] = "Thread ID = ";
+    constexpr char tidRearStr[] = ") is running";
+    size_t frontPos = sendMsg.find(tidFrontStr);
+    if (frontPos == std::string::npos) {
+        return;
+    }
+    size_t rearPos = sendMsg.find(tidRearStr, frontPos);
+    if (rearPos == std::string::npos) {
+        return;
+    }
+    size_t startPos = frontPos + strlen(tidFrontStr);
+    size_t tidLength = rearPos - startPos;
+    pid_t tid = 0;
+    if (ParseTid(sendMsg.c_str() + startPos, tidLength, tid)) {
+        watchdogTid = tid;
     }
 }
 
@@ -375,7 +396,7 @@ void WatchdogTask::SendHisyseventEvent(const HisyseventParam& param)
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
         ret, param.eventName.c_str(), param.sendMsg.c_str());
 #else
-       XCOLLIE_LOGI("hisysevent not exists");
+    XCOLLIE_LOGI("hisysevent not exists");
 #endif
 }
 
@@ -422,7 +443,7 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
 #else
-       XCOLLIE_LOGI("hisysevent not exists");
+    XCOLLIE_LOGI("hisysevent not exists");
 #endif
 }
 

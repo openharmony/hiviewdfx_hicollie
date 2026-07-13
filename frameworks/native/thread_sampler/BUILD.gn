@@ -26,12 +26,12 @@ ohos_shared_library("libthread_sampler") {
     "-Oz",
     "-fno-exceptions",
     "-fno-rtti",
-    "-fno-omit-frame-pointer",
   ]
   if (target_cpu == "arm64") {
     cflags_cc += [
       "-fno-unwind-tables",
       "-fno-asynchronous-unwind-tables",
+      "-fno-omit-frame-pointer",
     ]
     ldflags = [ "-Wl,-s", ]
   }
