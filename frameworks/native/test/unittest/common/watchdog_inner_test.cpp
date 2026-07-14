@@ -2212,5 +2212,22 @@ HWTEST_F(WatchdogInnerTest, ParseBinderCallChainTest_008, TestSize.Level1)
     EXPECT_TRUE(pids.find(200) != pids.end());
     EXPECT_TRUE(pids.find(300) != pids.end());
 }
+
+/**
+ * @tc.name: WatchdogInner GetMainThreadCheckTimer Test;
+ * @tc.desc: add testcase
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInner_GetMainThreadCheckTimer_001, TestSize.Level1)
+{
+    int32_t ret = WatchdogInner::GetInstance().GetMainThreadCheckTimer();
+    EXPECT_TRUE(ret >= 0);
+    OHOS::system::SetParameter("const.logsystem.versiontype", "beta");
+    ret = WatchdogInner::GetInstance().GetMainThreadCheckTimer();
+    EXPECT_TRUE(ret >= 0);
+    OHOS::system::SetParameter("const.security.developermode.state", "true");
+    ret = WatchdogInner::GetInstance().GetMainThreadCheckTimer();
+    EXPECT_TRUE(ret >= 0);
+}
 } // namespace HiviewDFX
 } // namespace OHOS

@@ -424,6 +424,19 @@ void WatchdogInner::UpdateTime(int64_t& reportBegin, int64_t& reportEnd,
     lastEndTime = endTime;
 }
 
+int32_t WatchdogInner::GetMainThreadCheckTimer()
+{
+    int32_t checkInterval = jankParamsMap[KEY_CHECKER_INTERVAL];
+    if (checkInterval > 0) {
+        return checkInterval;
+    }
+    if (IsDeveloperOpen() ||
+        (IsBetaVersion() && GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE)) {
+        return ONE_HOUR_LIMIT;
+    }
+    return ONE_DAY_LIMIT;
+}
+
 bool WatchdogInner::SampleStackDetect(const TimePoint& endTime, int& reportTimes,
     int updateTimes, int ignoreTime, bool isScroll)
 {
@@ -437,14 +450,7 @@ bool WatchdogInner::SampleStackDetect(const TimePoint& endTime, int& reportTimes
         return false;
     }
     if (reportTimes <= 0) {
-        int32_t checkTimer = ONE_DAY_LIMIT;
-        int32_t checkInterval = jankParamsMap[KEY_CHECKER_INTERVAL];
-        if (checkInterval > 0) {
-            checkTimer = checkInterval;
-        } else if (!isScroll && (IsDeveloperOpen() ||
-            (IsBetaVersion() && GetProcessNameFromProcCmdline(getpid()) == KEY_SCB_STATE))) {
-            checkTimer = ONE_HOUR_LIMIT;
-        }
+        int32_t checkTimer = isScroll ? ONE_DAY_LIMIT : GetMainThreadCheckTimer();
         auto diff = endTime - stackContent_.lastEndTime;
         int64_t intervalTime = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
         if (intervalTime < checkTimer) {
