@@ -169,6 +169,7 @@ private:
     void UninstallThreadSamplerSignal();
     void ResetFreezeSampleFlags();
     static void IsExistProcess(std::string description);
+    int32_t GetMainThreadCheckTimer();
 
     static SigActionType threadSamplerSigHandler_;
     std::priority_queue<WatchdogTask> checkerQueue_; // protected by lock_
