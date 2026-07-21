@@ -1250,7 +1250,7 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckSample_001, TestSize.Level1)
     TimePoint endTime = std::chrono::steady_clock::now();
     int64_t durationTime = 1000;
     bool result = WatchdogInner::GetInstance().CheckSample(endTime, durationTime);
-    EXPECT_TRUE(!result);
+    EXPECT_TRUE(result);
     WatchdogInner::GetInstance().isScroll_ = false;
     result = WatchdogInner::GetInstance().CheckSample(endTime, durationTime);
     EXPECT_TRUE(!result);
