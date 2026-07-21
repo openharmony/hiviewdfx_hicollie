@@ -43,6 +43,7 @@ ohos_shared_library("libthread_sampler") {
   public_configs = [ ":thread_sampler_config" ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "faultloggerd:libasync_stack",
     "faultloggerd:libstack_printer",
@@ -84,6 +85,7 @@ ohos_static_library("libthread_sampler_static") {
   public_configs = [ ":thread_sampler_config" ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "faultloggerd:libasync_stack",
     "faultloggerd:libstack_printer",
