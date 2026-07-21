@@ -80,8 +80,8 @@ constexpr const char* KEY_SCB_STATE = "com.ohos.sceneboard";
 constexpr const char* MEDIA_SERVICE = "media_service";
 #endif
 constexpr uint64_t DEFAULT_TIMEOUT = 60 * 1000;
-#ifdef FOUNDATION_FFRT_CALLBACK_TIME_ENABLE
-constexpr uint32_t FFRT_CALLBACK_TIME = 60 * 1000;
+#ifdef FFRT_CALLBACK_TIME_SEC
+constexpr uint32_t FFRT_CALLBACK_TIME = FFRT_CALLBACK_TIME_SEC * 1000;
 #else
 constexpr uint32_t FFRT_CALLBACK_TIME = 30 * 1000;
 #endif
@@ -197,7 +197,7 @@ static const int CRASH_SIGNAL_LIST[] = {
 };
 }
 
-#ifdef FOUNDATION_FFRT_CALLBACK_TIME_ENABLE
+#ifdef FOUNDATION_FFRT_WATCHDOG_EARLY_INIT_ENABLE
 void __attribute__ ((constructor)) setup(void)
 {
     if (getuid() == FOUNDATION_UID) {
