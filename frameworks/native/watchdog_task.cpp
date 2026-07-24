@@ -23,7 +23,6 @@
 #include <thread>
 
 #include <fcntl.h>
-#include <dlfcn.h>
 #include <unistd.h>
 
 #include "backtrace_local.h"
@@ -42,7 +41,7 @@ constexpr int TIME_LIMIT_NUM_MAX_RATIO = 2;
 constexpr int BINDER_SPACE_FULL_COUNT_HALF = 2;
 constexpr int UID_TYPE_THRESHOLD = 20000;
 constexpr int BINDER_SPACE_FULL_WARNING_MULTIPLE = 10;
-constexpr const char* CORE_PROCS[] = {
+static constexpr const char* const CORE_PROCS[] = {
     "anco_service_broker", "aptouch_daemon", "foundation", "init",
     "multimodalinput", "com.ohos.sceneboard", "render_service"
 };
@@ -523,7 +522,7 @@ void WatchdogTask::HandleWaitedFullState(std::string &description, const std::st
     }
 }
 
-std::string WatchdogTask::GetBlockDescription(uint64_t interval)
+inline std::string WatchdogTask::GetBlockDescription(uint64_t interval)
 {
     std::string desc = "Watchdog: thread(" + name + ") blocked " + std::to_string(interval) + "s";
     return desc;
