@@ -30,6 +30,9 @@ ohos_source_set("libhicollie_source") {
     "-Oz",
     "-fno-exceptions",
     "-fno-rtti",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-flto",
   ]
   if (target_cpu == "arm64") {
     cflags_cc += [
@@ -101,6 +104,10 @@ ohos_source_set("libhicollie_source") {
   }
   part_name = "hicollie"
   subsystem_name = "hiviewdfx"
+  ldflags = [
+    "-flto",
+    "-Wl,--gc-sections",
+  ]
 }
 
 group("libhicollie") {
