@@ -26,6 +26,7 @@
 using namespace testing::ext;
 
 namespace {
+constexpr std::size_t MAX_BUFFER_SIZE = 64 * 1024; // 65536 bytes
 class HiCollieTest : public ::testing::Test {
 public:
     void SetUp() override {}
@@ -47,6 +48,17 @@ void InitEndFunc(const char* eventName)
 {
     std::string str(eventName);
     printf("InitBeginFunc eventName: %s\n", str.c_str());
+}
+
+static size_t UserCall(OH_HiCollie_Freeze_Type type, void* buffer, size_t size)
+{
+    std::string source("ReportInputBlockUserCall");
+    char* buffer1 = (char*)buffer;
+    int needed = snprintf(buffer1, size, "%s%d", source.c_str(), (int)type);
+    if (needed < 0) {
+        printf("snprintf failed");
+    }
+    return MAX_BUFFER_SIZE + 1;
 }
 
 /**
@@ -213,6 +225,18 @@ HWTEST_F(HiCollieTest, Test_OH_HiCollie_SetFreezeCallback_1, TestSize.Level1)
 {
     void* last = OH_HiCollie_SetFreezeCallback(nullptr);
     EXPECT_EQ(last, nullptr);
+}
+
+/**
+ * @tc.name: OH_HiCollie_SetFreezeCallback
+ * @tc.desc: test OH_HiCollie_SetFreezeCallback
+ * @tc.type: FUNC
+ */
+HWTEST_F(HiCollieTest, Test_OH_HiCollie_SetFreezeCallback_2, TestSize.Level1)
+{
+    (void)OH_HiCollie_SetFreezeCallback(UserCall);
+    std::string ret = OHOS::HiviewDFX::Watchdog::GetInstance().ReadDataFromBuffer(4);
+    EXPECT_EQ(ret, "");
 }
 
 /**
