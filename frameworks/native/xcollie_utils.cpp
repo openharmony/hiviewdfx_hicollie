@@ -73,9 +73,7 @@ static constexpr uint8_t DECIMAL = 10;
 static constexpr uint8_t FREE_ASYNC_INDEX = 6;
 static constexpr uint16_t FREE_ASYNC_MAX = 1000;
 
-constexpr const char* RECLAIM_AVAIL_BUFFER = "ReclaimAvailBuffer";
 constexpr const char* MEM_AVAILABLE = "MemAvailable";
-constexpr const char* PROC_MEMORYVIEW = "/proc/memview";
 constexpr const char* PROC_MEMORYINFO = "/proc/meminfo";
 
 static std::string g_curProcName;
@@ -885,7 +883,7 @@ int64_t GetNumFromString(const std::string &str)
 int64_t GetAvailMemory()
 {
     std::string content;
-    std::string memInfoPath = OHOS::FileExists(PROC_MEMORYVIEW) ? PROC_MEMORYVIEW : PROC_MEMORYINFO;
+    std::string memInfoPath = PROC_MEMORYINFO;
     if (!OHOS::LoadStringFromFile(memInfoPath, content)) {
         XCOLLIE_LOGE("Get memInfoPath failed!");
         return -1;
@@ -898,7 +896,7 @@ int64_t GetAvailMemory()
     std::vector<std::string> vec;
     SplitStr(content, "\n", vec);
 
-    std::string targetField = (memInfoPath == PROC_MEMORYVIEW) ? RECLAIM_AVAIL_BUFFER : MEM_AVAILABLE;
+    std::string targetField = MEM_AVAILABLE;
 
     for (const std::string &mem : vec) {
         if (mem.find(targetField) != std::string::npos) {

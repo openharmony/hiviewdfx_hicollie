@@ -82,7 +82,7 @@ WatchdogTask::WatchdogTask(uint64_t interval, unsigned int count, IpcFullCallbac
       flag(flag), watchdogTid(0), timeLimit(0), countLimit(0), reportCount(0)
 {
     id = ++curId;
-    checker = (count > 0) ? nullptr:std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
+    checker = (count > 0) ? nullptr : std::make_shared<HandlerChecker>(IPC_FULL_TASK, nullptr);
     name = (count > 0) ? ASYNC_BINDER_SPACE_FULL_TASK : IPC_FULL_TASK;
     checkInterval = interval;
     nextTickTime = GetCurrentTickMillseconds();
@@ -182,7 +182,12 @@ void WatchdogTask::Run(uint64_t now)
     }
 #endif
     constexpr int resetRatio = 2;
-    if ((checkInterval != 0) && (now - nextTickTime > (resetRatio * checkInterval))) {
+#ifdef SUSPEND_CHECK_ENABLE
+    uint64_t blockThresholdMs = 5000;
+#else
+    uint64_t blockThresholdMs = resetRatio * checkInterval;
+#endif
+    if ((checkInterval != 0) && (now - nextTickTime > (blockThresholdMs))) {
         XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."
             "now:%{public}" PRIu64 " expect:%{public}" PRIu64 " interval:%{public}" PRIu64 "",
             now, nextTickTime, checkInterval);

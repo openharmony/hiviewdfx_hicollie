@@ -15,7 +15,13 @@ import("//build/ohos.gni")
 import("//base/hiviewdfx/hicollie/hicollie.gni")
 
 ohos_shared_library("ohhicollie") {
-  cflags_cc = [ "-Os", "-fno-exceptions", "-fno-rtti" ]
+  branch_protector_ret = "pac_ret"
+  sanitize = {
+    cfi = true
+    cfi_cross_dso = true
+    cfi_vcall_icall_only = true
+    debug = false
+  }
   include_dirs = [
     "include",
     "../native/innerkits/include/xcollie",

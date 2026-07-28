@@ -63,7 +63,7 @@ void XCollieFfrtTask::DumpTrace(UCollectClient::AppCaller appCaller,
     }
     uint64_t beforeTime = GetCurrentTickMillseconds();
     auto result = traceCollector->CaptureDurationTrace(appCaller);
-    XCOLLIE_LOGI("Start to open trace result: %{public}d, interval: %{public}" PRIu64 " ms",
+    XCOLLIE_LOGI("Dump trace result: %{public}d, interval: %{public}" PRIu64 " ms",
         result.retCode, (GetCurrentTickMillseconds() - beforeTime));
 }
 
