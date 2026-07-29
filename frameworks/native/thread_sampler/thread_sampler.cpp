@@ -50,12 +50,12 @@ void ThreadSampler::ThreadSamplerSignalHandler(int sig, siginfo_t* si, void* con
 
 ThreadSampler::ThreadSampler()
 {
-    XCOLLIE_LOGI("Create ThreadSampler.\n");
+    XCOLLIE_LOGD("Create ThreadSampler.\n");
 }
 
 ThreadSampler::~ThreadSampler()
 {
-    XCOLLIE_LOGI("Destroy ThreadSampler.\n");
+    XCOLLIE_LOGD("Destroy ThreadSampler.\n");
 }
 
 int ThreadSampler::FindUnwindTable(uintptr_t pc, UnwindTableInfo& outTableInfo, void* arg)

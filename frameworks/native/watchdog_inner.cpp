@@ -99,6 +99,8 @@ constexpr const char* ON_KICK_TIME = "on,72";
 constexpr const char* ON_KICK_TIME_EXTRA = "on,10,";
 constexpr const char* KICK_TIME = "kick";
 constexpr const char* KICK_TIME_EXTRA = "kick,";
+constexpr int KICK_PRINT_TIMES = 2;
+constexpr int KICK_PRINT_COUNT = 10;
 constexpr int32_t NOT_OPEN = -1;
 constexpr const char* LIB_THREAD_SAMPLER_PATH = "libthread_sampler.z.so";
 constexpr size_t STACK_LENGTH = 128 * 1024;
@@ -589,7 +591,7 @@ void WatchdogInner::InitAsyncStackIfNeed()
     }
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [this] {
-        XCOLLIE_LOGI("Start init Async Stack.");
+        XCOLLIE_LOGD("Start init Async Stack.");
         if (!NeedOpenAsyncStack()) {
             return;
         }
@@ -597,7 +599,7 @@ void WatchdogInner::InitAsyncStackIfNeed()
         if (asyncStackLibHandle != nullptr) {
             auto initAsyncStack = reinterpret_cast<InitAsyncStackFn>(dlsym(asyncStackLibHandle, "DfxInitAsyncStack"));
             if (initAsyncStack != nullptr && initAsyncStack()) {
-                XCOLLIE_LOGI("Init async stack successfully.");
+                XCOLLIE_LOGD("Init async stack successfully.");
                 initAsyncStack_ = true;
             } else {
                 XCOLLIE_LOGE("Init async stack failed.");
@@ -615,7 +617,6 @@ void WatchdogInner::InitDefaultTask()
 {
     IpcCheck();
     AddKickWatchdog();
-    XCOLLIE_LOGI("init default task finished.");
 }
 
 bool WatchdogInner::CheckSample(const TimePoint& endTime, int64_t durationTime)
@@ -944,7 +945,7 @@ int32_t WatchdogInner::StartTraceProfile()
         std::unique_lock<std::mutex> lock(lock_);
         InsertWatchdogTaskLocked(TRACE_CHECKER, std::move(task));
     }
-    XCOLLIE_LOGI("success to submit start trace");
+    XCOLLIE_LOGD("success to submit start trace");
     return 0;
 }
 
@@ -1387,7 +1388,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
         }
         stackContent_.isStartSampleEnabled = true;
         isMainThreadStackEnabled_ = false;
-        XCOLLIE_LOGI("Detect sample stack task complete.");
+        XCOLLIE_LOGD("Detect sample stack task complete.");
     } else if (queuedTaskCheck.name == APP_START_SAMPLE && ((startSlowContent_.isFinishStartSample) ||
         scrollSlowContent_.isFinishStartSample)) {
         checkerQueue_.pop();
@@ -1399,7 +1400,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
         startSlowContent_.isStartSampleEnabled = true;
         scrollSlowContent_.isFinishStartSample = false;
         scrollSlowContent_.isStartSampleEnabled = true;
-        XCOLLIE_LOGI("Detect app start sample task complete.");
+        XCOLLIE_LOGD("Detect app start sample task complete.");
     } else if (queuedTaskCheck.name == TRACE_CHECKER && isMainThreadTraceEnabled_) {
         checkerQueue_.pop();
         taskNameSet_.erase(TRACE_CHECKER);
@@ -1407,7 +1408,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
         if (traceContent_.dumpCount < COLLECT_TRACE_MIN) {
             traceContent_.traceState = DumpStackState::DEFAULT;
         }
-        XCOLLIE_LOGI("Detect collect trace task complete.");
+        XCOLLIE_LOGD("Detect collect trace task complete.");
     } else if (queuedTaskCheck.name == FREEZE_SAMPLE && g_freezeTaskFinished) {
         checkerQueue_.pop();
         if (!g_isDumpStack && Deinit()) {
@@ -1416,7 +1417,7 @@ bool WatchdogInner::CheckCurrentTaskLocked(const WatchdogTask& queuedTaskCheck)
         taskNameSet_.erase(FREEZE_SAMPLE);
         g_isReuseStack.store(false);
         g_freezeTaskFinished.store(false);
-        XCOLLIE_LOGI("Freeze collect stack task complete.");
+        XCOLLIE_LOGD("Freeze collect stack task complete.");
     } else {
         return false;
     }
@@ -1541,7 +1542,13 @@ bool WatchdogInner::SendMsgToHungtask(const std::string& msg)
         g_fd = NOT_OPEN;
         return false;
     }
-    XCOLLIE_KLOGI("Send %{public}s to hungtask Successful\n", msg.c_str());
+    static int printCount = 0;
+    if (++printCount % KICK_PRINT_TIMES == 0) {
+        XCOLLIE_KLOGI("Send %{public}s ok, cnt:%{public}d\n", msg.c_str(), printCount);
+    }
+    if (printCount == KICK_PRINT_COUNT) {
+        printCount = 0;
+    }
     return true;
 }
 
@@ -1593,7 +1600,7 @@ bool WatchdogInner::IpcCheck(uint64_t interval, unsigned int flag, IpcFullCallba
     bool result = InsertWatchdogTaskLocked(IPC_FULL_TASK, WatchdogTask(interval * TO_MILLISECOND_MULTPLE,
         IPC_FULL_TASK_PARAM, func, arg, flag)) > 0;
     if (result) {
-        XCOLLIE_LOGI("add ipc full task success");
+        XCOLLIE_LOGD("add ipc full task success");
     } else {
         XCOLLIE_LOGE("add ipc full task falied");
     }
