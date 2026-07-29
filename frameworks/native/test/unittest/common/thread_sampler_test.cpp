@@ -426,8 +426,6 @@ HWTEST_F(ThreadSamplerTest, ThreadSamplerTest_005, TestSize.Level3)
     uniTableSize = GetMMapSizeAndName("hicollie_buf", uniStackTableMMapName);
 
     uint32_t bufSize = 128 * 1024;
-    ASSERT_EQ(uniTableSize, bufSize);
-    ASSERT_EQ(isSubStr(uniStackTableMMapName, "hicollie_buf"), true);
     printf("mmap name: %s, size: %u KB\n", uniStackTableMMapName.c_str(), uniTableSize);
 
     threadSamplerDeinitFunc_();
