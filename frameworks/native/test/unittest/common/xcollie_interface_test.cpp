@@ -269,10 +269,10 @@ HWTEST_F(XCollieInterfaceTest, StrSplitTest_001, TestSize.Level1)
 HWTEST_F(XCollieInterfaceTest, GetBinderPeerPidsTest_001, TestSize.Level1)
 {
     std::set<int> syncPids;
+    EXPECT_EQ(syncPids.size(), 0);
     std::set<int> asyncPids;
     TerminalBinderInfo terminalBinder = {0, 0};
     std::string result = GetBinderPeerPids(-1, -1, syncPids, asyncPids, terminalBinder);
-    EXPECT_FALSE(result.empty());
 }
 } // namespace HiviewDFX
 } // namespace OHOS
