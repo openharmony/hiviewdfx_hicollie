@@ -620,7 +620,7 @@ void WatchdogInner::InitDefaultTask()
 
 bool WatchdogInner::CheckSample(const TimePoint& endTime, int64_t durationTime)
 {
-    bool isScroll = isScroll_;
+    bool isScroll = isScroll_.load();
     if (!isScroll) {
         return EnableAppStartSample(startSlowContent_, durationTime, isScroll);
     }
@@ -2201,7 +2201,7 @@ std::string WatchdogInner::GetSpecifiedProcessName()
 
 void WatchdogInner::SetScrollState(bool isScroll)
 {
-    isScroll_ = isScroll;
+    isScroll_.store(isScroll);
 }
 
 int32_t WatchdogInner::GetReservedTimeForLogging()
