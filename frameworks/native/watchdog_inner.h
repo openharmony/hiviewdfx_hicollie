@@ -115,7 +115,6 @@ public:
         {KEY_SAMPLE_COUNT, SAMPLE_DEFAULT_COUNT}, {KEY_SAMPLE_REPORT_TIMES, SAMPLE_DEFAULT_REPORT_TIMES},
         {KEY_LOG_TYPE, 0}, {KEY_SET_TIMES_FLAG, SET_TIMES_FLAG}, {KEY_CHECKER_INTERVAL, 0}, {KEY_AUTO_STOP_SAMPLING, 0}
     };
-    bool isScroll_ {false};
 
 private:
     bool Start();
@@ -221,6 +220,7 @@ private:
     int reservedTime_ {DEFAULT_RESERVED_TIME};
     static std::atomic_bool isTestExist_;
     static ffrt::mutex taskIdCntMtx_;
+    std::atomic_bool isScroll_ {false};
 };
 } // end of namespace HiviewDFX
 } // end of namespace OHOS
