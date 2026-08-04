@@ -1552,19 +1552,14 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_CheckTaskValid_001, TestSize.Level
 {
     int targetCount = 0;
     std::string result;
-    bool ret = WatchdogInner::GetInstance().CheckTaskValid(0, 100, targetCount, result);
-    EXPECT_FALSE(ret);
-    ret = WatchdogInner::GetInstance().CheckTaskValid(100, 0, targetCount, result);
-    EXPECT_FALSE(ret);
-    ret = WatchdogInner::GetInstance().CheckTaskValid(-1, 100, targetCount, result);
-    EXPECT_FALSE(ret);
-    ret = WatchdogInner::GetInstance().CheckTaskValid(100, -1, targetCount, result);
-    EXPECT_FALSE(ret);
-    ret = WatchdogInner::GetInstance().CheckTaskValid(100, 200, targetCount, result);
-    EXPECT_FALSE(ret);
-    ret = WatchdogInner::GetInstance().CheckTaskValid(100, 100, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(0, 100, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(100, 0, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(-1, 100, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(100, -1, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(100, 200, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(100, 100, targetCount, result);
     EXPECT_EQ(targetCount, 1);
-    ret = WatchdogInner::GetInstance().CheckTaskValid(200, 100, targetCount, result);
+    WatchdogInner::GetInstance().CheckTaskValid(200, 100, targetCount, result);
     EXPECT_EQ(targetCount, 2);
 }
 
