@@ -92,6 +92,11 @@ std::string XcollieMgr::ReadDataFromBuffer(int type)
         void* mptr = mmap(nullptr, mmapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (mptr == MAP_FAILED) {
             XCOLLIE_LOGE("mmap failed! errno:%{public}d", errno);
+            {
+                std::lock_guard<std::mutex> innerLock(state->cvMutex);
+                state->ready = true;
+            }
+            state->cv.notify_one();
             return;
         }
         size_t callbackSize = handler((OH_HiCollie_Freeze_Type)type, mptr, OHOS::HiviewDFX::MAX_BUFFER_SIZE);
