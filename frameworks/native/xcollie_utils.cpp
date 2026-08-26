@@ -474,7 +474,11 @@ bool IsProcessDebug(int32_t pid)
 {
     const int buffSize = 128;
     char paramBundle[buffSize] = {0};
-    GetParameter("hiviewdfx.appfreeze.filter_bundle_name", "", paramBundle, buffSize - 1);
+    int ret = GetParameter("hiviewdfx.appfreeze.filter_bundle_name", "", paramBundle, buffSize - 1);
+    if (ret < 0) {
+        XCOLLIE_LOGE("GetParameter failed, ret=%{public}d", ret);
+        return false;
+    }
     std::string debugBundle(paramBundle);
     std::string procCmdlineContent = GetProcessNameFromProcCmdline(pid);
     if (procCmdlineContent.compare(debugBundle) == 0) {
@@ -723,14 +727,18 @@ bool ClearFreezeFileIfNeed(uint64_t stackSize)
 bool SaveStringToFile(const std::string& path, const std::string& content)
 {
     constexpr mode_t defaultLogFileMode = 0644;
-    FILE* fp = fopen(path.c_str(), "w+");
-    chmod(path.c_str(), defaultLogFileMode);
-    if (fp == nullptr) {
-        XCOLLIE_LOGE("Failed to create path=%{public}s", path.c_str());
+    int fd = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW, defaultLogFileMode);
+    if (fd < 0) {
+        XCOLLIE_LOGE("Failed to create path=%{public}s, errno:%{public}d", path.c_str(), errno);
         return false;
-    } else {
-        XCOLLIE_LOGI("success to create path=%{public}s", path.c_str());
     }
+    FILE* fp = fdopen(fd, "w+");
+    if (fp == nullptr) {
+        XCOLLIE_LOGE("Failed to fdopen path=%{public}s, errno:%{public}d", path.c_str(), errno);
+        close(fd);
+        return false;
+    }
+    XCOLLIE_LOGI("success to create path=%{public}s", path.c_str());
     OHOS::SaveStringToFile(path, content, true);
     (void)fclose(fp);
     return true;
@@ -1104,6 +1112,21 @@ std::string GetBinderInfoString(int32_t pid, int32_t tid, std::string& rawBinder
             "," + std::to_string(terminalBinder.tid);
     }
     return binderInfo;
+}
+
+bool SafeStringToInt64(const std::string& value, int64_t& result)
+{
+    if (value.empty()) {
+        return false;
+    }
+    char* endptr = nullptr;
+    errno = 0;
+    unsigned long long ullValue = strtoull(value.c_str(), &endptr, DECIMAL);
+    if (endptr == value.c_str() || *endptr != '\0' || errno == ERANGE || ullValue > INT64_MAX) {
+        return false;
+    }
+    result = static_cast<int64_t>(ullValue);
+    return true;
 }
 } // end of HiviewDFX
 } // end of OHOS

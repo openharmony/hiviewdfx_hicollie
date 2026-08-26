@@ -768,6 +768,10 @@ std::string WatchdogInner::SaveFreezeStackToFile(int32_t pid)
         .freezeFile = freezeFile,
     };
     XCOLLIE_LOGI("Save freeze stack to file, ret:%{public}d, logFile:%{public}s.", saveRet, freezeFile.c_str());
+    if (!saveRet) {
+        XCOLLIE_LOGE("Save freeze stack to file failed, ret:%{public}d, logFile:%{public}s.",
+            saveRet, freezeFile.c_str());
+    }
     return freezeFile;
 }
 
@@ -1297,7 +1301,13 @@ void WatchdogInner::ParseAppStartParams(const std::string& line, const std::stri
                 key.c_str(), value.c_str());
             continue;
         }
-        keyValueMap[key] = static_cast<int64_t>(strtoull(value.c_str(), nullptr, CPU_FREQ_DECIMAL_BASE));
+        int64_t intValue = 0;
+        if (!SafeStringToInt64(value, intValue)) {
+            XCOLLIE_LOGE("ParseAppStartParams failed, key:%{public}s value:%{public}s",
+                key.c_str(), value.c_str());
+            continue;
+        }
+        keyValueMap[key] = intValue;
     }
     if (keyValueMap.size() < APP_START_PARAM_SIZE) {
         XCOLLIE_LOGE("ParseAppStartParams eventName:%{public}s keyValueMap size:%{public}zu",
