@@ -36,6 +36,7 @@ constexpr KillReasonEntry KILL_REASON_CONFIG[] = {
     {REASON_KILL_PROCESS_WITH_ACCOUNT, "KillProcessWithAccount", "KillApplication"},
     {REASON_KILL_APPLICATION, "KillApplication", "KillApplication"},
     {REASON_KILL_CGROUP, "KillCgroup", "KillApplication"},
+    {REASON_KILL_PROCESS, "KillProcess", "KillProcess"},
 
     {REASON_USER_REQUEST, "User Request", "UserRequest"},
     {REASON_CLEAR_SESSION, "ClearSession", "UserRequest"},
