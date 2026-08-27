@@ -943,7 +943,9 @@ int32_t WatchdogInner::StartTraceProfile()
     appCaller_.beginTime = traceContent_.reportBegin / MILLISEC_TO_NANOSEC;
     appCaller_.endTime = traceContent_.reportEnd / MILLISEC_TO_NANOSEC;
     appCaller_.actionId = UCollectClient::ACTION_ID_START_TRACE;
-    xcollieFfrtTask_ = std::make_shared<XCollieFfrtTask>(XCOLLIE_TASK_MAX_CONCURRENCY_NUM);
+    if (!xcollieFfrtTask_) {
+        xcollieFfrtTask_ = std::make_shared<XCollieFfrtTask>(XCOLLIE_TASK_MAX_CONCURRENCY_NUM);
+    }
     if (!xcollieFfrtTask_) {
         XCOLLIE_LOGE("submit start trace failed.");
         return -1;
