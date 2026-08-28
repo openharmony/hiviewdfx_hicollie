@@ -199,7 +199,14 @@ void WatchdogTask::Run(uint64_t now)
     }
 #endif
 #ifdef SUSPEND_CHECK_ENABLE
-    uint64_t blockedThresholdMs = 5000;
+    uint64_t blockedThresholdMs = 2000;
+    uint64_t TIME_THREAD = 10;
+    static uint32_t uid = getuid();
+    if ((uid == RENDER_SERVICE_UID) && (now - nextTickTime >= TIME_THREAD)) {
+        XCOLLIE_LOGI("checker thread may be blocked, reset next tick time."
+            "now:%{public}" PRIu64 " expect:%{public}" PRIu64 " diff:%{public}" PRIu64 " interval:%{public}" PRIu64 "",
+            now, nextTickTime, now - nextTickTime, checkInterval);
+    }
 #else
     constexpr int resetRatio = 2;
     uint64_t blockedThresholdMs = resetRatio * checkInterval;
