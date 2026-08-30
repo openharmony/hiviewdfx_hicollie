@@ -14,6 +14,7 @@
  */
 
 #include "xcollie_utils.h"
+#include "parse_xcollie_int.h"
 #include <ctime>
 #include <cinttypes>
 #include <algorithm>
@@ -837,10 +838,11 @@ int64_t GetAppStartTime(int32_t pid, int64_t tid)
             return startTime;
         }
         content = strings[START_TIME_INDEX];
-        if (!IsNum(content)) {
+        int64_t parsed = 0;
+        if (!IsNum(content) || !ParseXcollieInt64(content, parsed)) {
             return startTime;
         }
-        startTime = static_cast<int64_t>(std::stoll(content));
+        startTime = parsed;
         lastTid = tid;
     }
     return startTime;
@@ -867,7 +869,13 @@ std::map<std::string, int> GetReportTimesMap()
                 key.c_str(), value.c_str());
             continue;
         }
-        long long num = std::stoll(value);
+        int64_t parsed = 0;
+        if (!ParseXcollieInt64(value, parsed)) {
+            XCOLLIE_LOGE("Parse param failed, key:%{public}s value:%{public}s",
+                key.c_str(), value.c_str());
+            continue;
+        }
+        long long num = static_cast<long long>(parsed);
         if (num < INT32_MIN) {
             XCOLLIE_LOGE("Value below int range, key: %{public}s, invalid value: %{public}lld",
                 key.c_str(), num);
@@ -897,7 +905,7 @@ void UpdateReportTimes(const std::string& bundleName, int32_t& times, int32_t& c
 
 bool IsNum(const std::string& str)
 {
-    return std::all_of(str.begin(), str.end(), ::isdigit);
+    return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
 }
 
 bool GetKeyValueByStr(const std::string& tokens, std::string& key, std::string& value,
