@@ -238,6 +238,7 @@ ohos_unittest("ThreadSamplerTest") {
     "${hicollie_part_path}/frameworks/native:libhicollie_source",
   ]
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "faultloggerd:libasync_stack",
     "faultloggerd:libstack_printer",
@@ -289,6 +290,7 @@ ohos_unittest("XcollieMgrTest") {
   deps = [ "//base/hiviewdfx/hicollie/frameworks/native:libhicollie_source" ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "googletest:gtest_main",
     "hilog:libhilog",
