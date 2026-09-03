@@ -201,6 +201,8 @@ int64_t GetNumFromString(const std::string &str);
  
 int64_t GetAvailMemory();
 
+bool SafeStringToInt64(const std::string& value, int64_t& result);
+
 void DumpKernelStack(struct HstackVal& val, int& ret);
 
 std::string GetKernelStackByTid(pid_t watchdogTid);
