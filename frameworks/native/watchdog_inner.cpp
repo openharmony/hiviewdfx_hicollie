@@ -1219,6 +1219,7 @@ int64_t WatchdogInner::InsertWatchdogTaskLocked(const std::string& name, Watchdo
     }
     CreateWatchdogThreadIfNeed();
     if (task.nextTickTime < nextWeakUpTime_) {
+        std::unique_lock<std::mutex> lock(conditionLock_);
         condition_.notify_all();
     }
 
@@ -1542,7 +1543,7 @@ bool WatchdogInner::Start()
         } else if (isNeedStop_) {
             break;
         } else {
-            std::unique_lock<std::mutex> lock(lock_);
+            std::unique_lock<std::mutex> lock(conditionLock_);
             condition_.wait_for(lock, std::chrono::milliseconds(leftTimeMill));
         }
     }
@@ -1908,7 +1909,10 @@ bool WatchdogInner::Stop()
         mainRunner_->SetMainLooperWatcher(nullptr, nullptr);
     }
     isNeedStop_.store(true);
-    condition_.notify_all();
+    {
+        std::unique_lock<std::mutex> lock(conditionLock_);
+        condition_.notify_all();
+    }
     if (threadLoop_ != nullptr && threadLoop_->joinable()) {
         threadLoop_->join();
         threadLoop_ = nullptr;
