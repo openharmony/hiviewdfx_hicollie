@@ -46,6 +46,8 @@ constexpr KillReasonEntry KILL_REASON_CONFIG[] = {
     {REASON_USER_STOP, "UserStop", "Logout"},
     {REASON_PERMISSION_UPDATE, "PermissionUpdate", "PermissionUpdate"},
     {REASON_AA_FORCE_STOP, "aa force-stop", "aaForceStop"},
+    {REASON_SIGNAL_KILL, "signal kill", "signalKill"},
+    {REASON_SIGNAL_EXIT, "signal exit", "signalExit"},
 
     {REASON_THREAD_BLOCK_6S, "THREAD_BLOCK_6S", "ThreadBlock6S"},
     {REASON_APP_INPUT_BLOCK, "APP_INPUT_BLOCK", "AppInputBlock"},
