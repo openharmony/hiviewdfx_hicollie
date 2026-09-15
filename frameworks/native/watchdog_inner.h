@@ -140,6 +140,7 @@ private:
     bool InitThreadSamplerFuncs();
     void ResetThreadSamplerFuncs();
     static void GetFfrtTaskTid(int32_t& tid, const std::string& msg);
+    static std::string GetFfrtEventMsg(const std::string& msg);
     void UpdateJankParam(SampleJankParams& params);
     int ConvertStrToNum(const std::map<std::string, std::string>& paramsMap, const std::string& key,
         std::string& value, int defaultValue = -1);

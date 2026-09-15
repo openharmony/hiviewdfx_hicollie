@@ -182,6 +182,8 @@ int32_t GetUidByPid(const int32_t pid);
 
 int64_t GetAppStartTime(int32_t pid, int64_t tid);
 
+int64_t GetProcessLifeTime(int32_t pid, int64_t tid);
+
 bool IsOversea();
 
 std::string GetBinderInfoString(int32_t pid, int32_t tid, std::string& rawBinderInfo);
