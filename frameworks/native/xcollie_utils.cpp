@@ -408,12 +408,6 @@ bool IsBetaVersion()
     return (isBetaVersion.find(ENABLE_BETA_VAULE) != std::string::npos);
 }
 
-bool IsFansStage()
-{
-    const char *const fansStage = "const.product.dfx.fans.stage";
-    return OHOS::system::GetParameter(fansStage, "0") == "1";
-}
-
 bool IsAsyncStackBlockBundle(const std::string& bundleName)
 {
     const char *const asyncStackBlockBundles = "persist.hiviewdfx.async_stack.block_bundles";

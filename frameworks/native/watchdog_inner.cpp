@@ -586,15 +586,9 @@ bool WatchdogInner::NeedOpenAsyncStack()
     if (isSystemApp_) {
         return false;
     }
-    // beta version or fans stage, open async stack
-    if (IsBetaVersion() || IsFansStage()) {
-        return true;
-    }
-    // other versions must have the 'const. dfx. sync_stack. enable' parameter set to true
-    if (OHOS::system::GetBoolParameter("const.dfx.async_stack.enable", false)) {
-        return true;
-    }
-    return false;
+    // For non-system release apps, initialize async stack.
+    // Whether to collect all stacks or sample libuv stacks is decided by libasync_stack.
+    return true;
 }
 
 void WatchdogInner::InitAsyncStackIfNeed()

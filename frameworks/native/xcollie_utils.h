@@ -140,8 +140,6 @@ bool IsDeveloperOpen();
 
 bool IsBetaVersion();
 
-bool IsFansStage();
-
 bool IsAsyncStackBlockBundle(const std::string& bundleName);
 
 std::string GetFormatDate();
