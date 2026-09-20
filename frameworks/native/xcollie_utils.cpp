@@ -153,13 +153,14 @@ bool ReadProcFile(const char* path, std::string& content, size_t readSize)
     if (fd < 0) {
         return false;
     }
+    fdsan_exchange_owner_tag(fd, 0, LOG_DOMAIN);
     char* buffer = new(std::nothrow) char[readSize]();
     if (buffer == nullptr) {
-        close(fd);
+        fdsan_close_with_tag(fd, LOG_DOMAIN);
         return false;
     }
     ssize_t bytes = read(fd, buffer, readSize - 1);
-    close(fd);
+    fdsan_close_with_tag(fd, LOG_DOMAIN);
     if (bytes <= 0) {
         delete[] buffer;
         return false;
