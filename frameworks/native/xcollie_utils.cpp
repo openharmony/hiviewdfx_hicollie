@@ -78,6 +78,7 @@ static constexpr uint16_t FREE_ASYNC_MAX = 1000;
 constexpr size_t UID_PREFIX_LEN = 4;
 constexpr const char* MEM_AVAILABLE = "MemAvailable";
 constexpr const char* PROC_MEMORYINFO = "/proc/meminfo";
+constexpr int64_t DEFAULT_CLOCK_TICKS = 100;
 
 static std::string g_curProcName;
 static int32_t g_lastPid;
@@ -847,6 +848,20 @@ int64_t GetAppStartTime(int32_t pid, int64_t tid)
         lastTid = tid;
     }
     return startTime;
+}
+
+int64_t GetProcessLifeTime(int32_t pid, int64_t tid)
+{
+    auto clockTicks = sysconf(_SC_CLK_TCK);
+    if (clockTicks <= 0) {
+        XCOLLIE_LOGI("Get _SC_CLK_TCK fail. errno %{public}d", errno);
+        clockTicks = DEFAULT_CLOCK_TICKS;
+    }
+    int64_t startTime = GetAppStartTime(pid, tid);
+    if (startTime <= 0) {
+        return startTime;
+    }
+    return startTime / clockTicks;
 }
 
 std::map<std::string, int> GetReportTimesMap()

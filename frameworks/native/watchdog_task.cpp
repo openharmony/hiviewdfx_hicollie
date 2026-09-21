@@ -386,17 +386,20 @@ void WatchdogTask::SendHisyseventEvent(const HisyseventParam& param)
     std::string processName = GetSelfProcName();
     std::string moduleName = (name == IPC_FULL_TASK) ? (processName + "_" + name) : name;
     std::string stackTrace = GetProcessStacktrace();
+    int64_t processLifeTime = GetProcessLifeTime(param.pid, param.pid);
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
         "PID", param.pid, "TID", watchdogTid, "TGID", param.gid, "UID", param.uid, "MODULE_NAME", moduleName,
         "PROCESS_NAME", processName, "MSG", param.sendMsg, "STACK", stackTrace,
-        "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo);
+        "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo,
+        "PROCESS_LIFETIME", processLifeTime);
     if (ret == ERR_OVER_SIZE) {
         std::string stack;
         GetBacktraceStringByTid(stack, watchdogTid, 0, true);
         ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
             "PID", param.pid, "TID", watchdogTid, "TGID", param.gid, "UID", param.uid, "MODULE_NAME", moduleName,
             "PROCESS_NAME", processName, "MSG", param.sendMsg, "STACK", stack,
-            "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo);
+            "SAMPLE_STACK", sampleStack, "HICOLLIE_BINDER_INFO", param.binderInfo,
+            "PROCESS_LIFETIME", processLifeTime);
     }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], msg=%{public}s",
@@ -442,10 +445,13 @@ void WatchdogTask::SendXCollieEvent(const std::string &timerName, const std::str
     }
 
 #ifdef HISYSEVENT_ENABLE
+    int64_t processLifeTime = GetProcessLifeTime(pid, pid);
     int result = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, eventName, HiSysEvent::EventType::FAULT, "PID", pid,
         "TID", watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", timerName, "PROCESS_NAME", processName,
-        "MSG", sendMsg, "STACK", stack + "\n"+ GetKernelStackByTid(watchdogTid), "SPECIFICSTACK_NAME",
-        WatchdogInner::GetInstance().GetSpecifiedProcessName(), "TASK_NAME", name, "HICOLLIE_BINDER_INFO", binderInfo);
+        "MSG", sendMsg,
+        "STACK", stack + "\n" + GetKernelStackByTid(watchdogTid), "SPECIFICSTACK_NAME",
+        WatchdogInner::GetInstance().GetSpecifiedProcessName(), "TASK_NAME", name,
+        "HICOLLIE_BINDER_INFO", binderInfo, "PROCESS_LIFETIME", processLifeTime);
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "
         "msg=%{public}s", result, eventName.c_str(), keyMsg.c_str());
 #else

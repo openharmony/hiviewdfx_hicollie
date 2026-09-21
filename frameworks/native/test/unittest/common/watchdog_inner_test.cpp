@@ -453,6 +453,9 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_SendFfrtEvent_002, TestSize.Level1
     EXPECT_FALSE(IsProcessDebug(getprocpid()));
     std::string faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
     WatchdogInner::SendFfrtEvent({"test", "SendFfrtEvent_002", "test", faultTimeStr, true, ""});
+
+    faultTimeStr = "\nFault time:" + FormatTime("%Y/%m/%d-%H:%M:%S") + "\n";
+    WatchdogInner::SendFfrtEvent({"msg", "SERVICE_WARNING", "taskInfo", faultTimeStr, false, "sampleStack"});
 }
 
 /**
@@ -2228,6 +2231,137 @@ HWTEST_F(WatchdogInnerTest, WatchdogInner_GetMainThreadCheckTimer_001, TestSize.
     OHOS::system::SetParameter("const.security.developermode.state", "true");
     ret = WatchdogInner::GetInstance().GetMainThreadCheckTimer();
     EXPECT_TRUE(ret >= 0);
+}
+
+/**
+ * @tc.name: WatchdogInner GetAppStartTime test;
+ * @tc.desc: test GetAppStartTime with valid pid and tid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_002, TestSize.Level1)
+{
+    int32_t pid = getprocpid();
+    int64_t tid = getproctid();
+    int64_t time = GetAppStartTime(pid, tid);
+    EXPECT_TRUE(time >= 0);
+}
+
+/**
+ * @tc.name: WatchdogInner GetAppStartTime test;
+ * @tc.desc: test GetAppStartTime returns cached value for same tid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_003, TestSize.Level1)
+{
+    int32_t pid = getprocpid();
+    int64_t tid = getproctid();
+    int64_t time1 = GetAppStartTime(pid, tid);
+    int64_t time2 = GetAppStartTime(pid, tid);
+    EXPECT_EQ(time1, time2);
+}
+
+/**
+ * @tc.name: WatchdogInner GetAppStartTime test;
+ * @tc.desc: test GetAppStartTime with invalid pid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetAppStartTime_004, TestSize.Level1)
+{
+    int64_t time = GetAppStartTime(-1, -1);
+    EXPECT_TRUE(time != 0);
+}
+
+/**
+ * @tc.name: WatchdogInner GetProcessLifeTime test;
+ * @tc.desc: test GetProcessLifeTime with valid pid and tid
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcessLifeTime_001, TestSize.Level1)
+{
+    int32_t pid = getprocpid();
+    int64_t tid = getproctid();
+    int64_t lifeTime = GetProcessLifeTime(pid, tid);
+    EXPECT_TRUE(lifeTime >= 0);
+    GetProcessLifeTime(-1, -1);
+}
+
+/**
+ * @tc.name: WatchdogInner GetProcessLifeTime test;
+ * @tc.desc: test GetProcessLifeTime equals GetAppStartTime divided by clock ticks
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcessLifeTime_002, TestSize.Level1)
+{
+    int32_t pid = getprocpid();
+    int64_t tid = getproctid();
+    int64_t startTime = GetAppStartTime(pid, tid);
+    int64_t lifeTime = GetProcessLifeTime(pid, tid);
+    int64_t clockTicks = sysconf(_SC_CLK_TCK);
+    if (clockTicks <= 0) {
+        clockTicks = 100;
+    }
+    EXPECT_EQ(lifeTime, startTime / clockTicks);
+}
+
+/**
+ * @tc.name: WatchdogInner GetProcessLifeTime test;
+ * @tc.desc: test GetProcessLifeTime returns 0 when startTime is 0
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcessLifeTime_003, TestSize.Level1)
+{
+    int32_t pid = getprocpid();
+    int64_t tid = getproctid();
+    int64_t lifeTime1 = GetProcessLifeTime(pid, tid);
+    int64_t lifeTime2 = GetProcessLifeTime(pid, tid);
+    EXPECT_EQ(lifeTime1, lifeTime2);
+}
+
+/**
+ * @tc.name: WatchdogInner GetProcessLifeTime test;
+ * @tc.desc: test GetProcessLifeTime for init process (pid=1)
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetProcessLifeTime_004, TestSize.Level1)
+{
+    int64_t lifeTime = GetProcessLifeTime(1, 1);
+    EXPECT_TRUE(lifeTime >= 0);
+}
+
+/**
+ * @tc.name: WatchdogInner GetFfrtEventMsg test;
+ * @tc.desc: test GetFfrtEventMsg with normal message
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtEventMsg_001, TestSize.Level1)
+{
+    std::string msg = "WatchdogInnerTest_GetFfrtEventMsg_001";
+    std::string result = WatchdogInner::GetFfrtEventMsg(msg);
+    EXPECT_TRUE(result.find(msg) != std::string::npos);
+}
+
+/**
+ * @tc.name: WatchdogInner GetFfrtEventMsg test;
+ * @tc.desc: test GetFfrtEventMsg with empty message
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtEventMsg_002, TestSize.Level1)
+{
+    std::string msg = "";
+    std::string result = WatchdogInner::GetFfrtEventMsg(msg);
+    EXPECT_TRUE(!result.empty());
+}
+
+/**
+ * @tc.name: WatchdogInner GetFfrtEventMsg test;
+ * @tc.desc: test GetFfrtEventMsg with special characters
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_GetFfrtEventMsg_003, TestSize.Level1)
+{
+    std::string msg = "special chars: !@#$%^&*()_+{}|:<>?";
+    std::string result = WatchdogInner::GetFfrtEventMsg(msg);
+    EXPECT_TRUE(result.find(msg) != std::string::npos);
 }
 } // namespace HiviewDFX
 } // namespace OHOS

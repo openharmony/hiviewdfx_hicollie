@@ -1785,6 +1785,19 @@ void WatchdogInner::InitFfrtWatchdog()
     ffrt_task_timeout_set_threshold(FFRT_CALLBACK_TIME);
 }
 
+std::string WatchdogInner::GetFfrtEventMsg(const std::string& msg)
+{
+    time_t curTime = time(nullptr);
+    char* timeStr = ctime(&curTime);
+    std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) + "\n" + msg + "\n";
+    char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
+    buffer[FFRT_BUFFER_SIZE] = 0;
+    ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
+    sendMsg += buffer;
+    delete[] buffer;
+    return sendMsg;
+}
+
 void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
 {
     int32_t pid = getprocpid();
@@ -1794,15 +1807,7 @@ void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
     }
     uint32_t gid = getgid();
     uint32_t uid = getuid();
-    time_t curTime = time(nullptr);
-    char* timeStr = ctime(&curTime);
-    std::string sendMsg = std::string((timeStr == nullptr) ? "" : timeStr) +
-        "\n" + param.msg + "\n";
-    char* buffer = new char[FFRT_BUFFER_SIZE + 1]();
-    buffer[FFRT_BUFFER_SIZE] = 0;
-    ffrt_dump(DUMP_INFO_ALL, buffer, FFRT_BUFFER_SIZE);
-    sendMsg += buffer;
-    delete[] buffer;
+    std::string sendMsg = GetFfrtEventMsg(param.msg);
     int32_t tid = pid;
     GetFfrtTaskTid(tid, sendMsg);
     pid_t watchdogTid = ParseTidFromInfo(std::string(param.taskInfo));
@@ -1815,11 +1820,12 @@ void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
         binderInfo = binderInfo.empty() ? rawBinderInfo : rawBinderInfo + "PROCESS_NAME:" + binderInfo;
     }
 #ifdef HISYSEVENT_ENABLE
+    int64_t processLifeTime = GetProcessLifeTime(pid, watchdogTid);
     int ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT,
         "PID", pid, "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid,
         "MODULE_NAME", param.taskInfo, "PROCESS_NAME", GetSelfProcName(),
         "MSG", sendMsg, "STACK", (param.isDumpStack ? GetProcessStacktrace() : "") + kernelStack,
-        "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo);
+        "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo, "PROCESS_LIFETIME", processLifeTime);
     if (ret == ERR_OVER_SIZE) {
         std::string stack = "";
         if (param.isDumpStack) {
@@ -1828,7 +1834,8 @@ void WatchdogInner::SendFfrtEvent(const FfrtEventParam& param)
         ret = HiSysEventWrite(HiSysEvent::Domain::FRAMEWORK, param.eventName, HiSysEvent::EventType::FAULT, "PID", pid,
             "TID", watchdogTid < 0 ? tid : watchdogTid, "TGID", gid, "UID", uid, "MODULE_NAME", param.taskInfo,
             "PROCESS_NAME", GetSelfProcName(), "MSG", sendMsg, "STACK", stack + kernelStack,
-            "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo);
+            "SAMPLE_STACK", param.sampleStack, "HICOLLIE_BINDER_INFO", binderInfo,
+            "PROCESS_LIFETIME", processLifeTime);
     }
 
     XCOLLIE_LOGI("hisysevent write result=%{public}d, send event [FRAMEWORK,%{public}s], "

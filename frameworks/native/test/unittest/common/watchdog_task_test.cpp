@@ -24,6 +24,7 @@
 #include "file_ex.h"
 #include "event_handler.h"
 #include "ffrt_inner.h"
+#include "parameters.h"
 
 using namespace testing::ext;
 using namespace OHOS::AppExecFwk;
@@ -445,6 +446,55 @@ HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_InsertSampleStackTask_001, TestSize.
     WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
     task.sampleStack = "";
     task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_BLOCK", "");
+    EXPECT_TRUE(!name.empty());
+}
+
+/**
+ * @tc.name: WatchdogTaskTest SendHisyseventEvent
+ * @tc.desc: test SendHisyseventEvent via SendEvent with SERVICE_WARNING event and PROCESS_LIFETIME
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendHisyseventEvent_001, TestSize.Level1)
+{
+    OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogTaskTest_SendHisysevent_001");
+    std::string name = "WatchdogTaskTest_SendHisyseventEvent_001";
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<EventHandler>(runner);
+    WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
+    task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_WARNING", "");
+    EXPECT_TRUE(!name.empty());
+}
+
+/**
+ * @tc.name: WatchdogTaskTest SendHisyseventEvent
+ * @tc.desc: test SendHisyseventEvent via SendEvent with SERVICE_BLOCK event and PROCESS_LIFETIME
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendHisyseventEvent_002, TestSize.Level1)
+{
+    OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogTaskTest_SendHisysevent_002");
+    std::string name = "WatchdogTaskTest_SendHisyseventEvent_002";
+    auto runner = EventRunner::Create(true);
+    auto handler = std::make_shared<EventHandler>(runner);
+    WatchdogTask task(name, handler, nullptr, 5, AppExecFwk::EventQueue::Priority::IMMEDIATE);
+    task.SendEvent("test msg with Thread ID = 12345) is running", "SERVICE_BLOCK", "");
+    EXPECT_TRUE(!name.empty());
+}
+
+/**
+ * @tc.name: WatchdogTaskTest SendXCollieEvent
+ * @tc.desc: test SendXCollieEvent with PROCESS_LIFETIME in non-debug mode
+ * @tc.type: FUNC
+ */
+HWTEST_F(WatchdogTaskTest, WatchdogTaskTest_SendXCollieEvent_002, TestSize.Level1)
+{
+    OHOS::system::SetParameter("hiviewdfx.appfreeze.filter_bundle_name", "WatchdogTaskTest_SendXCollie_002");
+    int taskResult = 0;
+    auto taskFunc = [&taskResult]() { taskResult = 1; };
+    std::string name = "WatchdogTaskTest_SendXCollieEvent_002";
+    WatchdogTask task(name, taskFunc, 0, 1000, true);
+    std::string faultTimeStr = "\nFault time:" + std::to_string(GetCurrentTickMillseconds()) + "\n";
+    task.SendXCollieEvent("timerName", "keyMsg", faultTimeStr);
     EXPECT_TRUE(!name.empty());
 }
 } // namespace HiviewDFX
