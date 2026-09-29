@@ -220,6 +220,7 @@ private:
     AppStartContent scrollSlowContent_;
     SampleFreezeInfo sampleFreezeInfo_;
     bool initAsyncStack_ {false};
+    bool isHapDebuggable_ {false};
     int reservedTime_ {DEFAULT_RESERVED_TIME};
     static std::atomic_bool isTestExist_;
     static ffrt::mutex taskIdCntMtx_;

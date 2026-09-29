@@ -140,7 +140,7 @@ const uint64_t PRIORITY_MAX = 4;
 constexpr const char* SCROLL_JANK = "SCROLL_JANK";
 constexpr const char* MAIN_THREAD_JANK = "MAIN_THREAD_JANK";
 constexpr const char* BUSSINESS_THREAD_JANK = "BUSSINESS_THREAD_JANK";
-using InitAsyncStackFn = bool(*)();
+using InitAsyncStackFn = bool(*)(bool);
 static bool g_betaVersion = OHOS::system::GetParameter("const.logsystem.versiontype", "unknown") == "beta";
 }
 
@@ -576,10 +576,8 @@ bool WatchdogInner::NeedOpenAsyncStack()
     if (IsAsyncStackBlockBundle(bundleName_)) {
         return false;
     }
-    const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
-    bool isDebuggable = (debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0);
     // if debuggable hap, open async stack directly
-    if (isDebuggable) {
+    if (isHapDebuggable_) {
         return true;
     }
     // system release hap, do not open async stack
@@ -604,8 +602,9 @@ void WatchdogInner::InitAsyncStackIfNeed()
         }
         static auto asyncStackLibHandle = dlopen("libasync_stack.z.so", RTLD_LAZY);
         if (asyncStackLibHandle != nullptr) {
-            auto initAsyncStack = reinterpret_cast<InitAsyncStackFn>(dlsym(asyncStackLibHandle, "DfxInitAsyncStack"));
-            if (initAsyncStack != nullptr && initAsyncStack()) {
+            auto initAsyncStack = reinterpret_cast<InitAsyncStackFn>(
+                dlsym(asyncStackLibHandle, "DfxInitAsyncStackWithDebug"));
+            if (initAsyncStack != nullptr && initAsyncStack(isHapDebuggable_)) {
                 XCOLLIE_LOGD("Init async stack successfully.");
                 initAsyncStack_ = true;
             } else {
@@ -1359,6 +1358,10 @@ void WatchdogInner::CreateWatchdogThreadIfNeed()
             }
             const uint64_t limitNum = 20000;
             IPCDfx::SetIPCProxyLimit(limitNum, IPCProxyLimitCallback);
+#if defined(__aarch64__)
+            const char* debuggableEnv = getenv("HAP_DEBUGGABLE");
+            isHapDebuggable_ = (debuggableEnv != nullptr && strcmp(debuggableEnv, "true") == 0);
+#endif
             threadLoop_ = std::make_unique<std::thread>(&WatchdogInner::Start, this);
             if (getpid() == gettid()) {
                 SetThreadSignalMask(SIGDUMP, true, true);
