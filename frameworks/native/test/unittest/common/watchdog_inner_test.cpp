@@ -1387,14 +1387,15 @@ HWTEST_F(WatchdogInnerTest, WatchdogInnerTest_InitAsyncStack, TestSize.Level1)
 
     WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0");
     WatchdogInner::GetInstance().SetSystemApp(true);
+    WatchdogInner::GetInstance().isHapDebuggable_ = false;
     ASSERT_FALSE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
-    setenv("HAP_DEBUGGABLE", "true", 1);
+    WatchdogInner::GetInstance().isHapDebuggable_ = true;
     ASSERT_TRUE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
 
     WatchdogInner::GetInstance().SetBundleInfo(bundleName, "1.1.0");
     WatchdogInner::GetInstance().SetSystemApp(false);
     ASSERT_TRUE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
-    setenv("HAP_DEBUGGABLE", "false", 1);
+    WatchdogInner::GetInstance().isHapDebuggable_ = false;
     ASSERT_TRUE(WatchdogInner::GetInstance().NeedOpenAsyncStack());
 
     WatchdogInner::GetInstance().InitAsyncStackIfNeed();
